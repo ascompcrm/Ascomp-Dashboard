@@ -1,4 +1,15 @@
+import dotenv from 'dotenv'
 import { PrismaClient, Role, ServiceStatus } from './generated/client'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { auth } from '@my-better-t-app/auth'
+
+// Load environment variables
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+dotenv.config({
+  path: path.resolve(__dirname, '../../../apps/web/.env'),
+})
 
 const prisma = new PrismaClient()
 
@@ -29,21 +40,40 @@ async function main() {
   await prisma.serviceRecord.deleteMany({})
   await prisma.projector.deleteMany({})
   await prisma.site.deleteMany({})
+  await prisma.account.deleteMany({})
   await prisma.user.deleteMany({})
 
-  // Create Admin User
+  // Create Admin User using better-auth API
   console.log('👤 Creating admin user...')
-  const adminId = generateObjectId()
-  const admin = await prisma.user.create({
-    data: {
-      id: adminId,
-      name: 'Admin User',
+  // Use better-auth's internal API handler
+  // Better-auth handler expects the full path
+  const adminRequest = new Request('http://localhost/api/auth/sign-up/email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       email: 'admin@crm.com',
-      emailVerified: true,
-      role: Role.ADMIN,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
+      password: 'admin123',
+      name: 'Admin User',
+      role: 'ADMIN',
+    }),
+  })
+  const adminResponse = await auth.handler(adminRequest)
+  
+  if (!adminResponse.ok) {
+    const errorText = await adminResponse.text()
+    throw new Error(`Failed to create admin user: ${adminResponse.status} ${errorText}`)
+  }
+  
+  const adminData = await adminResponse.json()
+  
+  if (!adminData || !adminData.user) {
+    throw new Error('Failed to create admin user: ' + JSON.stringify(adminData))
+  }
+
+  // Update role if not set during signup
+  const admin = await prisma.user.update({
+    where: { id: adminData.user.id },
+    data: { role: Role.ADMIN },
   })
   console.log('✅ Admin created:', admin.email)
 
@@ -57,20 +87,40 @@ async function main() {
     { name: 'David Brown', email: 'david.brown@crm.com' },
   ]
 
+  // Create Field Workers using better-auth API
   const createdFieldWorkers = await Promise.all(
-    fieldWorkers.map((worker) =>
-      prisma.user.create({
-        data: {
-          id: generateObjectId(),
-          name: worker.name,
+    fieldWorkers.map(async (worker) => {
+      const signUpRequest = new Request('http://localhost/api/auth/sign-up/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           email: worker.email,
-          emailVerified: true,
-          role: Role.FIELD_WORKER,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
+          password: 'password123',
+          name: worker.name,
+          role: 'FIELD_WORKER',
+        }),
       })
-    )
+      const signUpResponse = await auth.handler(signUpRequest)
+      
+      if (!signUpResponse.ok) {
+        const errorText = await signUpResponse.text()
+        throw new Error(`Failed to create field worker ${worker.email}: ${signUpResponse.status} ${errorText}`)
+      }
+      
+      const signUpData = await signUpResponse.json()
+
+      if (!signUpData || !signUpData.user) {
+        throw new Error(`Failed to create field worker: ${worker.email} - ${JSON.stringify(signUpData)}`)
+      }
+
+      // Update role if not set during signup
+      const user = await prisma.user.update({
+        where: { id: signUpData.user.id },
+        data: { role: Role.FIELD_WORKER },
+      })
+
+      return user
+    })
   )
   console.log(`✅ Created ${createdFieldWorkers.length} field workers`)
 

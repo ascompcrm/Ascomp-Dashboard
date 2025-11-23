@@ -1,39 +1,36 @@
 "use client"
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
 export default function UserDashboard() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const { user, isLoading, logout } = useAuth()
 
   useEffect(() => {
-    const userData = localStorage.getItem('user')
-    if (!userData) {
-      router.push('/')
-    } else {
-      setUser(JSON.parse(userData))
+    if (!isLoading) {
+      if (!user) {
+        router.push('/')
+      } else if (user.role === 'ADMIN') {
+        router.push('/admin/dashboard')
+      }
     }
-  }, [router])
-
-  const handleLogout = () => {
-    localStorage.removeItem('user')
-    router.push('/')
-  }
+  }, [user, isLoading, router])
 
   const startWorkflow = () => {
     router.push('/user/workflow')
   }
 
-  if (!user) return null
+  if (isLoading || !user) return null
 
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b-2 border-black p-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-black">Engineer Dashboard</h1>
         <Button
-          onClick={handleLogout}
+          onClick={logout}
           variant="outline"
           className="border-2 border-black text-black hover:bg-gray-100"
         >

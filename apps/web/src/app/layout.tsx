@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import '../index.css'
+import { DataProvider } from '@/lib/data-context';
+import { AuthProvider } from '@/lib/auth-context';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -45,8 +48,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased`}>
-        {children}
-        <Analytics />
+        <AuthProvider>
+          <SidebarProvider>
+            <DataProvider>{children}</DataProvider>
+            <Analytics />
+          </SidebarProvider>
+        </AuthProvider>
       </body>
     </html>
   )

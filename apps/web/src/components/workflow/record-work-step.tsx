@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Select } from '../ui/select'
 
 export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -441,7 +442,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               <FormRow>
                 {['reflector', 'uvFilter', 'integratorRod', 'coldMirror', 'foldMirror'].map((field) => (
                   <FormField key={field} label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}>
-                    <select
+                    <Select
                       value={formData[field as keyof typeof formData] || ''}
                       onChange={(e) => handleChange(field, e.target.value)}
                       className="w-full border-2 border-black p-2 text-black text-sm"
@@ -450,7 +451,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                       <option value="OK">OK</option>
                       <option value="Not OK">Not OK</option>
                       <option value="Needs Replacement">Needs Replacement</option>
-                    </select>
+                    </Select>
                   </FormField>
                 ))}
               </FormRow>

@@ -28,15 +28,18 @@
     "seed": "bun run prisma/seed.ts"
   },
   "devDependencies": {
+    "@my-better-t-app/config": "workspace:*",
+    "@types/bcryptjs": "^3.0.0",
     "prisma": "^6.15.0",
-    "tsdown": "catalog:",
-    "@my-better-t-app/config": "workspace:*"
+    "tsdown": "catalog:"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "@my-better-t-app/auth": "workspace:*",
     "@prisma/client": "catalog:",
+    "bcryptjs": "^3.0.3",
     "dotenv": "catalog:",
     "zod": "catalog:"
   }

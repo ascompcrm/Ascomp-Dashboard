@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
 import SelectServiceStep from '@/components/workflow/select-service-step'
 import StartServiceStep from '@/components/workflow/start-service-step'
 import RecordWorkStep from '@/components/workflow/record-work-step'
@@ -11,28 +12,31 @@ import { Button } from '@/components/ui/button'
 
 export default function WorkflowPage() {
   const router = useRouter()
+  const { user, isLoading } = useAuth()
   const [currentStep, setCurrentStep] = useState(0)
   const [workflowData, setWorkflowData] = useState<any>({})
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    const user = localStorage.getItem('user')
-    if (!user) {
-      router.push('/')
-    }
+    if (!isLoading) {
+      if (!user) {
+        router.push('/')
+        return
+      }
 
-    const savedData = localStorage.getItem('workflowData')
-    const savedStep = localStorage.getItem('workflowStep')
+      const savedData = localStorage.getItem('workflowData')
+      const savedStep = localStorage.getItem('workflowStep')
 
-    if (savedData) {
-      setWorkflowData(JSON.parse(savedData))
-    }
-    if (savedStep) {
-      setCurrentStep(parseInt(savedStep))
-    }
+      if (savedData) {
+        setWorkflowData(JSON.parse(savedData))
+      }
+      if (savedStep) {
+        setCurrentStep(parseInt(savedStep))
+      }
 
-    setIsLoaded(true)
-  }, [router])
+      setIsLoaded(true)
+    }
+  }, [user, isLoading, router])
 
   const steps = [
     { name: 'Select Service', component: SelectServiceStep },

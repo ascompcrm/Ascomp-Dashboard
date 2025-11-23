@@ -16,6 +16,7 @@ model User {
   id               String          @id @map("_id")
   name             String
   email            String
+  password         String?         // Optional - better-auth stores passwords in Account table
   emailVerified    Boolean
   image            String?
   createdAt        DateTime
