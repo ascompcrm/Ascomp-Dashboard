@@ -1,12 +1,13 @@
 "use client"
 
-import { useData } from "@/lib/data-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import ProjectorDetails from "./projector-details"
 import AddProjectorModal from "./modals/add-projector-modal"
 import ScheduleServiceModal from "./modals/schedule-service-modal"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import type { Site, Projector } from "@/lib/types"
 
 interface SiteDetailPageProps {
   siteId: string
@@ -14,12 +15,46 @@ interface SiteDetailPageProps {
 }
 
 export default function SiteDetailPage({ siteId, onProjectorClick }: SiteDetailPageProps) {
-  const { sites } = useData()
+  const [site, setSite] = useState<Site | null>(null)
+  const [loading, setLoading] = useState(true)
   const [showAddProjector, setShowAddProjector] = useState(false)
   const [selectedProjector, setSelectedProjector] = useState<{ siteId: string; projectorId: string } | null>(null)
   const [showSchedule, setShowSchedule] = useState(false)
 
-  const site = sites.find((s) => s.id === siteId)
+  useEffect(() => {
+    const fetchSite = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`/api/admin/sites/${siteId}`)
+        if (!response.ok) {
+          throw new Error("Failed to fetch site")
+        }
+        const result = await response.json()
+        setSite(result.site)
+      } catch (error) {
+        console.error("Error fetching site:", error)
+        setSite(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSite()
+  }, [siteId])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-32 w-full" />
+        <div className="grid grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
+  }
 
   if (!site) {
     return (
@@ -100,28 +135,64 @@ export default function SiteDetailPage({ siteId, onProjectorClick }: SiteDetailP
           {site.projectors.length === 0 ? (
             <p className="text-sm text-muted-foreground">No projectors added to this site yet.</p>
           ) : (
-            site.projectors.map((projector) => (
-              <ProjectorDetails
-                key={projector.id}
-                site={site}
-                projector={projector}
-                onSchedule={() => {
-                  setSelectedProjector({ siteId: site.id, projectorId: projector.id })
-                  setShowSchedule(true)
-                }}
-                onViewDetails={() => onProjectorClick(site.id, projector.id)}
-              />
-            ))
+            site.projectors.map((projector) => {
+              // Convert to Projector type for ProjectorDetails component
+              const projectorForDetails: Projector = {
+                id: projector.id,
+                name: projector.name,
+                model: projector.model,
+                serialNumber: projector.serialNumber,
+                installDate: projector.installDate,
+                lastServiceDate: projector.lastServiceDate,
+                status: projector.status,
+                nextServiceDue: projector.nextServiceDue,
+                serviceHistory: projector.serviceHistory || [],
+              }
+              return (
+                <ProjectorDetails
+                  key={projector.id}
+                  site={site}
+                  projector={projectorForDetails}
+                  onSchedule={() => {
+                    setSelectedProjector({ siteId: site.id, projectorId: projector.id })
+                    setShowSchedule(true)
+                  }}
+                  onViewDetails={() => onProjectorClick(site.id, projector.id)}
+                />
+              )
+            })
           )}
         </CardContent>
       </Card>
 
-      {showAddProjector && <AddProjectorModal siteId={siteId} onClose={() => setShowAddProjector(false)} />}
+      {showAddProjector && (
+        <AddProjectorModal
+          siteId={siteId}
+          onClose={() => setShowAddProjector(false)}
+          onSuccess={() => {
+            // Refresh site data
+            fetch(`/api/admin/sites/${siteId}`)
+              .then((res) => res.json())
+              .then((data) => setSite(data.site))
+              .catch((err) => console.error("Error refreshing site:", err))
+            setShowAddProjector(false)
+          }}
+        />
+      )}
       {selectedProjector && (
         <ScheduleServiceModal
           siteId={selectedProjector.siteId}
           projectorId={selectedProjector.projectorId}
           onClose={() => {
+            setSelectedProjector(null)
+            setShowSchedule(false)
+          }}
+          onSuccess={() => {
+            // Refresh site data
+            fetch(`/api/admin/sites/${siteId}`)
+              .then((res) => res.json())
+              .then((data) => setSite(data.site))
+              .catch((err) => console.error("Error refreshing site:", err))
             setSelectedProjector(null)
             setShowSchedule(false)
           }}

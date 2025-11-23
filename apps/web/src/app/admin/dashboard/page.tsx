@@ -7,6 +7,9 @@ export default function AdminDashboard() {
   const { activeView, setActiveView } = useAdminDashboard()
 
   return (
-    <AdminDashboardd activeView={activeView} onViewChange={setActiveView} />
+    <AdminDashboardd
+      activeView={activeView}
+      onViewChange={(view: any) => setActiveView(view)}
+    />
   )
 }

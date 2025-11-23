@@ -6,6 +6,7 @@ import FieldWorkersView from "./admin/field-workers-view"
 import OverviewView from "./admin/overview-view"
 import SiteDetailPage from "./admin/site-detail-page"
 import ProjectorDetailPage from "./admin/projector-detail-page"
+import FieldWorkerDetailPage from "./admin/field-worker-detail-page"
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -15,11 +16,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 
-type ViewType = "overview" | "sites" | "fieldworkers" | "site-detail" | "projector-detail"
+type ViewType = "overview" | "sites" | "fieldworkers" | "site-detail" | "projector-detail" | "fieldworker-detail"
 
 interface DetailPageState {
   siteId?: string
   projectorId?: string
+  workerId?: string
 }
 
 interface AdminDashboarddProps {
@@ -40,8 +42,17 @@ export default function AdminDashboardd({ activeView, onViewChange }: AdminDashb
     onViewChange("projector-detail")
   }
 
+  const handleViewWorkerDetail = (workerId: string) => {
+    setDetailState({ workerId })
+    onViewChange("fieldworker-detail")
+  }
+
   const handleBack = () => {
-    onViewChange("sites")
+    if (activeView === "site-detail" || activeView === "projector-detail") {
+      onViewChange("sites")
+    } else if (activeView === "fieldworker-detail") {
+      onViewChange("fieldworkers")
+    }
     setDetailState({})
   }
 
@@ -131,6 +142,25 @@ export default function AdminDashboardd({ activeView, onViewChange }: AdminDashb
           <BreadcrumbPage>Field Workers</BreadcrumbPage>
         </BreadcrumbItem>
       )
+    } else if (activeView === "fieldworker-detail") {
+      breadcrumbs.push(
+        <BreadcrumbSeparator key="sep1" />,
+        <BreadcrumbItem key="fieldworkers">
+          <BreadcrumbLink
+            onClick={(e) => {
+              e.preventDefault()
+              onViewChange("fieldworkers")
+            }}
+            className="cursor-pointer"
+          >
+            Field Workers
+          </BreadcrumbLink>
+        </BreadcrumbItem>,
+        <BreadcrumbSeparator key="sep2" />,
+        <BreadcrumbItem key="fieldworker-detail">
+          <BreadcrumbPage>Worker Details</BreadcrumbPage>
+        </BreadcrumbItem>
+      )
     }
 
     return breadcrumbs
@@ -162,7 +192,12 @@ export default function AdminDashboardd({ activeView, onViewChange }: AdminDashb
                 onBack={handleBack}
               />
             )}
-            {activeView === "fieldworkers" && <FieldWorkersView />}
+            {activeView === "fieldworkers" && (
+              <FieldWorkersView onWorkerClick={handleViewWorkerDetail} />
+            )}
+            {activeView === "fieldworker-detail" && detailState.workerId && (
+              <FieldWorkerDetailPage workerId={detailState.workerId} onBack={handleBack} />
+            )}
           </div>
         </main>
       </div>

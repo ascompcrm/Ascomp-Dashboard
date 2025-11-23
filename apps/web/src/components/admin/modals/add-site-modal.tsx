@@ -3,30 +3,56 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useData } from "@/lib/data-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface AddSiteModalProps {
   onClose: () => void
+  onSuccess?: () => void
 }
 
-export default function AddSiteModal({ onClose }: AddSiteModalProps) {
-  const { addSite } = useData()
+export default function AddSiteModal({ onClose, onSuccess }: AddSiteModalProps) {
   const [formData, setFormData] = useState({
-    name: "",
-    location: "",
+    siteName: "",
     address: "",
+    contactDetails: "",
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (formData.name && formData.location && formData.address) {
-      addSite({
-        ...formData,
-        createdDate: new Date().toISOString().split("T")[0],
+    if (!formData.siteName || !formData.address || !formData.contactDetails) {
+      setError("All fields are required")
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/admin/sites", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
       })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create site")
+      }
+
+      if (onSuccess) {
+        onSuccess()
+      }
       onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -42,21 +68,11 @@ export default function AddSiteModal({ onClose }: AddSiteModalProps) {
               <label className="text-sm font-medium text-foreground">Site Name</label>
               <input
                 type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={formData.siteName}
+                onChange={(e) => setFormData({ ...formData, siteName: e.target.value })}
                 className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="e.g., Downtown Theater"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground">Location</label>
-              <input
-                type="text"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="e.g., Downtown District"
+                required
               />
             </div>
 
@@ -68,15 +84,44 @@ export default function AddSiteModal({ onClose }: AddSiteModalProps) {
                 className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 placeholder="Full address"
                 rows={2}
+                required
               />
             </div>
 
+            <div>
+              <label className="text-sm font-medium text-foreground">Contact Details</label>
+              <input
+                type="text"
+                value={formData.contactDetails}
+                onChange={(e) => setFormData({ ...formData, contactDetails: e.target.value })}
+                className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Phone number or contact info"
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
+                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={onClose} className="border-border bg-transparent">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="border-border bg-transparent"
+                disabled={loading}
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                Add Site
+              <Button
+                type="submit"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={loading}
+              >
+                {loading ? "Creating..." : "Add Site"}
               </Button>
             </div>
           </form>

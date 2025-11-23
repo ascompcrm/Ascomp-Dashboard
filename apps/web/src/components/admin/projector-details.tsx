@@ -31,8 +31,13 @@ export default function ProjectorDetails({ site, projector, onSchedule, onViewDe
         </div>
         <div className="text-xs text-muted-foreground space-y-1">
           <p>Model: {projector.model}</p>
-          <p>Last Service: {new Date(projector.lastServiceDate).toLocaleDateString()}</p>
-          <p>Next Due: {new Date(projector.nextServiceDue).toLocaleDateString()}</p>
+          <p>Serial: {projector.serialNumber}</p>
+          {projector.lastServiceDate && (
+            <p>Last Service: {new Date(projector.lastServiceDate).toLocaleDateString()}</p>
+          )}
+          {projector.nextServiceDue && (
+            <p>Next Due: {new Date(projector.nextServiceDue).toLocaleDateString()}</p>
+          )}
         </div>
       </div>
       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>

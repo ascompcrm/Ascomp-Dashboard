@@ -1,47 +1,74 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { useData } from "@/lib/data-context"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import SearchBar from "../search-bar"
 import FilterTabs from "../filter-tabs"
 import AddFieldWorkerModal from "./modals/add-field-worker-modal"
 
-export default function FieldWorkersView() {
-  const { fieldWorkers, scheduledTasks } = useData()
+interface FieldWorker {
+  id: string
+  name: string
+  email: string
+  joinDate: string
+  lastActiveDate: string
+  sitesCompleted: number
+  pendingTasks: number
+  totalTasks: number
+}
+
+interface FieldWorkersViewProps {
+  onWorkerClick?: (workerId: string) => void
+}
+
+export default function FieldWorkersView({ onWorkerClick }: FieldWorkersViewProps) {
+  const [workers, setWorkers] = useState<FieldWorker[]>([])
+  const [loading, setLoading] = useState(true)
   const [showAddWorker, setShowAddWorker] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [workerFilter, setWorkerFilter] = useState("all")
 
-  const getWorkerTaskCount = (workerId: string) => {
-    return scheduledTasks.filter((t) => t.fieldWorkerId === workerId && t.status === "pending").length
+  const fetchWorkers = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("/api/admin/field-workers")
+      if (!response.ok) {
+        throw new Error("Failed to fetch field workers")
+      }
+      const result = await response.json()
+      setWorkers(result.workers || [])
+    } catch (error) {
+      console.error("Error fetching field workers:", error)
+      setWorkers([])
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const getWorkerCompletedCount = (workerId: string) => {
-    return scheduledTasks.filter((t) => t.fieldWorkerId === workerId && t.status === "completed").length
-  }
+  useEffect(() => {
+    fetchWorkers()
+  }, [])
 
   const filteredWorkers = useMemo(() => {
-    return fieldWorkers.filter((worker) => {
+    return workers.filter((worker) => {
       const matchesSearch =
         worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        worker.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        worker.phone.includes(searchQuery)
+        worker.email.toLowerCase().includes(searchQuery.toLowerCase())
 
       if (!matchesSearch) return false
 
       if (workerFilter === "all") return true
-      if (workerFilter === "active") return getWorkerTaskCount(worker.id) > 0
-      if (workerFilter === "idle") return getWorkerTaskCount(worker.id) === 0
+      if (workerFilter === "active") return worker.pendingTasks > 0
+      if (workerFilter === "idle") return worker.pendingTasks === 0
 
       return true
     })
-  }, [fieldWorkers, searchQuery, workerFilter])
+  }, [workers, searchQuery, workerFilter])
 
   return (
     <div className="space-y-6">
-      {/* Header with Add Button */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-foreground">Field Workers</h2>
         <Button
@@ -53,7 +80,7 @@ export default function FieldWorkersView() {
       </div>
 
       <SearchBar
-        placeholder="Search workers by name, email, or phone..."
+        placeholder="Search workers by name or email..."
         value={searchQuery}
         onChange={setSearchQuery}
       />
@@ -63,44 +90,80 @@ export default function FieldWorkersView() {
         <FilterTabs tabs={["all", "active", "idle"]} activeTab={workerFilter} onTabChange={setWorkerFilter} />
       </div>
 
-      {/* Workers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredWorkers.length === 0 ? (
-          <Card className="border-border col-span-full">
-            <CardContent className="pt-6 text-center">
-              <p className="text-muted-foreground">No field workers found matching your search.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredWorkers.map((worker) => (
-            <Card key={worker.id} className="border-border">
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="border-border">
               <CardHeader>
-                <CardTitle className="text-lg">{worker.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">{worker.email}</p>
+                <Skeleton className="h-6 w-32 mb-2" />
+                <Skeleton className="h-4 w-48" />
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Sites Completed</p>
-                    <p className="font-semibold text-foreground text-lg">{getWorkerCompletedCount(worker.id)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Pending Tasks</p>
-                    <p className="font-semibold text-foreground text-lg">{getWorkerTaskCount(worker.id)}</p>
-                  </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
                 </div>
-                <div className="border-t border-border pt-3 text-xs space-y-1 text-muted-foreground">
-                  <p>Joined: {new Date(worker.joinDate).toLocaleDateString()}</p>
-                  <p>Last Active: {new Date(worker.lastActiveDate).toLocaleDateString()}</p>
-                  <p>Phone: {worker.phone}</p>
-                </div>
+                <Skeleton className="h-20" />
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredWorkers.length === 0 ? (
+            <Card className="border-border col-span-full">
+              <CardContent className="pt-6 text-center">
+                <p className="text-muted-foreground">No field workers found matching your search.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredWorkers.map((worker) => (
+              <Card
+                key={worker.id}
+                className="border-border hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => onWorkerClick?.(worker.id)}
+              >
+                <CardHeader className="">
+                  <CardTitle className="text-lg font-semibold mb-1">{worker.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{worker.email}</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                      <p className="text-xs text-muted-foreground mb-1">Completed</p>
+                      <p className="text-2xl font-bold text-foreground">{worker.sitesCompleted}</p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                      <p className="text-xs text-muted-foreground mb-1">Pending</p>
+                      <p className="text-2xl font-bold text-foreground">{worker.pendingTasks}</p>
+                    </div>
+                  </div>
 
-      {showAddWorker && <AddFieldWorkerModal onClose={() => setShowAddWorker(false)} />}
+                  {/* Additional Info */}
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Last Active</span>
+                      <span className="text-foreground font-medium">
+                        {new Date(worker.lastActiveDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+
+      {showAddWorker && (
+        <AddFieldWorkerModal
+          onClose={() => setShowAddWorker(false)}
+          onSuccess={() => {
+            fetchWorkers()
+          }}
+        />
+      )}
     </div>
   )
 }
