@@ -22,7 +22,7 @@ export default function SiteDetailPage({ siteId: siteIdProp }: SiteDetailPagePro
   const [loading, setLoading] = useState(true)
   const [showAddProjector, setShowAddProjector] = useState(false)
   const [selectedProjector, setSelectedProjector] = useState<{ siteId: string; projectorId: string } | null>(null)
-  const [showSchedule, setShowSchedule] = useState(false)
+  const [_showSchedule, setShowSchedule] = useState(false)
 
   useEffect(() => {
     const fetchSite = async () => {
@@ -74,7 +74,6 @@ export default function SiteDetailPage({ siteId: siteIdProp }: SiteDetailPagePro
   }
 
   const totalServices = site.projectors.reduce((acc, proj) => acc + proj.serviceHistory.length, 0)
-  const completedProjectors = site.projectors.filter((p) => p.status === "completed").length
   const pendingProjectors = site.projectors.filter((p) => p.status === "pending").length
 
   return (

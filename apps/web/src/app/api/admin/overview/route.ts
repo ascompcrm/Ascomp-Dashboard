@@ -1,8 +1,5 @@
-import prisma from "@my-better-t-app/db"
 import { NextResponse } from "next/server"
-import { ServiceStatus } from "../../../../../../../packages/db/prisma/generated/enums"
-// import prisma from "@my-better-t-app/db"
-// import { ServiceStatus } from "@my-better-t-app/db/prisma/generated/enums"
+import prisma, { ServiceStatus } from "@my-better-t-app/db"
 
 export async function GET() {
   try {
@@ -178,7 +175,7 @@ export async function GET() {
           joinDate: fw.createdAt.toISOString().split("T")[0],
         }
       })
-      .sort((a, b) => new Date(b.lastActiveDate).getTime() - new Date(a.lastActiveDate).getTime())
+      .sort((a, b) => new Date(b.lastActiveDate || "").getTime() - new Date(a.lastActiveDate || "").getTime())
       .slice(0, 4)
 
     // Format recent tasks

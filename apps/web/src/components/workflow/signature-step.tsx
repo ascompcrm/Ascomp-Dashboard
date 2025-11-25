@@ -21,10 +21,13 @@ const uploadSignature = async (dataUrl: string, role: 'engineer' | 'site') => {
 }
 
 const dataUrlToFile = (dataUrl: string, filename: string) => {
-  const arr = dataUrl.split(',')
-  const mimeMatch = arr[0].match(/:(.*?);/)
+  const [metaPart, dataPart] = dataUrl.split(',')
+  if (!metaPart || !dataPart) {
+    throw new Error('Invalid data URL')
+  }
+  const mimeMatch = metaPart.match(/:(.*?);/)
   const mime = mimeMatch ? mimeMatch[1] : 'image/png'
-  const bstr = atob(arr[1])
+  const bstr = atob(dataPart)
   let n = bstr.length
   const u8arr = new Uint8Array(n)
   while (n--) {

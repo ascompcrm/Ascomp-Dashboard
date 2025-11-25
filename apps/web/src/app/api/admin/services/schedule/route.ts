@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@my-better-t-app/db"
-import { ServiceStatus } from "../../../../../../../../packages/db/prisma/generated/enums"
+import prisma, { ServiceStatus } from "@my-better-t-app/db"
 
 // Helper to generate Mongo-style IDs (since schema uses string IDs)
 const generateObjectId = () => [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join("")

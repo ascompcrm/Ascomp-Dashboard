@@ -8,7 +8,6 @@ import StartServiceStep from "@/components/workflow/start-service-step"
 import RecordWorkStep from "@/components/workflow/record-work-step"
 import SignatureStep from "@/components/workflow/signature-step"
 import GenerateReportStep from "@/components/workflow/generate-report-step"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,7 +59,11 @@ export default function WorkflowPage() {
   ]
 
   const safeStepIndex = Math.max(0, Math.min(currentStep, steps.length - 1))
-  const CurrentStepComponent = steps[safeStepIndex].component
+  const currentStepData = steps[safeStepIndex]
+  if (!currentStepData) {
+    return <div>Error: Step not found</div>
+  }
+  const CurrentStepComponent = currentStepData.component
 
   const handleNext = (payload: any) => {
     const newData = { ...workflowData, ...payload }
@@ -77,12 +80,6 @@ export default function WorkflowPage() {
       setCurrentStep(currentStep - 1)
       localStorage.setItem("workflowStep", String(currentStep - 1))
     }
-  }
-
-  const handleExit = () => {
-    localStorage.removeItem("workflowData")
-    localStorage.removeItem("workflowStep")
-    router.replace("/")
   }
 
   const handleLogout = () => {

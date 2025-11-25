@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import jsPDF from 'jspdf'
 
-export default function GenerateReportStep({ data, onNext, onBack }: any) {
+export default function GenerateReportStep({ data, onBack }: any) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionComplete, setSubmissionComplete] = useState(false)

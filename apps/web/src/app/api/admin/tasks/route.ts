@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@my-better-t-app/db"
-import { ServiceStatus } from "../../../../../../../packages/db/prisma/generated/enums"
+import prisma, { ServiceStatus } from "@my-better-t-app/db"
 
 export async function GET(request: NextRequest) {
   try {

@@ -141,7 +141,7 @@ export default function OverviewView() {
     )
   }
 
-  const { stats, pendingProjectors, recentWorkers, recentTasks } = data
+  const { stats, pendingProjectors, recentWorkers } = data
 
   const statCards = [
     { label: "Total Sites", value: stats.totalSites, color: "text-slate-700" },

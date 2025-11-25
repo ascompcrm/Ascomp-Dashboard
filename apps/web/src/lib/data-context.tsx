@@ -195,7 +195,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [fieldWorkers, setFieldWorkers] = useState<FieldWorker[]>(mockFieldWorkers)
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([])
 
-  const login = (email: string, password: string) => {
+  const login = (email: string) => {
     if (email.includes("fieldworker")) {
       setCurrentUser({
         id: "fw-current",
@@ -263,9 +263,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
                       ...p,
                       lastServiceDate,
                       status: "completed" as const,
-                      nextServiceDue: new Date(new Date(lastServiceDate).getTime() + 180 * 24 * 60 * 60 * 1000)
-                        .toISOString()
-                        .split("T")[0],
+                      nextServiceDue:
+                        new Date(new Date(lastServiceDate).getTime() + 180 * 24 * 60 * 60 * 1000)
+                          .toISOString()
+                          .split("T")[0] || "",
                     }
                   : p,
               ),
@@ -303,7 +304,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     const task = scheduledTasks.find((t) => t.id === taskId)
     if (task) {
-      updateProjectorService(task.siteId, task.projectorId, new Date().toISOString().split("T")[0])
+      updateProjectorService(task.siteId, task.projectorId, new Date().toISOString().split("T")[0] || new Date().toISOString())
     }
   }
 

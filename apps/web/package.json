@@ -64,9 +64,9 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
-    "@my-better-t-app/db": "workspace:*",
     "@my-better-t-app/auth": "workspace:*",
     "@my-better-t-app/config": "workspace:*",
+    "@my-better-t-app/db": "workspace:*",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",

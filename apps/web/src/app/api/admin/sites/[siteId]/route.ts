@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@my-better-t-app/db"
-import { ServiceStatus } from "../../../../../../../../packages/db/prisma/generated/enums"
+import prisma, { ServiceStatus } from "@my-better-t-app/db"
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ siteId: string }> }
+  _request: NextRequest,
+  context: { params: Promise<{ siteId: string }> }
 ) {
   try {
-    const { siteId } = await params
+    const { siteId } = await context.params
 
     const site = await prisma.site.findUnique({
       where: { id: siteId },

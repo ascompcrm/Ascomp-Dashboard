@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -17,7 +16,6 @@ export default function LoginForm() {
   const [passwordError, setPasswordError] = useState('')
   const [touched, setTouched] = useState({ email: false, password: false })
   const { login } = useAuth()
-  const router = useRouter()
 
   const validateEmail = (emailValue: string): string => {
     if (!emailValue.trim()) {

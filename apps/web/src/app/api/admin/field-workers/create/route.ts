@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@my-better-t-app/auth"
 import { Resend } from "resend"
-import prisma from "@my-better-t-app/db"
-import { Role } from "../../../../../../../../packages/db/prisma/generated/enums"
+import prisma, { Role } from "@my-better-t-app/db"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 

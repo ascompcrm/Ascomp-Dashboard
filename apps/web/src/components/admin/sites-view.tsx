@@ -45,7 +45,7 @@ export default function SitesView() {
   const [showAddSite, setShowAddSite] = useState(false)
   const [selectedSite, setSelectedSite] = useState<string | null>(null)
   const [selectedProjector, setSelectedProjector] = useState<{ siteId: string; projectorId: string } | null>(null)
-  const [showSchedule, setShowSchedule] = useState(false)
+  const [_showSchedule, setShowSchedule] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [projectorFilter, setProjectorFilter] = useState("all")
 

@@ -20,7 +20,7 @@ interface Service {
   status: string
 }
 
-export default function SelectServiceStep({ data, onNext }: any) {
+export default function SelectServiceStep({ onNext }: any) {
   const [selected, setSelected] = useState<string | null>(null)
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)

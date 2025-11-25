@@ -24,7 +24,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
-  const { data: session, isPending, error } = authClient.useSession()
+  const { data: session, isPending } = authClient.useSession()
 
   const login = async (email: string, password: string) => {
     return new Promise<void>((resolve, reject) => {

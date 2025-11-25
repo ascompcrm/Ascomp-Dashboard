@@ -11,7 +11,7 @@ interface ProjectorDetailsProps {
   onViewDetails?: () => void
 }
 
-export default function ProjectorDetails({ site, projector, onSchedule, onViewDetails }: ProjectorDetailsProps) {
+export default function ProjectorDetails({ site: _site, projector, onSchedule, onViewDetails }: ProjectorDetailsProps) {
   const statusColor =
     projector.status === "pending"
       ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
