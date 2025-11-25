@@ -110,7 +110,7 @@ export default function WorkflowPage() {
   return (
     <div className="min-h-screen w-full bg-white">
       <div className="border-b-2 border-black p-3 sm:p-4 sticky top-0 bg-white/95 backdrop-blur z-50 w-full">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
+        <div className="flex justify-between gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 sm:h-12 sm:w-12 border-2 border-black rounded-xl overflow-hidden bg-white hidden sm:flex">
               <Image src="/LOGO/Ascomp.png" alt="Ascomp INC" fill className="object-contain p-1.5" sizes="48px" />

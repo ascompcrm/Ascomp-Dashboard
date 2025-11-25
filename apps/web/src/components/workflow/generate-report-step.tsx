@@ -1,13 +1,10 @@
 import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import jsPDF from 'jspdf'
 
 export default function GenerateReportStep({ data, onBack }: any) {
-  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submissionComplete, setSubmissionComplete] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const hasImageEvidence = useMemo(() => {
     if (!data?.workImages) return false
@@ -317,8 +314,56 @@ export default function GenerateReportStep({ data, onBack }: any) {
     pdf.save(`Service_Report_${service.projector}_${new Date().getTime()}.pdf`)
   }
 
+  const submitServiceRecord = async () => {
+    if (!data.selectedService?.id) {
+      throw new Error('Service record ID is missing')
+    }
+
+    const summarizeImages = () => {
+      if (!data.workImages) {
+        return { broken: [], other: [] }
+      }
+      if (Array.isArray(data.workImages)) {
+        return {
+          broken: [],
+          other: data.workImages,
+        }
+      }
+      return {
+        broken: data.workImages.broken || [],
+        other: data.workImages.other || [],
+      }
+    }
+
+    const images = summarizeImages()
+
+    const response = await fetch('/api/user/services/complete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        serviceRecordId: data.selectedService.id,
+        workDetails: data.workDetails || {},
+        signatures: {
+          engineer: data.engineerSignatureUrl,
+          site: data.siteSignatureUrl,
+        },
+        images: images.other,
+        brokenImages: images.broken,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Submission failed' }))
+      throw new Error(errorData.error || 'Failed to submit service record')
+    }
+
+    return response.json()
+  }
+
   const handleGenerateAndSubmit = async () => {
-    if (isSubmitting || submissionComplete) return
+    if (isSubmitting) return
 
     setIsSubmitting(true)
     setSubmitError(null)
@@ -327,21 +372,31 @@ export default function GenerateReportStep({ data, onBack }: any) {
         throw new Error('Please upload required images before generating the report.')
       }
       const issues = getIssueEntries()
+      
+      // Generate PDF first
       await generatePDF(issues)
+      
+      // Submit to database
+      await submitServiceRecord()
+      
+      // Save to localStorage for backup
       saveReportToLocalStorage(issues)
-      setSubmissionComplete(true)
+      
+      // Clear workflow data and reset to first step BEFORE redirecting
+      localStorage.removeItem('workflowData')
+      localStorage.removeItem('workflowStep')
+      localStorage.removeItem('siteInChargeSignature')
+      localStorage.removeItem('engineerSignature')
+      
+      // Small delay to ensure PDF download starts, then redirect immediately
+      setTimeout(() => {
+        window.location.href = '/user/workflow'
+      }, 200)
     } catch (error) {
       console.error('Error generating or submitting report:', error)
-      setSubmitError('Failed to generate or submit report. Please try again.')
-    } finally {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to generate or submit report. Please try again.')
       setIsSubmitting(false)
     }
-  }
-
-  const handleFinish = () => {
-    localStorage.removeItem('workflowData')
-    localStorage.removeItem('workflowStep')
-    router.push('/user/workflow')
   }
 
   const issues = getIssueEntries()
@@ -432,19 +487,13 @@ export default function GenerateReportStep({ data, onBack }: any) {
           </div>
         )}
 
-        {!submissionComplete ? (
-          <Button
-            onClick={handleGenerateAndSubmit}
-            disabled={isSubmitting}
-            className="w-full bg-black text-white hover:bg-gray-800 border-2 border-black font-bold py-2 text-sm disabled:opacity-50"
-          >
-            {isSubmitting ? 'Submitting...' : 'Generate PDF Report and Submit'}
-          </Button>
-        ) : (
-          <div className="p-3 bg-black text-white border-2 border-black text-center font-bold text-sm">
-            ✓ Report Generated and Submitted Successfully
-          </div>
-        )}
+        <Button
+          onClick={handleGenerateAndSubmit}
+          disabled={isSubmitting}
+          className="w-full bg-black text-white hover:bg-gray-800 border-2 border-black font-bold py-2 text-sm disabled:opacity-50"
+        >
+          {isSubmitting ? 'Generating PDF...' : 'Generate PDF Report and Submit'}
+        </Button>
       </Card>
 
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -452,17 +501,10 @@ export default function GenerateReportStep({ data, onBack }: any) {
           onClick={onBack}
           variant="outline"
           className="border-2 border-black text-black hover:bg-gray-100 flex-1"
+          disabled={isSubmitting}
         >
           Back
         </Button>
-        {submissionComplete && (
-          <Button
-            onClick={handleFinish}
-            className="bg-black text-white hover:bg-gray-800 border-2 border-black font-bold flex-1"
-          >
-            Return to Dashboard
-          </Button>
-        )}
       </div>
     </div>
   )

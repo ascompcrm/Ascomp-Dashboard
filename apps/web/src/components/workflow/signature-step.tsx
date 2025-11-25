@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Maximize2, X } from 'lucide-react'
 
 const uploadSignature = async (dataUrl: string, role: 'engineer' | 'site') => {
   const formData = new FormData()
@@ -42,8 +43,11 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
   const [siteSignatureUrl, setSiteSignatureUrl] = useState<string | null>(data.siteSignatureUrl || null)
   const [engineerSignatureUrl, setEngineerSignatureUrl] = useState<string | null>(data.engineerSignatureUrl || null)
   const [uploading, setUploading] = useState(false)
+  const [fullscreenCanvas, setFullscreenCanvas] = useState<'site' | 'engineer' | null>(null)
   const siteInChargeCanvasRef = useRef<HTMLCanvasElement>(null)
   const engineerCanvasRef = useRef<HTMLCanvasElement>(null)
+  const fullscreenCanvasRef = useRef<HTMLCanvasElement>(null)
+  const isDrawingRef = useRef(false)
 
   useEffect(() => {
     const savedSiteSignature = localStorage.getItem('siteInChargeSignature')
@@ -53,54 +57,151 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
     if (savedEngineerSignature) setEngineerSignature(savedEngineerSignature)
   }, [])
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>, isEngineer: boolean) => {
-    const canvas = isEngineer ? engineerCanvasRef.current : siteInChargeCanvasRef.current
+  useEffect(() => {
+    // Initialize canvas context settings
+    const initCanvas = (canvas: HTMLCanvasElement) => {
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      ctx.strokeStyle = '#000000'
+      ctx.lineWidth = 3
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+    }
+
+    if (siteInChargeCanvasRef.current) {
+      initCanvas(siteInChargeCanvasRef.current)
+    }
+    if (engineerCanvasRef.current) {
+      initCanvas(engineerCanvasRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    // Initialize fullscreen canvas when opened
+    if (fullscreenCanvas && fullscreenCanvasRef.current) {
+      const ctx = fullscreenCanvasRef.current.getContext('2d')
+      if (ctx) {
+        ctx.strokeStyle = '#000000'
+        ctx.lineWidth = 4
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+      }
+    }
+  }, [fullscreenCanvas])
+
+  const getCoordinates = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+
+    if ('touches' in e && e.touches.length > 0 && e.touches[0]) {
+      const touch = e.touches[0]
+      return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY,
+      }
+    } else if ('clientX' in e) {
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+      }
+    }
+    return { x: 0, y: 0 }
+  }
+
+  const startDrawing = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+    isEngineer: boolean,
+    isFullscreen = false
+  ) => {
+    e.preventDefault()
+    const canvas = isFullscreen
+      ? fullscreenCanvasRef.current
+      : isEngineer
+        ? engineerCanvasRef.current
+        : siteInChargeCanvasRef.current
     if (!canvas) return
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const rect = canvas.getBoundingClientRect()
+    isDrawingRef.current = true
+    const coords = getCoordinates(e.nativeEvent, canvas)
     ctx.beginPath()
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top)
+    ctx.moveTo(coords.x, coords.y)
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      ctx.lineTo(moveEvent.clientX - rect.left, moveEvent.clientY - rect.top)
+    const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+      if (!isDrawingRef.current) return
+      moveEvent.preventDefault()
+      const moveCoords = getCoordinates(moveEvent, canvas)
+      ctx.lineTo(moveCoords.x, moveCoords.y)
       ctx.stroke()
     }
 
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+    const handleEnd = () => {
+      isDrawingRef.current = false
+      document.removeEventListener('mousemove', handleMove as EventListener)
+      document.removeEventListener('mouseup', handleEnd)
+      document.removeEventListener('touchmove', handleMove as EventListener)
+      document.removeEventListener('touchend', handleEnd)
     }
 
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('mousemove', handleMove as EventListener)
+    document.addEventListener('mouseup', handleEnd)
+    document.addEventListener('touchmove', handleMove as EventListener, { passive: false })
+    document.addEventListener('touchend', handleEnd)
   }
 
-  const clearSignature = (isEngineer: boolean) => {
-    const canvas = isEngineer ? engineerCanvasRef.current : siteInChargeCanvasRef.current
+  const clearSignature = (isEngineer: boolean, isFullscreen = false) => {
+    const canvas = isFullscreen
+      ? fullscreenCanvasRef.current
+      : isEngineer
+        ? engineerCanvasRef.current
+        : siteInChargeCanvasRef.current
     if (canvas) {
       const ctx = canvas.getContext('2d')
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height)
       }
     }
-    if (isEngineer) {
-      setEngineerSignature(null)
-      localStorage.removeItem('engineerSignature')
-    } else {
-      setSiteInChargeSignature(null)
-      localStorage.removeItem('siteInChargeSignature')
+    if (!isFullscreen) {
+      if (isEngineer) {
+        setEngineerSignature(null)
+        localStorage.removeItem('engineerSignature')
+      } else {
+        setSiteInChargeSignature(null)
+        localStorage.removeItem('siteInChargeSignature')
+      }
     }
   }
 
-  const saveSignature = async (isEngineer: boolean) => {
-    const canvas = isEngineer ? engineerCanvasRef.current : siteInChargeCanvasRef.current
+  const copyFullscreenToMain = (isEngineer: boolean) => {
+    const fullscreenCanvas = fullscreenCanvasRef.current
+    const mainCanvas = isEngineer ? engineerCanvasRef.current : siteInChargeCanvasRef.current
+    if (fullscreenCanvas && mainCanvas) {
+      const fullscreenCtx = fullscreenCanvas.getContext('2d')
+      const mainCtx = mainCanvas.getContext('2d')
+      if (fullscreenCtx && mainCtx) {
+        mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height)
+        mainCtx.drawImage(fullscreenCanvas, 0, 0, mainCanvas.width, mainCanvas.height)
+      }
+    }
+  }
+
+  const saveSignature = async (isEngineer: boolean, fromFullscreen = false) => {
+    const canvas = fromFullscreen
+      ? fullscreenCanvasRef.current
+      : isEngineer
+        ? engineerCanvasRef.current
+        : siteInChargeCanvasRef.current
     if (canvas) {
       const signature = canvas.toDataURL()
       try {
         setUploading(true)
+        if (fromFullscreen) {
+          copyFullscreenToMain(isEngineer)
+        }
         const uploaded = await uploadSignature(signature, isEngineer ? 'engineer' : 'site')
         if (isEngineer) {
           setEngineerSignature(signature)
@@ -111,12 +212,32 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
           setSiteSignatureUrl(uploaded.url)
           localStorage.setItem('siteInChargeSignature', signature)
         }
+        if (fromFullscreen) {
+          setFullscreenCanvas(null)
+        }
       } catch (error) {
         console.error('Signature upload failed:', error)
       } finally {
         setUploading(false)
       }
     }
+  }
+
+  const openFullscreen = (isEngineer: boolean) => {
+    setFullscreenCanvas(isEngineer ? 'engineer' : 'site')
+    // Copy existing signature to fullscreen canvas if available
+    setTimeout(() => {
+      const mainCanvas = isEngineer ? engineerCanvasRef.current : siteInChargeCanvasRef.current
+      const fullscreenCanvas = fullscreenCanvasRef.current
+      if (mainCanvas && fullscreenCanvas) {
+        const mainCtx = mainCanvas.getContext('2d')
+        const fullscreenCtx = fullscreenCanvas.getContext('2d')
+        if (mainCtx && fullscreenCtx) {
+          fullscreenCtx.clearRect(0, 0, fullscreenCanvas.width, fullscreenCanvas.height)
+          fullscreenCtx.drawImage(mainCanvas, 0, 0, fullscreenCanvas.width, fullscreenCanvas.height)
+        }
+      }
+    }, 100)
   }
 
   const handleNext = () => {
@@ -146,14 +267,27 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4">
         {/* Site In-charge Signature */}
         <Card className="border-2 border-black p-3 sm:p-4">
-          <h3 className="font-bold text-black mb-2 text-sm sm:text-base">Site In-charge Signature</h3>
-          <canvas
-            ref={siteInChargeCanvasRef}
-            width={200}
-            height={100}
-            onMouseDown={(e) => startDrawing(e, false)}
-            className="border-2 border-black bg-white cursor-crosshair w-full h-24 sm:h-28"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-black text-sm sm:text-base">Site In-charge Signature</h3>
+            <button
+              onClick={() => openFullscreen(false)}
+              className="p-1.5 hover:bg-gray-100 rounded border border-black"
+              aria-label="Expand signature canvas"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="relative">
+            <canvas
+              ref={siteInChargeCanvasRef}
+              width={400}
+              height={200}
+              onMouseDown={(e) => startDrawing(e, false)}
+              onTouchStart={(e) => startDrawing(e, false)}
+              className="border-2 border-black bg-white cursor-crosshair w-full h-32 sm:h-40 touch-none"
+              style={{ touchAction: 'none' }}
+            />
+          </div>
           <div className="flex gap-2 mt-2">
             <Button
               onClick={() => clearSignature(false)}
@@ -164,9 +298,10 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
             </Button>
             <Button
               onClick={() => saveSignature(false)}
-              className="flex-1 bg-black text-white hover:bg-gray-800 border-2 border-black text-xs sm:text-sm"
+              disabled={uploading}
+              className="flex-1 bg-black text-white hover:bg-gray-800 border-2 border-black text-xs sm:text-sm disabled:opacity-50"
             >
-              Save
+              {uploading ? 'Saving...' : 'Save'}
             </Button>
           </div>
           {siteSignatureUrl && (
@@ -178,14 +313,27 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
 
         {/* Engineer Signature */}
         <Card className="border-2 border-black p-3 sm:p-4">
-          <h3 className="font-bold text-black mb-2 text-sm sm:text-base">Engineer Signature</h3>
-          <canvas
-            ref={engineerCanvasRef}
-            width={200}
-            height={100}
-            onMouseDown={(e) => startDrawing(e, true)}
-            className="border-2 border-black bg-white cursor-crosshair w-full h-24 sm:h-28"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-black text-sm sm:text-base">Engineer Signature</h3>
+            <button
+              onClick={() => openFullscreen(true)}
+              className="p-1.5 hover:bg-gray-100 rounded border border-black"
+              aria-label="Expand signature canvas"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="relative">
+            <canvas
+              ref={engineerCanvasRef}
+              width={400}
+              height={200}
+              onMouseDown={(e) => startDrawing(e, true)}
+              onTouchStart={(e) => startDrawing(e, true)}
+              className="border-2 border-black bg-white cursor-crosshair w-full h-32 sm:h-40 touch-none"
+              style={{ touchAction: 'none' }}
+            />
+          </div>
           <div className="flex gap-2 mt-2">
             <Button
               onClick={() => clearSignature(true)}
@@ -196,9 +344,10 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
             </Button>
             <Button
               onClick={() => saveSignature(true)}
-              className="flex-1 bg-black text-white hover:bg-gray-800 border-2 border-black text-xs sm:text-sm"
+              disabled={uploading}
+              className="flex-1 bg-black text-white hover:bg-gray-800 border-2 border-black text-xs sm:text-sm disabled:opacity-50"
             >
-              Save
+              {uploading ? 'Saving...' : 'Save'}
             </Button>
           </div>
           {engineerSignatureUrl && (
@@ -208,6 +357,53 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
           )}
         </Card>
       </div>
+
+      {/* Fullscreen Signature Modal */}
+      {fullscreenCanvas && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-black">
+                {fullscreenCanvas === 'engineer' ? 'Engineer Signature' : 'Site In-charge Signature'}
+              </h3>
+              <button
+                onClick={() => setFullscreenCanvas(null)}
+                className="p-2 hover:bg-gray-100 rounded"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 flex items-center justify-center mb-4 bg-gray-50 rounded-lg p-4 overflow-hidden">
+              <canvas
+                ref={fullscreenCanvasRef}
+                width={800}
+                height={400}
+                onMouseDown={(e) => startDrawing(e, fullscreenCanvas === 'engineer', true)}
+                onTouchStart={(e) => startDrawing(e, fullscreenCanvas === 'engineer', true)}
+                className="border-2 border-black bg-white cursor-crosshair w-full max-w-3xl h-64 sm:h-80 md:h-96 touch-none"
+                style={{ touchAction: 'none' }}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => clearSignature(fullscreenCanvas === 'engineer', true)}
+                variant="outline"
+                className="flex-1 border-2 border-black text-black hover:bg-gray-100"
+              >
+                Clear
+              </Button>
+              <Button
+                onClick={() => saveSignature(fullscreenCanvas === 'engineer', true)}
+                disabled={uploading}
+                className="flex-1 bg-black text-white hover:bg-gray-800 border-2 border-black disabled:opacity-50"
+              >
+                {uploading ? 'Saving...' : 'Save & Close'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!hasImageEvidence && (
         <div className="p-3 border-2 border-amber-500 bg-amber-50 text-amber-800 text-sm mb-4">
