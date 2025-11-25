@@ -6,6 +6,7 @@ import { DataProvider } from '@/lib/data-context'
 import { AuthProvider } from '@/lib/auth-context'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { PwaProvider } from '@/components/pwa-provider'
+import { PwaInstallBanner } from '@/components/pwa-install-banner'
 
 const _geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 const _geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
@@ -15,6 +16,11 @@ export const metadata: Metadata = {
   description: 'Ascomp INC field-service and maintenance workflow portal.',
   applicationName: 'Ascomp INC',
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Ascomp',
+  },
   icons: {
     icon: [
       { url: '/favicon/favicon.svg', type: 'image/svg+xml' },
@@ -42,13 +48,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${_geist.variable} ${_geistMono.variable} font-sans antialiased bg-white text-slate-900`}>
-        <PwaProvider />
-        <AuthProvider>
-          <SidebarProvider>
-            <DataProvider>{children}</DataProvider>
-            <Analytics />
-          </SidebarProvider>
-        </AuthProvider>
+        <PwaProvider>
+          <AuthProvider>
+            <SidebarProvider>
+              <DataProvider>{children}</DataProvider>
+              <Analytics />
+            </SidebarProvider>
+          </AuthProvider>
+          <PwaInstallBanner />
+        </PwaProvider>
       </body>
     </html>
   )

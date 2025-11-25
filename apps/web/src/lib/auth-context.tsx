@@ -1,8 +1,8 @@
 "use client"
 
-import { createContext, useContext, type ReactNode, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { authClient } from './auth-client'
+import { createContext, useContext, type ReactNode, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { authClient } from "./auth-client"
 
 interface User {
   id: string
@@ -34,25 +34,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password,
         },
         {
-          onSuccess: () => {
-            resolve()
+          onSuccess: async () => {
+            try {
+              // Fetch session to get the role (sign-in response doesn't include it)
+              const sessionResponse = await fetch("/api/session", {
+                credentials: "include",
+              })
+              if (!sessionResponse.ok) {
+                throw new Error("Unable to fetch active session")
+              }
+              const sessionData = await sessionResponse.json()
+              const role = (sessionData?.user as User | undefined)?.role
+              console.log("Role:", role)
+              if (!role) {
+                throw new Error("Role not found")
+              }
+              resolve(role as any);
+            } catch (error) {
+              console.error("Failed to fetch session after login:", error)
+              router.replace("/user/workflow")
+              resolve()
+            }
           },
           onError: (error) => {
-            reject(new Error(error.error.message || 'Login failed'))
+            const message =
+              error?.error?.message ||
+              error?.error?.statusText ||
+              "Login failed. Please check your credentials."
+            reject(new Error(message))
           },
-        }
+        },
       )
     })
   }
 
   const logout = async () => {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.push('/')
-        },
-      },
-    })
+    try {
+      await authClient.signOut()
+      router.push("/login")
+    } catch (error) {
+      console.error("Logout failed:", error)
+    }
   }
 
   const user: User | null = session?.user

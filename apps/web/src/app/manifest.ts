@@ -10,7 +10,8 @@ export default function manifest(): MetadataRoute.Manifest {
     display: 'standalone',
     orientation: 'portrait-primary',
     background_color: '#ffffff',
-    theme_color: '#0f172a',
+    theme_color: '#000000',
+    categories: ['productivity', 'business'],
     icons: [
       {
         src: '/favicon/web-app-manifest-192x192.png',
@@ -28,6 +29,7 @@ export default function manifest(): MetadataRoute.Manifest {
         src: '/LOGO/Ascomp.png',
         sizes: '512x512',
         type: 'image/png',
+        purpose: 'any',
       },
     ],
   }
