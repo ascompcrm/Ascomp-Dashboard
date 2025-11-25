@@ -1,12 +1,8 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Select } from '../ui/select'
 
-export default function RecordWorkStep({ data, onNext, onBack }: any) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const [formData, setFormData] = useState({
+const createInitialFormData = () => ({
     // Cinema Details
     cinemaName: '',
     date: new Date().toISOString().split('T')[0],
@@ -114,125 +110,51 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     pm10: '',
     temperature: '',
     humidity: '',
+    startTime: '',
+    endTime: '',
+    signatures: '',
+    reportGenerated: false,
+    reportUrl: '',
   })
 
-  const [showForm, setShowForm] = useState(false)
-  const [scrollPosition, setScrollPosition] = useState(0)
+export default function RecordWorkStep({ data, onNext, onBack }: any) {
+  const [formData, setFormData] = useState(createInitialFormData())
+  const [imageFiles, setImageFiles] = useState<File[]>([])
 
   useEffect(() => {
-    const savedFormData = localStorage.getItem('recordWorkFormData')
-    if (savedFormData && data.workDetails) {
-      setFormData(JSON.parse(savedFormData))
-    } else if (data.workDetails) {
+    if (data.workDetails) {
       setFormData(data.workDetails)
+      return
+    }
+    const savedFormData = localStorage.getItem('recordWorkFormData')
+    if (savedFormData) {
+      setFormData(JSON.parse(savedFormData))
     }
   }, [data])
 
-  const handleChange = (field: string, value: any) => {
-    if (scrollContainerRef.current) {
-      setScrollPosition(scrollContainerRef.current.scrollTop)
+  useEffect(() => {
+    if (data.workImages) {
+      setImageFiles(data.workImages)
     }
-    
+  }, [data.workImages])
+
+  const handleChange = (field: string, value: any) => {
     const newFormData = { ...formData, [field]: value }
     setFormData(newFormData)
     localStorage.setItem('recordWorkFormData', JSON.stringify(newFormData))
-    
-    setTimeout(() => {
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = scrollPosition
-      }
-    }, 0)
   }
 
   const handleResetForm = () => {
     if (window.confirm('Are you sure you want to reset the form? This cannot be undone.')) {
-      const initialFormData = {
-        cinemaName: '',
-        date: new Date().toISOString().split('T')[0],
-        address: '',
-        contactDetails: '',
-        location: '',
-        screenNumber: '',
-        serviceVisitType: '',
-        projectorModel: '',
-        projectorSerialNumber: '',
-        projectorRunningHours: '',
-        replacementRequired: false,
-        reflector: '',
-        uvFilter: '',
-        integratorRod: '',
-        coldMirror: '',
-        foldMirror: '',
-        touchPanel: '',
-        evbImcbBoard: '',
-        pibIcpBoard: '',
-        imbSBoard: '',
-        serialNumberVerified: false,
-        disposableConsumables: '',
-        coolantLevelColor: '',
-        lightEngineWhite: '',
-        lightEngineRed: '',
-        lightEngineGreen: '',
-        lightEngineBlue: '',
-        lightEngineBlack: '',
-        acBlowerVane: '',
-        extractorVane: '',
-        exhaustCfm: '',
-        lightEngineFans: '',
-        cardCageFans: '',
-        radiatorFanPump: '',
-        pumpConnectorHose: '',
-        securityLampHouseLock: '',
-        lampLocMechanism: '',
-        projectorPlacementEnvironment: '',
-        softwareVersion: '',
-        screenHeight: '',
-        screenWidth: '',
-        screenGain: '',
-        screenMake: '',
-        throwDistance: '',
-        lampMakeModel: '',
-        lampTotalRunningHours: '',
-        lampCurrentRunningHours: '',
-        pvVsN: '',
-        pvVsE: '',
-        nvVsE: '',
-        flCenter: '',
-        flLeft: '',
-        flRight: '',
-        contentPlayerModel: '',
-        acStatus: '',
-        leStatus: '',
-        remarks: '',
-        lightEngineSerialNumber: '',
-        whiteX: '', whiteY: '', whiteFl: '',
-        redX: '', redY: '', redFl: '',
-        greenX: '', greenY: '', greenFl: '',
-        blueX: '', blueY: '', blueFl: '',
-        focusBoresight: false,
-        integratorPosition: false,
-        spotsOnScreen: false,
-        screenCroppingOk: false,
-        convergenceOk: false,
-        channelsCheckedOk: false,
-        pixelDefects: '',
-        imageVibration: '',
-        liteloc: '',
-        hcho: '',
-        tvoc: '',
-        pm1: '',
-        pm2_5: '',
-        pm10: '',
-        temperature: '',
-        humidity: '',
-      }
+      const initialFormData = createInitialFormData()
       setFormData(initialFormData)
       localStorage.setItem('recordWorkFormData', JSON.stringify(initialFormData))
+      setImageFiles([])
     }
   }
 
   const handleNext = () => {
-    onNext({ workDetails: formData })
+    onNext({ workDetails: formData, workImages: imageFiles })
     localStorage.setItem('recordWorkFormData', JSON.stringify(formData))
   }
 
@@ -263,32 +185,17 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         Document work performed, issues found, and component status.
       </p>
 
-      {!showForm ? (
-        <Card className="border-2 border-black p-4 mb-4">
-          <p className="text-sm text-gray-700 mb-3">Fill in all service details and component checks.</p>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="w-full bg-black text-white hover:bg-gray-800 border-2 border-black font-bold"
-          >
-            Open Work Form
-          </Button>
-        </Card>
-      ) : (
-        <>
-          <div className="mb-3 flex justify-end">
-            <Button
-              onClick={handleResetForm}
-              variant="outline"
-              className="border-2 border-red-600 text-red-600 hover:bg-red-50 text-sm"
-            >
-              Reset Form
-            </Button>
-          </div>
+      <div className="mb-3 flex justify-end">
+        <Button
+          onClick={handleResetForm}
+          variant="outline"
+          className="border-2 border-red-600 text-red-600 hover:bg-red-50 text-sm"
+        >
+          Reset Form
+        </Button>
+      </div>
 
-          <Card 
-            ref={scrollContainerRef}
-            className="border-2 border-black p-3 sm:p-4 mb-4 max-h-96 overflow-y-auto scroll-smooth"
-          >
+      <div className="border-2 border-black p-3 sm:p-4 mb-4 space-y-6">
             {/* Cinema Details */}
             <FormSection title="Cinema Details">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
@@ -442,8 +349,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               <FormRow>
                 {['reflector', 'uvFilter', 'integratorRod', 'coldMirror', 'foldMirror'].map((field) => (
                   <FormField key={field} label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}>
-                    <Select
-                      value={formData[field as keyof typeof formData] || ''}
+                    <select
+                      value={String(formData[field as keyof typeof formData] ?? '')}
                       onChange={(e) => handleChange(field, e.target.value)}
                       className="w-full border-2 border-black p-2 text-black text-sm"
                     >
@@ -451,7 +358,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                       <option value="OK">OK</option>
                       <option value="Not OK">Not OK</option>
                       <option value="Needs Replacement">Needs Replacement</option>
-                    </Select>
+                    </select>
                   </FormField>
                 ))}
               </FormRow>
@@ -463,7 +370,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 {['touchPanel', 'evbImcbBoard', 'pibIcpBoard', 'imbSBoard'].map((field) => (
                   <FormField key={field} label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}>
                     <select
-                      value={formData[field as keyof typeof formData] || ''}
+                      value={String(formData[field as keyof typeof formData] ?? '')}
                       onChange={(e) => handleChange(field, e.target.value)}
                       className="w-full border-2 border-black p-2 text-black text-sm"
                     >
@@ -519,7 +426,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 {['lightEngineWhite', 'lightEngineRed', 'lightEngineGreen', 'lightEngineBlue', 'lightEngineBlack'].map((field) => (
                   <FormField key={field} label={field.replace('lightEngine', '').toUpperCase()}>
                     <select
-                      value={formData[field as keyof typeof formData] || ''}
+                      value={String(formData[field as keyof typeof formData] ?? '')}
                       onChange={(e) => handleChange(field, e.target.value)}
                       className="w-full border-2 border-black p-2 text-black text-sm"
                     >
@@ -538,7 +445,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 {['acBlowerVane', 'extractorVane', 'lightEngineFans', 'cardCageFans', 'radiatorFanPump'].map((field) => (
                   <FormField key={field} label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}>
                     <select
-                      value={formData[field as keyof typeof formData] || ''}
+                      value={String(formData[field as keyof typeof formData] ?? '')}
                       onChange={(e) => handleChange(field, e.target.value)}
                       className="w-full border-2 border-black p-2 text-black text-sm"
                     >
@@ -820,7 +727,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                         <Input
                           type="number"
                           step="0.001"
-                          value={formData[field as keyof typeof formData] || ''}
+                          value={String(formData[field as keyof typeof formData] ?? '')}
                           onChange={(e) => handleChange(field, e.target.value)}
                           placeholder={field.replace(name.toLowerCase(), '')}
                           className="border-2 border-black text-black text-sm"
@@ -964,6 +871,58 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               </FormRow>
             </FormSection>
 
+            {/* Service Timing & Report */}
+            <FormSection title="Service Timing & Report">
+              <FormRow>
+                <FormField label="Start Time">
+                  <Input
+                    type="datetime-local"
+                    value={formData.startTime}
+                    onChange={(e) => handleChange('startTime', e.target.value)}
+                    className="border-2 border-black text-black text-sm"
+                  />
+                </FormField>
+                <FormField label="End Time">
+                  <Input
+                    type="datetime-local"
+                    value={formData.endTime}
+                    onChange={(e) => handleChange('endTime', e.target.value)}
+                    className="border-2 border-black text-black text-sm"
+                  />
+                </FormField>
+              </FormRow>
+              <FormRow>
+                <FormField label="Report Generated">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.reportGenerated}
+                      onChange={(e) => handleChange('reportGenerated', e.target.checked)}
+                      className="w-4 h-4 border-2 border-black"
+                    />
+                    <span className="text-black text-sm">Yes</span>
+                  </label>
+                </FormField>
+                <FormField label="Report URL">
+                  <Input
+                    value={formData.reportUrl}
+                    onChange={(e) => handleChange('reportUrl', e.target.value)}
+                    placeholder="https://"
+                    className="border-2 border-black text-black text-sm"
+                  />
+                </FormField>
+              </FormRow>
+              <FormField label="Signatures / Notes">
+                <textarea
+                  value={formData.signatures}
+                  onChange={(e) => handleChange('signatures', e.target.value)}
+                  placeholder="Capture signature metadata or notes"
+                  className="w-full border-2 border-black p-2 text-black text-sm"
+                  rows={3}
+                />
+              </FormField>
+            </FormSection>
+
             {/* Remarks */}
             <FormSection title="Remarks">
               <FormField label="Remarks">
@@ -984,9 +943,28 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 />
               </FormField>
             </FormSection>
-          </Card>
-        </>
-      )}
+
+            {/* Service Images */}
+            <FormSection title="Service Images">
+              <p className="text-xs sm:text-sm text-gray-600 mb-2">
+                Upload reference images for this visit (you can add multiple images).
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => setImageFiles(Array.from(e.target.files || []))}
+                className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50"
+              />
+              {imageFiles.length > 0 && (
+                <ul className="text-xs sm:text-sm text-gray-700 list-disc pl-5">
+                  {imageFiles.map((file, index) => (
+                    <li key={index}>{file.name}</li>
+                  ))}
+                </ul>
+              )}
+            </FormSection>
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         <Button

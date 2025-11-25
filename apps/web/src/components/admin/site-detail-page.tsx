@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -10,11 +11,13 @@ import { useState, useEffect } from "react"
 import type { Site, Projector } from "@/lib/types"
 
 interface SiteDetailPageProps {
-  siteId: string
-  onProjectorClick: (siteId: string, projectorId: string) => void
+  siteId?: string
 }
 
-export default function SiteDetailPage({ siteId, onProjectorClick }: SiteDetailPageProps) {
+export default function SiteDetailPage({ siteId: siteIdProp }: SiteDetailPageProps) {
+  const router = useRouter()
+  const params = useParams<{ siteId?: string }>()
+  const siteId = siteIdProp ?? params?.siteId ?? ""
   const [site, setSite] = useState<Site | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAddProjector, setShowAddProjector] = useState(false)
@@ -23,6 +26,12 @@ export default function SiteDetailPage({ siteId, onProjectorClick }: SiteDetailP
 
   useEffect(() => {
     const fetchSite = async () => {
+      if (!siteId) {
+        setLoading(false)
+        setSite(null)
+        return
+      }
+
       try {
         setLoading(true)
         const response = await fetch(`/api/admin/sites/${siteId}`)
@@ -157,7 +166,7 @@ export default function SiteDetailPage({ siteId, onProjectorClick }: SiteDetailP
                     setSelectedProjector({ siteId: site.id, projectorId: projector.id })
                     setShowSchedule(true)
                   }}
-                  onViewDetails={() => onProjectorClick(site.id, projector.id)}
+                  onViewDetails={() => router.push(`/admin/dashboard/sites/${site.id}/projectors/${projector.id}`)}
                 />
               )
             })

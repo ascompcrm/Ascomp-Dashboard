@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter, useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -51,17 +52,24 @@ interface FieldWorkerDetail {
 }
 
 interface FieldWorkerDetailPageProps {
-  workerId: string
-  onBack: () => void
+  workerId?: string
 }
 
-export default function FieldWorkerDetailPage({ workerId, onBack }: FieldWorkerDetailPageProps) {
+export default function FieldWorkerDetailPage({ workerId: workerIdProp }: FieldWorkerDetailPageProps) {
+  const router = useRouter()
+  const params = useParams<{ workerId?: string }>()
+  const workerId = workerIdProp ?? params?.workerId ?? ""
   const [data, setData] = useState<FieldWorkerDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!workerId) {
+        setError("Missing worker id")
+        setLoading(false)
+        return
+      }
       try {
         setLoading(true)
         setError(null)
@@ -133,7 +141,7 @@ export default function FieldWorkerDetailPage({ workerId, onBack }: FieldWorkerD
       <Card className="border-border">
         <CardContent className="pt-6 text-center">
           <p className="text-muted-foreground">{error || "Failed to load work history"}</p>
-          <Button onClick={onBack} className="mt-4">
+          <Button onClick={() => router.push("/admin/dashboard/field-workers")} className="mt-4">
             Go Back
           </Button>
         </CardContent>
@@ -151,7 +159,7 @@ export default function FieldWorkerDetailPage({ workerId, onBack }: FieldWorkerD
           <h2 className="text-2xl font-semibold text-foreground">{worker.name}</h2>
           <p className="text-sm text-muted-foreground mt-1">{worker.email}</p>
         </div>
-        <Button onClick={onBack} variant="outline">
+        <Button onClick={() => router.push("/admin/dashboard/field-workers")} variant="outline">
           Back
         </Button>
       </div>

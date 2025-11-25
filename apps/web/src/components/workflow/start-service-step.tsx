@@ -2,48 +2,59 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
 export default function StartServiceStep({ data, onNext, onBack }: any) {
   const [startTime, setStartTime] = useState<string>('')
+  const service = data?.selectedService
 
   useEffect(() => {
     const now = new Date()
     setStartTime(now.toISOString().slice(0, 16))
   }, [])
 
-  const handleStart = () => {
-    onNext({ startTime })
+  if (!service) {
+    return (
+      <div className="border-2 border-gray-300 p-4 text-sm text-gray-700">
+        No service selected. Please go back and choose a service visit.
+      </div>
+    )
   }
 
-  const service = data.selectedService
+  const infoRows = [
+    { label: 'Site', value: service.site },
+    { label: 'Address', value: service.address || '—' },
+    { label: 'Contact', value: service.contactDetails || '—' },
+    {
+      label: 'Projector',
+      value: `${service.projector} ${service.projectorModel ? `(${service.projectorModel})` : ''}`.trim(),
+    },
+    { label: 'Service #', value: service.serviceNumber ?? '—' },
+    { label: 'Type', value: service.type },
+    { label: 'Status', value: service.status?.replace(/_/g, ' ') || '—' },
+    { label: 'Scheduled Date', value: service.date || '—' },
+  ]
+
+  const handleStart = () => {
+    onNext({ startTime, selectedService: service })
+  }
 
   return (
     <div>
       <h2 className="text-lg sm:text-xl font-bold text-black mb-2">Start Service</h2>
-      <p className="text-sm text-gray-700 mb-4">Begin the service work and record start time.</p>
+      <p className="text-sm text-gray-700 mb-4">Confirm site details and record the start time.</p>
 
-      <Card className="border-2 border-black p-3 sm:p-4 mb-4">
-        <h3 className="font-bold text-black mb-3 text-sm sm:text-base">Service Visit Details</h3>
-        <div className="space-y-2 text-xs sm:text-sm">
-          <div>
-            <span className="font-semibold">Site:</span> {service.site}
-          </div>
-          <div>
-            <span className="font-semibold">Projector:</span> {service.projector}
-          </div>
-          <div>
-            <span className="font-semibold">Type:</span> {service.type}
-          </div>
-          <div>
-            <span className="font-semibold">Priority:</span> Medium
-          </div>
-          <div>
-            <span className="font-semibold">Description:</span> Service for CP2220
-          </div>
+      <div className="border-2 border-black p-4 mb-5">
+        <h3 className="font-semibold text-black mb-3 text-sm sm:text-base">Service Visit Details</h3>
+        <div className="divide-y divide-gray-200 text-xs sm:text-sm">
+          {infoRows.map((row) => (
+            <div key={row.label} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <span className="text-gray-600 font-medium">{row.label}</span>
+              <span className="text-black">{row.value}</span>
+            </div>
+          ))}
         </div>
-      </Card>
+      </div>
 
       <div className="mb-4">
         <label className="block font-semibold text-black mb-2 text-sm">Start Time</label>

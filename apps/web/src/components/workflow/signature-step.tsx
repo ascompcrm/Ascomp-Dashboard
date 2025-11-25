@@ -93,7 +93,7 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
             ref={siteInChargeCanvasRef}
             width={200}
             height={100}
-            onMouseDown={startDrawing}
+            onMouseDown={(e) => startDrawing(e, false)}
             className="border-2 border-black bg-white cursor-crosshair w-full h-24 sm:h-28"
           />
           <div className="flex gap-2 mt-2">

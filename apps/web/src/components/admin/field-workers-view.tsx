@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,11 +20,8 @@ interface FieldWorker {
   totalTasks: number
 }
 
-interface FieldWorkersViewProps {
-  onWorkerClick?: (workerId: string) => void
-}
-
-export default function FieldWorkersView({ onWorkerClick }: FieldWorkersViewProps) {
+export default function FieldWorkersView() {
+  const router = useRouter()
   const [workers, setWorkers] = useState<FieldWorker[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddWorker, setShowAddWorker] = useState(false)
@@ -121,7 +119,7 @@ export default function FieldWorkersView({ onWorkerClick }: FieldWorkersViewProp
               <Card
                 key={worker.id}
                 className="border-border hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => onWorkerClick?.(worker.id)}
+                onClick={() => router.push(`/admin/dashboard/field-workers/${worker.id}`)}
               >
                 <CardHeader className="">
                   <CardTitle className="text-lg font-semibold mb-1">{worker.name}</CardTitle>

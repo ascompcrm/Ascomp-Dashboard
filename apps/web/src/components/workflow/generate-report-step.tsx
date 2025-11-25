@@ -1,12 +1,83 @@
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import jsPDF from 'jspdf'
 
 export default function GenerateReportStep({ data, onNext, onBack }: any) {
-  const [reportGenerated, setReportGenerated] = useState(false)
+  const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionComplete, setSubmissionComplete] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const generatePDF = async () => {
+  const getIssueEntries = () => {
+    const workDetails = data.workDetails || {}
+    const statusFields = [
+      { key: 'reflector', label: 'Reflector' },
+      { key: 'uvFilter', label: 'UV Filter' },
+      { key: 'integratorRod', label: 'Integrator Rod' },
+      { key: 'coldMirror', label: 'Cold Mirror' },
+      { key: 'foldMirror', label: 'Fold Mirror' },
+      { key: 'touchPanel', label: 'Touch Panel' },
+      { key: 'evbImcbBoard', label: 'EVB/IMCB Board' },
+      { key: 'pibIcpBoard', label: 'PIB/ICP Board' },
+      { key: 'imbSBoard', label: 'IMB-S Board' },
+      { key: 'coolantLevelColor', label: 'Coolant Level & Color' },
+      { key: 'acBlowerVane', label: 'AC Blower Vane' },
+      { key: 'extractorVane', label: 'Extractor Vane' },
+      { key: 'lightEngineFans', label: 'Light Engine Fans' },
+      { key: 'cardCageFans', label: 'Card Cage Fans' },
+      { key: 'radiatorFanPump', label: 'Radiator Fan Pump' },
+      { key: 'pumpConnectorHose', label: 'Pump Connector & Hose' },
+      { key: 'securityLampHouseLock', label: 'Security Lamp House Lock' },
+      { key: 'lampLocMechanism', label: 'Lamp LOC Mechanism' },
+      { key: 'acStatus', label: 'AC Status' },
+      { key: 'leStatus', label: 'LE Status' },
+      { key: 'disposableConsumables', label: 'Disposable Consumables' },
+      { key: 'pixelDefects', label: 'Pixel Defects' },
+      { key: 'imageVibration', label: 'Image Vibration' },
+      { key: 'liteloc', label: 'LiteLOC Status' },
+    ]
+
+    const nonOkValues = new Set(['not ok', 'needs replacement', 'low', 'discolored', 'leakage', 'bad', 'not working', 'removed', 'few', 'many', 'severe'])
+
+    const issues: { label: string; value: string }[] = []
+
+    statusFields.forEach(({ key, label }) => {
+      const raw = (workDetails[key] || '').toString()
+      if (!raw) return
+      const normalized = raw.trim().toLowerCase()
+      if (normalized && normalized !== 'ok' && normalized !== 'working' && normalized !== 'none' && normalized !== 'not available') {
+        issues.push({ label, value: raw })
+      }
+      if (nonOkValues.has(normalized)) {
+        issues.push({ label, value: raw })
+      }
+    })
+
+    if (workDetails.replacementRequired) {
+      issues.push({ label: 'Replacement Required', value: 'Yes' })
+    }
+
+    return issues
+  }
+
+  const saveReportToLocalStorage = (issues: { label: string; value: string }[]) => {
+    const reports = JSON.parse(localStorage.getItem('serviceReports') || '[]')
+    reports.push({
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      service: data.selectedService,
+      workDetails: data.workDetails,
+      issues,
+      remarks: data.workDetails?.remarks || '',
+      engineer: localStorage.getItem('user'),
+      images: data.workImages || [],
+    })
+    localStorage.setItem('serviceReports', JSON.stringify(reports))
+  }
+
+  const generatePDF = async (issues: { label: string; value: string }[]) => {
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -168,14 +239,27 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
     })
     yPosition += 5
 
-    // Remarks
+    // Issues & Remarks
     if (yPosition > pageHeight - 30) {
       pdf.addPage()
       yPosition = 10
     }
-    pdf.text('REMARKS', 10, yPosition)
+    pdf.text('ISSUES & REMARKS', 10, yPosition)
     yPosition += 6
-    const remarksText = pdf.splitTextToSize(workDetails.remarks || 'None', pageWidth - 20)
+    if (issues.length > 0) {
+      issues.forEach((issue) => {
+        if (yPosition > pageHeight - 10) {
+          pdf.addPage()
+          yPosition = 10
+        }
+        pdf.text(`• ${issue.label}: ${issue.value}`, 15, yPosition)
+        yPosition += 5
+      })
+    } else {
+      pdf.text('No issues reported. All components OK.', 15, yPosition)
+      yPosition += 5
+    }
+    const remarksText = pdf.splitTextToSize(workDetails.remarks || 'No remarks provided.', pageWidth - 20)
     remarksText.forEach((line: string) => {
       if (yPosition > pageHeight - 10) {
         pdf.addPage()
@@ -184,6 +268,19 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
       pdf.text(line, 15, yPosition)
       yPosition += 5
     })
+
+    // Signatures
+    if (yPosition > pageHeight - 40) {
+      pdf.addPage()
+      yPosition = 10
+    }
+    pdf.text('SIGNATURES', 10, yPosition)
+    yPosition += 8
+    pdf.rect(10, yPosition, pageWidth / 2 - 15, 20)
+    pdf.text('Engineer Signature', 15, yPosition + 15)
+    pdf.rect(pageWidth / 2 + 5, yPosition, pageWidth / 2 - 15, 20)
+    pdf.text('Site Incharge Signature', pageWidth / 2 + 10, yPosition + 15)
+    yPosition += 28
 
     // Footer
     if (yPosition > pageHeight - 20) {
@@ -196,48 +293,121 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
     pdf.text(`Date: ${new Date().toLocaleString()}`, 10, yPosition + 5)
 
     pdf.save(`Service_Report_${service.projector}_${new Date().getTime()}.pdf`)
-    setReportGenerated(true)
   }
 
-  const handleNext = () => {
-    onNext({ reportGenerated: true })
+  const handleGenerateAndSubmit = async () => {
+    if (isSubmitting || submissionComplete) return
+
+    setIsSubmitting(true)
+    setSubmitError(null)
+    try {
+      const issues = getIssueEntries()
+      await generatePDF(issues)
+      saveReportToLocalStorage(issues)
+      setSubmissionComplete(true)
+    } catch (error) {
+      console.error('Error generating or submitting report:', error)
+      setSubmitError('Failed to generate or submit report. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
+
+  const handleFinish = () => {
+    localStorage.removeItem('workflowData')
+    localStorage.removeItem('workflowStep')
+    router.push('/user/dashboard')
+  }
+
+  const issues = getIssueEntries()
 
   return (
     <div>
       <h2 className="text-lg sm:text-xl font-bold text-black mb-2">Generate Report</h2>
       <p className="text-sm text-gray-700 mb-4">Fill the values and generate a PDF report</p>
 
-      <Card className="border-2 border-black p-3 sm:p-4 mb-4">
-        <h3 className="font-bold text-black mb-3 text-sm sm:text-base">Report Summary</h3>
-        <div className="space-y-2 text-xs sm:text-sm mb-4">
-          <div>
-            <span className="font-semibold">Site:</span> <span className="break-words">{data.selectedService?.site}</span>
-          </div>
-          <div>
-            <span className="font-semibold">Projector:</span> {data.workDetails?.projectorModel}
-          </div>
-          <div>
-            <span className="font-semibold">Serial No:</span> {data.workDetails?.projectorSerialNumber}
-          </div>
-          <div>
-            <span className="font-semibold">Running Hours:</span> {data.workDetails?.projectorRunningHours}
-          </div>
-          <div>
-            <span className="font-semibold">Cinema:</span> {data.workDetails?.cinemaName}
+      <Card className="border-2 border-black p-4 mb-4 space-y-4">
+        <div>
+          <h3 className="font-bold text-black mb-3 text-sm sm:text-base">Site Summary</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
+            <div>
+            <span className="font-semibold">Site:</span>{' '}
+            <span className="wrap-break-word">{data.selectedService?.site || '—'}</span>
+            </div>
+            <div>
+            <span className="font-semibold">Address:</span>{' '}
+            <span className="wrap-break-word">{data.selectedService?.address || data.workDetails?.address || '—'}</span>
+            </div>
+            <div>
+              <span className="font-semibold">Contact:</span> {data.selectedService?.contactDetails || data.workDetails?.contactDetails || '—'}
+            </div>
+            <div>
+              <span className="font-semibold">Projector:</span>{' '}
+              {data.workDetails?.projectorModel} ({data.workDetails?.projectorSerialNumber})
+            </div>
+            <div>
+              <span className="font-semibold">Running Hours:</span> {data.workDetails?.projectorRunningHours || '—'}
+            </div>
+            <div>
+              <span className="font-semibold">Service Type:</span> {data.workDetails?.serviceVisitType || data.selectedService?.type || '—'}
+            </div>
           </div>
         </div>
 
-        {!reportGenerated ? (
+        <div>
+          <h3 className="font-bold text-black mb-3 text-sm sm:text-base">Issues & Actions</h3>
+          <div className="space-y-2 border border-gray-200 p-3 bg-gray-50 text-xs sm:text-sm">
+            {issues.length > 0 ? (
+              issues.map((issue) => (
+                <div key={`${issue.label}-${issue.value}`} className="flex justify-between gap-4">
+                  <span className="font-semibold">{issue.label}</span>
+                  <span className="text-gray-700">{issue.value}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-600">All components reported as OK.</p>
+            )}
+            {data.workDetails?.remarks && (
+              <div className="pt-2 border-t border-gray-300">
+                <p className="font-semibold mb-1">Remarks</p>
+                <p className="text-gray-700">{data.workDetails.remarks}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="border-2 border-dashed border-black p-3 text-center">
+            <p className="font-semibold text-sm mb-3">Engineer Signature</p>
+            <div className="h-20 flex items-center justify-center text-xs text-gray-500">
+              Signature preview
+            </div>
+          </div>
+          <div className="border-2 border-dashed border-black p-3 text-center">
+            <p className="font-semibold text-sm mb-3">Site Incharge Signature</p>
+            <div className="h-20 flex items-center justify-center text-xs text-gray-500">
+              Signature preview
+            </div>
+          </div>
+        </div>
+
+        {submitError && (
+          <div className="p-3 border-2 border-red-500 bg-red-50 text-red-700 text-sm">
+            {submitError}
+          </div>
+        )}
+
+        {!submissionComplete ? (
           <Button
-            onClick={generatePDF}
-            className="w-full bg-black text-white hover:bg-gray-800 border-2 border-black font-bold py-2 text-sm"
+            onClick={handleGenerateAndSubmit}
+            disabled={isSubmitting}
+            className="w-full bg-black text-white hover:bg-gray-800 border-2 border-black font-bold py-2 text-sm disabled:opacity-50"
           >
-            Generate PDF Report
+            {isSubmitting ? 'Submitting...' : 'Generate PDF Report and Submit'}
           </Button>
         ) : (
           <div className="p-3 bg-black text-white border-2 border-black text-center font-bold text-sm">
-            ✓ Report Generated Successfully
+            ✓ Report Generated and Submitted Successfully
           </div>
         )}
       </Card>
@@ -250,13 +420,14 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
         >
           Back
         </Button>
-        <Button
-          onClick={handleNext}
-          disabled={!reportGenerated}
-          className="bg-black text-white hover:bg-gray-800 border-2 border-black font-bold disabled:opacity-50 flex-1"
-        >
-          Continue to Complete
-        </Button>
+        {submissionComplete && (
+          <Button
+            onClick={handleFinish}
+            className="bg-black text-white hover:bg-gray-800 border-2 border-black font-bold flex-1"
+          >
+            Return to Dashboard
+          </Button>
+        )}
       </div>
     </div>
   )

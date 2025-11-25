@@ -1,15 +1,5 @@
-'use client'
-
-import AdminDashboardd from '@/components/admin-dashboard'
-import { useAdminDashboard } from './layout'
+import { redirect } from "next/navigation"
 
 export default function AdminDashboard() {
-  const { activeView, setActiveView } = useAdminDashboard()
-
-  return (
-    <AdminDashboardd
-      activeView={activeView}
-      onViewChange={(view: any) => setActiveView(view)}
-    />
-  )
+  redirect("/admin/dashboard/overview")
 }

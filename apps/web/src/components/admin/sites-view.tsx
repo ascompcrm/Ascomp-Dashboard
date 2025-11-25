@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -36,12 +37,8 @@ interface SiteData {
   projectors: ProjectorData[]
 }
 
-interface SitesViewProps {
-  onSiteClick?: (siteId: string) => void
-  onProjectorClick?: (siteId: string, projectorId: string) => void
-}
-
-export default function SitesView({ onSiteClick, onProjectorClick }: SitesViewProps) {
+export default function SitesView() {
+  const router = useRouter()
   const [sites, setSites] = useState<SiteData[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set())
@@ -160,27 +157,27 @@ export default function SitesView({ onSiteClick, onProjectorClick }: SitesViewPr
 
             return (
               <div key={site.id} className="border border-border bg-background">
-                <button
-                  onClick={() => {
-                    if (onSiteClick) {
-                      onSiteClick(site.id)
-                    } else {
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggleSite(site.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
                       toggleSite(site.id)
                     }
                   }}
-                  className="w-full text-left"
+                  className="w-full text-left cursor-pointer"
                 >
                   <div className="p-5 hover:bg-muted/30 transition-colors">
                     <div className="flex items-start gap-3">
-                      {!onSiteClick && (
-                        <div className="mt-0.5 shrink-0">
-                          {expandedSites.has(site.id) ? (
-                            <ChevronDown className="w-4 h-4 text-foreground" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-foreground" />
-                          )}
-                        </div>
-                      )}
+                      <div className="mt-0.5 shrink-0">
+                        {expandedSites.has(site.id) ? (
+                          <ChevronDown className="w-4 h-4 text-foreground" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-foreground" />
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-base font-semibold text-foreground mb-2">{site.name}</h3>
                         <div className="space-y-1 mb-3">
@@ -213,12 +210,24 @@ export default function SitesView({ onSiteClick, onProjectorClick }: SitesViewPr
                             </div>
                           )}
                         </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            router.push(`/admin/dashboard/sites/${site.id}`)
+                          }}
+                          className="mt-4 border-border"
+                        >
+                          Open Site Page
+                        </Button>
                       </div>
                     </div>
                   </div>
-                </button>
+                </div>
 
-                {!onSiteClick && expandedSites.has(site.id) && (
+                {expandedSites.has(site.id) && (
                   <div className="border-t border-border bg-muted/20 p-5">
                     <div className="flex justify-between items-center mb-4">
                       <div>
@@ -284,7 +293,9 @@ export default function SitesView({ onSiteClick, onProjectorClick }: SitesViewPr
                                 setSelectedProjector({ siteId: site.id, projectorId: projector.id })
                                 setShowSchedule(true)
                               }}
-                              onViewDetails={onProjectorClick ? () => onProjectorClick(site.id, projector.id) : undefined}
+                              onViewDetails={() =>
+                                router.push(`/admin/dashboard/sites/${site.id}/projectors/${projector.id}`)
+                              }
                             />
                           )
                         })}

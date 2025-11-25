@@ -7,7 +7,6 @@ import StartServiceStep from '@/components/workflow/start-service-step'
 import RecordWorkStep from '@/components/workflow/record-work-step'
 import SignatureStep from '@/components/workflow/signature-step'
 import GenerateReportStep from '@/components/workflow/generate-report-step'
-import CompleteStep from '@/components/workflow/complete-step'
 import { Button } from '@/components/ui/button'
 
 export default function WorkflowPage() {
@@ -31,7 +30,12 @@ export default function WorkflowPage() {
         setWorkflowData(JSON.parse(savedData))
       }
       if (savedStep) {
-        setCurrentStep(parseInt(savedStep))
+        const parsed = parseInt(savedStep, 10)
+        const clamped = Math.max(0, Math.min(parsed, steps.length - 1))
+        setCurrentStep(clamped)
+        if (clamped !== parsed) {
+          localStorage.setItem('workflowStep', String(clamped))
+        }
       }
 
       setIsLoaded(true)
@@ -44,10 +48,10 @@ export default function WorkflowPage() {
     { name: 'Record Work', component: RecordWorkStep },
     { name: 'Signatures', component: SignatureStep },
     { name: 'Generate Report', component: GenerateReportStep },
-    { name: 'Complete', component: CompleteStep },
   ]
 
-  const CurrentStepComponent = steps[currentStep].component
+  const safeStepIndex = Math.max(0, Math.min(currentStep, steps.length - 1))
+  const CurrentStepComponent = steps[safeStepIndex].component
 
   const handleNext = (data: any) => {
     const newData = { ...workflowData, ...data }
@@ -77,8 +81,8 @@ export default function WorkflowPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="border-b-2 border-black p-3 sm:p-4 sticky top-0 bg-white z-50">
+    <div className="min-h-screen w-full bg-white">
+      <div className="border-b-2 border-black p-3 sm:p-4 sticky top-0 bg-white z-50 w-full">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-4">
           <h1 className="text-xl sm:text-2xl font-bold text-black">Service Workflow</h1>
           <Button
@@ -105,7 +109,7 @@ export default function WorkflowPage() {
         </div>
       </div>
 
-      <div className="p-3 sm:p-4 md:p-6">
+      <div className="p-3 sm:p-4 md:p-6 w-full">
         <div className="max-w-full md:max-w-4xl mx-auto">
           <CurrentStepComponent
             data={workflowData}

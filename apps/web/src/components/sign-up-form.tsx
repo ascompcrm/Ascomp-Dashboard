@@ -1,7 +1,6 @@
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
-import z from "zod";
 import Loader from "./loader";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -40,13 +39,6 @@ export default function SignUpForm({
 				},
 			);
 		},
-		validators: {
-			onSubmit: z.object({
-				name: z.string().min(2, "Name must be at least 2 characters"),
-				email: z.email("Invalid email address"),
-				password: z.string().min(8, "Password must be at least 8 characters"),
-			}),
-		},
 	});
 
 	if (isPending) {
@@ -77,8 +69,8 @@ export default function SignUpForm({
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
-								{field.state.meta.errors.map((error) => (
-									<p key={error?.message} className="text-red-500">
+								{(field.state.meta.errors as unknown as { message?: string }[]).map((error, index) => (
+									<p key={`${field.name}-error-${index}`} className="text-red-500">
 										{error?.message}
 									</p>
 								))}
@@ -100,8 +92,8 @@ export default function SignUpForm({
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
-								{field.state.meta.errors.map((error) => (
-									<p key={error?.message} className="text-red-500">
+								{(field.state.meta.errors as unknown as { message?: string }[]).map((error, index) => (
+									<p key={`${field.name}-error-${index}`} className="text-red-500">
 										{error?.message}
 									</p>
 								))}
@@ -123,8 +115,8 @@ export default function SignUpForm({
 									onBlur={field.handleBlur}
 									onChange={(e) => field.handleChange(e.target.value)}
 								/>
-								{field.state.meta.errors.map((error) => (
-									<p key={error?.message} className="text-red-500">
+								{(field.state.meta.errors as unknown as { message?: string }[]).map((error, index) => (
+									<p key={`${field.name}-error-${index}`} className="text-red-500">
 										{error?.message}
 									</p>
 								))}

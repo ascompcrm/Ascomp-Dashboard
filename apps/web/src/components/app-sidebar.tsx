@@ -1,23 +1,8 @@
 import * as React from "react"
-import {
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  Home,
-  LifeBuoy,
-  Map,
-  PieChart,
-  Projector,
-  Send,
-  Settings2,
-  SquareTerminal,
-  User,
-} from "lucide-react"
+import { Command, Home, Projector, User } from "lucide-react"
+import type { Route } from "next"
 
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavSecondary } from "@/components/nav-secondary"
+import { NavMain, type NavMainItem } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
 import { useAuth } from "@/lib/auth-context"
 import {
@@ -30,43 +15,25 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const navMainData = [
-    {
-      title: "Home",
-      url: "/",
-      icon: Home,
-      isActive: true,
-    },
-    {
-      title: "Sites & Projectors",
-      url: "#",
-      icon: Projector,
-      items: [
-        {
-          title: "Pending",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Field Workers",
-      url: "#",
-      icon: User,
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-    },
-  ]
+const navMainData: NavMainItem[] = [
+  {
+    title: "Overview",
+    url: "/admin/dashboard/overview" as Route,
+    icon: Home,
+  },
+  {
+    title: "Sites & Projectors",
+    url: "/admin/dashboard/sites" as Route,
+    icon: Projector,
+  },
+  {
+    title: "Field Workers",
+    url: "/admin/dashboard/field-workers" as Route,
+    icon: User,
+  },
+]
 
-type ViewType = "overview" | "sites" | "fieldworkers" | "site-detail" | "projector-detail"
-
-interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  onSelectionChange?: (view: ViewType) => void
-}
-
-export function AppSidebar({ onSelectionChange, ...props }: AppSidebarProps) {
+export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { user, logout } = useAuth()
 
   if (!user) {
@@ -74,16 +41,13 @@ export function AppSidebar({ onSelectionChange, ...props }: AppSidebarProps) {
   }
 
   const userData = {
-    name: user.name || (user.role === 'ADMIN' ? 'Admin' : 'Field Worker'),
+    name: user.name || (user.role === "ADMIN" ? "Admin" : "Field Worker"),
     email: user.email,
-    avatar: user.image || '/avatars/shadcn.jpg',
+    avatar: user.image || "/avatars/shadcn.jpg",
   }
 
   return (
-    <Sidebar
-      className="h-[calc(100svh-var(--header-height))]!"
-      {...props}
-    >
+    <Sidebar className="h-[calc(100svh-var(--header-height))]!" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -102,8 +66,7 @@ export function AppSidebar({ onSelectionChange, ...props }: AppSidebarProps) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMainData} onSelectionChange={onSelectionChange} />
-        {/* <NavProjects projects={data.projects} /> */}
+        <NavMain items={navMainData} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={userData} onLogout={logout} />
