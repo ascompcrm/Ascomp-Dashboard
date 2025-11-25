@@ -2,8 +2,10 @@ import { nextCookies } from 'better-auth/next-js';
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import prisma from "@my-better-t-app/db";
+import { inferAdditionalFields } from "better-auth/client/plugins";
 
-export const auth = betterAuth<BetterAuthOptions>({
+
+export const auth: any = betterAuth<BetterAuthOptions>({
 	database: prismaAdapter(prisma, {
 		provider: "postgresql",
 	}),
@@ -19,5 +21,5 @@ export const auth = betterAuth<BetterAuthOptions>({
 			},
 		},
 	},
-  plugins: [nextCookies()]
+  plugins: [nextCookies(), inferAdditionalFields<typeof auth>()]
 });

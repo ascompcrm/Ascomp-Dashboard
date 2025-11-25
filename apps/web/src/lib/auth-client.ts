@@ -1,6 +1,5 @@
 import type { auth } from "@my-better-t-app/auth";
-import { createAuthClient } from "better-auth/react";
-import { inferAdditionalFields } from "better-auth/client/plugins";
+import { createAuthClient, inferAdditionalFields } from "@my-better-t-app/auth/client";
 
 export const authClient = createAuthClient({
 	baseURL: typeof window !== 'undefined' 
