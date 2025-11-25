@@ -14,7 +14,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       if (!user) {
         router.replace("/")
       } else if (user.role !== "ADMIN") {
-        router.replace("/user/dashboard")
+        router.replace("/user/workflow")
       }
     }
   }, [user, isLoading, router])

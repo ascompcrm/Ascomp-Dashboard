@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { useState, useEffect, useMemo } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 
 interface Service {
   id: string
@@ -25,6 +25,7 @@ export default function SelectServiceStep({ data, onNext }: any) {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [timeFilter, setTimeFilter] = useState<"24h" | "7d" | "30d" | "all">("7d")
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -47,6 +48,51 @@ export default function SelectServiceStep({ data, onNext }: any) {
 
     fetchServices()
   }, [])
+
+  const getServiceDate = (service: Service) => {
+    if (service.rawDate) {
+      const parsed = new Date(service.rawDate)
+      if (!isNaN(parsed.getTime())) return parsed
+    }
+    if (service.date) {
+      const fallback = new Date(service.date)
+      if (!isNaN(fallback.getTime())) return fallback
+    }
+    return null
+  }
+
+  const pendingServices = useMemo(() => {
+    const allowed = new Set(["pending", "scheduled", "in_progress"])
+    return services.filter((service) => allowed.has((service.status || "").toLowerCase()))
+  }, [services])
+
+  const filteredServices = useMemo(() => {
+    const now = new Date().getTime()
+    const thresholdByFilter: Record<typeof timeFilter, number | null> = {
+      "24h": 1,
+      "7d": 7,
+      "30d": 30,
+      all: null,
+    }
+
+    const daysLimit = thresholdByFilter[timeFilter]
+
+    return pendingServices.filter((service) => {
+      if (daysLimit === null) return true
+      const serviceDate = getServiceDate(service)
+      if (!serviceDate) return true
+      const diffInDays = (now - serviceDate.getTime()) / (1000 * 60 * 60 * 24)
+      return diffInDays <= daysLimit
+    })
+  }, [pendingServices, timeFilter])
+
+  useEffect(() => {
+    if (!selected) return
+    const exists = filteredServices.some((service) => service.id === selected)
+    if (!exists) {
+      setSelected(null)
+    }
+  }, [filteredServices, selected])
 
   const handleSelect = (service: Service) => {
     setSelected((prev) => (prev === service.id ? null : service.id))
@@ -97,7 +143,7 @@ export default function SelectServiceStep({ data, onNext }: any) {
     )
   }
 
-  if (services.length === 0) {
+  if (pendingServices.length === 0) {
     return (
       <div>
         <h2 className="text-lg sm:text-xl font-bold text-black mb-2">Select Service Visit</h2>
@@ -112,10 +158,30 @@ export default function SelectServiceStep({ data, onNext }: any) {
   return (
     <div>
       <h2 className="text-lg sm:text-xl font-bold text-black mb-2">Select Service Visit</h2>
-      <p className="text-sm text-gray-700 mb-6">Choose the service visit to work on:</p>
+      <p className="text-sm text-gray-700 mb-4">Choose from your pending assigned services.</p>
+
+        <div className="flex w-full mb-3 justify-between items-center">
+          <label className="font-semibold text-gray-600">Filter by assignment date</label>
+          <select
+            value={timeFilter}
+            onChange={(e) => setTimeFilter(e.target.value as typeof timeFilter)}
+            className="w-fit border-2 border-black p-2 text-sm text-black"
+          >
+            <option value="24h">Assigned in last 24 hours</option>
+            <option value="7d">Assigned in last 7 days</option>
+            <option value="30d">Assigned in last 30 days</option>
+            <option value="all">Show all pending</option>
+          </select>
+        </div>
+
+      {filteredServices.length === 0 && (
+        <Card className="border-2 border-dashed border-black p-4 mb-6 bg-gray-50">
+          <p className="text-sm text-gray-700">No pending services match the selected filter.</p>
+        </Card>
+      )}
 
       <div className="space-y-3 mb-6">
-        {services.map((service) => (
+        {filteredServices.map((service) => (
           <div
             key={service.id}
             onClick={() => handleSelect(service)}
@@ -165,7 +231,7 @@ export default function SelectServiceStep({ data, onNext }: any) {
         disabled={!selected}
         className="w-full bg-black text-white hover:bg-gray-800 border-2 border-black font-semibold py-3 text-base disabled:opacity-40 disabled:cursor-not-allowed transition-all"
       >
-        {selected ? 'Proceed to Start Service' : 'Select a service to continue'}
+        {selected ? "Proceed to Start Service" : "Select a service to continue"}
       </Button>
     </div>
   )

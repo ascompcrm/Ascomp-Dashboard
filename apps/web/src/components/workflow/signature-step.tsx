@@ -1,12 +1,44 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+
+const uploadSignature = async (dataUrl: string, role: 'engineer' | 'site') => {
+  const formData = new FormData()
+  formData.append('file', dataUrlToFile(dataUrl, `${role}-signature.png`))
+  formData.append('folder', 'signatures')
+
+  const res = await fetch('/api/blob/upload', {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ error: 'Upload failed' }))
+    throw new Error(detail.error || 'Upload failed')
+  }
+  return res.json()
+}
+
+const dataUrlToFile = (dataUrl: string, filename: string) => {
+  const arr = dataUrl.split(',')
+  const mimeMatch = arr[0].match(/:(.*?);/)
+  const mime = mimeMatch ? mimeMatch[1] : 'image/png'
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n)
+  }
+  return new File([u8arr], filename, { type: mime })
+}
 
 export default function SignatureStep({ data, onNext, onBack }: any) {
   const [siteInChargeSignature, setSiteInChargeSignature] = useState<string | null>(null)
   const [engineerSignature, setEngineerSignature] = useState<string | null>(null)
+  const [siteSignatureUrl, setSiteSignatureUrl] = useState<string | null>(data.siteSignatureUrl || null)
+  const [engineerSignatureUrl, setEngineerSignatureUrl] = useState<string | null>(data.engineerSignatureUrl || null)
+  const [uploading, setUploading] = useState(false)
   const siteInChargeCanvasRef = useRef<HTMLCanvasElement>(null)
   const engineerCanvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -60,25 +92,48 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
     }
   }
 
-  const saveSignature = (isEngineer: boolean) => {
+  const saveSignature = async (isEngineer: boolean) => {
     const canvas = isEngineer ? engineerCanvasRef.current : siteInChargeCanvasRef.current
     if (canvas) {
       const signature = canvas.toDataURL()
-      if (isEngineer) {
-        setEngineerSignature(signature)
-        localStorage.setItem('engineerSignature', signature)
-      } else {
-        setSiteInChargeSignature(signature)
-        localStorage.setItem('siteInChargeSignature', signature)
+      try {
+        setUploading(true)
+        const uploaded = await uploadSignature(signature, isEngineer ? 'engineer' : 'site')
+        if (isEngineer) {
+          setEngineerSignature(signature)
+          setEngineerSignatureUrl(uploaded.url)
+          localStorage.setItem('engineerSignature', signature)
+        } else {
+          setSiteInChargeSignature(signature)
+          setSiteSignatureUrl(uploaded.url)
+          localStorage.setItem('siteInChargeSignature', signature)
+        }
+      } catch (error) {
+        console.error('Signature upload failed:', error)
+      } finally {
+        setUploading(false)
       }
     }
   }
 
   const handleNext = () => {
-    if (siteInChargeSignature && engineerSignature) {
-      onNext({ siteInChargeSignature, engineerSignature })
+    if (siteSignatureUrl && engineerSignatureUrl) {
+      onNext({
+        siteInChargeSignature,
+        engineerSignature,
+        siteSignatureUrl,
+        engineerSignatureUrl,
+      })
     }
   }
+
+  const hasImageEvidence = useMemo(() => {
+    if (!data?.workImages) return false
+    if (Array.isArray(data.workImages)) {
+      return data.workImages.length > 0
+    }
+    return Boolean((data.workImages.broken || []).length && (data.workImages.other || []).length)
+  }, [data])
 
   return (
     <div>
@@ -111,8 +166,10 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
               Save
             </Button>
           </div>
-          {siteInChargeSignature && (
-            <p className="text-xs sm:text-sm text-green-600 mt-2">✓ Signature saved</p>
+          {siteSignatureUrl && (
+            <div className="mt-2 border border-gray-200 p-2">
+              <img src={siteSignatureUrl} alt="Site Signature" className="w-full h-20 object-contain" />
+            </div>
           )}
         </Card>
 
@@ -141,11 +198,19 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
               Save
             </Button>
           </div>
-          {engineerSignature && (
-            <p className="text-xs sm:text-sm text-green-600 mt-2">✓ Signature saved</p>
+          {engineerSignatureUrl && (
+            <div className="mt-2 border border-gray-200 p-2">
+              <img src={engineerSignatureUrl} alt="Engineer Signature" className="w-full h-20 object-contain" />
+            </div>
           )}
         </Card>
       </div>
+
+      {!hasImageEvidence && (
+        <div className="p-3 border-2 border-amber-500 bg-amber-50 text-amber-800 text-sm mb-4">
+          Please attach required images in the Record Work step before submitting signatures.
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         <Button
@@ -157,7 +222,7 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
         </Button>
         <Button
           onClick={handleNext}
-          disabled={!siteInChargeSignature || !engineerSignature}
+          disabled={!siteSignatureUrl || !engineerSignatureUrl || !hasImageEvidence || uploading}
           className="bg-black text-white hover:bg-gray-800 border-2 border-black font-bold disabled:opacity-50 flex-1"
         >
           Continue to Report

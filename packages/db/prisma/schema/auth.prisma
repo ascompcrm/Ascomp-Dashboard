@@ -206,6 +206,8 @@ model ServiceRecord {
   signatures                    Json?
   reportGenerated               Boolean       @default(false)
   reportUrl                     String?
+  images                        String[] @default([])
+  brokenImages                  String[] @default([])
 
   @@unique([projectorId, serviceNumber])
   @@index([projectorId, serviceNumber])

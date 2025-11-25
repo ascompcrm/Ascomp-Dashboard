@@ -57,13 +57,14 @@ export default function StartServiceStep({ data, onNext, onBack }: any) {
       </div>
 
       <div className="mb-4">
-        <label className="block font-semibold text-black mb-2 text-sm">Start Time</label>
+        <label className="block font-semibold text-black mb-2 text-sm">Start Time (auto captured)</label>
         <Input
           type="datetime-local"
           value={startTime}
-          onChange={(e) => setStartTime(e.target.value)}
-          className="w-full border-2 border-black p-2 text-black text-sm"
+          readOnly
+          className="w-full border-2 border-black p-2 text-black text-sm bg-gray-50"
         />
+        <p className="text-xs text-gray-600 mt-1">Start time is recorded automatically when you reach this step.</p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">

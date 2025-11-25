@@ -91,28 +91,25 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="h-screen w-full bg-gray-50 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-      <div className="w-full max-w-md">
-        <Card className="border-2 border-black shadow-lg">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-100 via-white to-slate-200 flex items-center justify-center p-4 sm:p-6 lg:p-10">
+      <div className="w-full max-w-lg">
+        <Card className="border-2 border-black shadow-xl backdrop-blur bg-white/95">
           <div className="p-6 sm:p-8 md:p-10">
-            <div className="flex justify-center mb-6 sm:mb-8">
-              <div className="w-full max-w-[180px] sm:max-w-[200px] md:max-w-[220px] h-16 sm:h-24 md:h-28 relative bg-white rounded-lg flex items-center justify-center overflow-hidden">
+            <div className="flex flex-col items-center gap-2 mb-6 sm:mb-8">
+              <div className="w-full max-w-[200px] sm:max-w-[220px] md:max-w-[240px] h-16 sm:h-24 md:h-28 relative bg-white rounded-2xl border-2 border-dashed border-black flex items-center justify-center overflow-hidden">
                 <Image
                   src="/LOGO/Ascomp.png"
-                  alt="Company Logo"
+                  alt="Ascomp INC"
                   fill
-                  className="object-contain p-3sm:p-4"
+                  className="object-contain p-3 sm:p-4"
                   priority
                 />
               </div>
+              <p className="text-xs uppercase tracking-[0.4em] text-gray-500">Ascomp INC</p>
             </div>
             <div className="text-center mb-6 sm:mb-8">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-black mb-2">
-                Login
-              </h1>
-              <p className="text-sm sm:text-base text-gray-600">
-                Sign in to access your account
-              </p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-black mb-2">Welcome back</h1>
+              <p className="text-sm sm:text-base text-gray-600">Sign in to continue managing service operations</p>
             </div>
             <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
               <div>

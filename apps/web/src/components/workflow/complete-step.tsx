@@ -25,7 +25,7 @@ export default function CompleteStep({ data, onBack }: any) {
   }
 
   const handleDone = () => {
-    router.push('/user/dashboard')
+    router.push('/user/workflow')
   }
 
   return (

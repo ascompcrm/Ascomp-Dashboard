@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -9,6 +9,13 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionComplete, setSubmissionComplete] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const hasImageEvidence = useMemo(() => {
+    if (!data?.workImages) return false
+    if (Array.isArray(data.workImages)) {
+      return data.workImages.length > 0
+    }
+    return Boolean((data.workImages.broken || []).length && (data.workImages.other || []).length)
+  }, [data])
 
   const getIssueEntries = () => {
     const workDetails = data.workDetails || {}
@@ -39,31 +46,43 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
       { key: 'liteloc', label: 'LiteLOC Status' },
     ]
 
-    const nonOkValues = new Set(['not ok', 'needs replacement', 'low', 'discolored', 'leakage', 'bad', 'not working', 'removed', 'few', 'many', 'severe'])
-
     const issues: { label: string; value: string }[] = []
+    const notes = workDetails.issueNotes || {}
 
     statusFields.forEach(({ key, label }) => {
       const raw = (workDetails[key] || '').toString()
       if (!raw) return
       const normalized = raw.trim().toLowerCase()
-      if (normalized && normalized !== 'ok' && normalized !== 'working' && normalized !== 'none' && normalized !== 'not available') {
+      const okValues = new Set(['ok', 'working', 'none', 'not available', 'yes'])
+      if (!okValues.has(normalized)) {
         issues.push({ label, value: raw })
-      }
-      if (nonOkValues.has(normalized)) {
-        issues.push({ label, value: raw })
+        if (notes[key]) {
+          issues.push({ label: `${label} Note`, value: notes[key] })
+        }
       }
     })
-
-    if (workDetails.replacementRequired) {
-      issues.push({ label: 'Replacement Required', value: 'Yes' })
-    }
 
     return issues
   }
 
   const saveReportToLocalStorage = (issues: { label: string; value: string }[]) => {
     const reports = JSON.parse(localStorage.getItem('serviceReports') || '[]')
+    const summarizeImages = () => {
+      if (!data.workImages) {
+        return { broken: [], other: [] }
+      }
+      if (Array.isArray(data.workImages)) {
+        return {
+          broken: [],
+          other: data.workImages,
+        }
+      }
+      return {
+        broken: data.workImages.broken || [],
+        other: data.workImages.other || [],
+      }
+    }
+
     reports.push({
       id: Date.now(),
       timestamp: new Date().toISOString(),
@@ -72,7 +91,11 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
       issues,
       remarks: data.workDetails?.remarks || '',
       engineer: localStorage.getItem('user'),
-      images: data.workImages || [],
+      images: summarizeImages(),
+      signatures: {
+        engineer: data.engineerSignatureUrl,
+        site: data.siteSignatureUrl,
+      },
     })
     localStorage.setItem('serviceReports', JSON.stringify(reports))
   }
@@ -136,7 +159,6 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
       `Model: ${workDetails.projectorModel}`,
       `Serial No.: ${workDetails.projectorSerialNumber}`,
       `Running Hours: ${workDetails.projectorRunningHours}`,
-      `Replacement Required: ${workDetails.replacementRequired ? 'Yes' : 'No'}`,
     ]
 
     projectorInfo.forEach((info) => {
@@ -301,6 +323,9 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
     setIsSubmitting(true)
     setSubmitError(null)
     try {
+      if (!hasImageEvidence) {
+        throw new Error('Please upload required images before generating the report.')
+      }
       const issues = getIssueEntries()
       await generatePDF(issues)
       saveReportToLocalStorage(issues)
@@ -316,7 +341,7 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
   const handleFinish = () => {
     localStorage.removeItem('workflowData')
     localStorage.removeItem('workflowStep')
-    router.push('/user/dashboard')
+    router.push('/user/workflow')
   }
 
   const issues = getIssueEntries()
@@ -348,9 +373,6 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
             <div>
               <span className="font-semibold">Running Hours:</span> {data.workDetails?.projectorRunningHours || '—'}
             </div>
-            <div>
-              <span className="font-semibold">Service Type:</span> {data.workDetails?.serviceVisitType || data.selectedService?.type || '—'}
-            </div>
           </div>
         </div>
 
@@ -379,14 +401,22 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="border-2 border-dashed border-black p-3 text-center">
             <p className="font-semibold text-sm mb-3">Engineer Signature</p>
-            <div className="h-20 flex items-center justify-center text-xs text-gray-500">
-              Signature preview
+            <div className="h-24 flex items-center justify-center">
+              {data.engineerSignatureUrl ? (
+                <img src={data.engineerSignatureUrl} alt="Engineer Signature" className="max-h-20 object-contain" />
+              ) : (
+                <span className="text-xs text-gray-500">Not captured</span>
+              )}
             </div>
           </div>
           <div className="border-2 border-dashed border-black p-3 text-center">
             <p className="font-semibold text-sm mb-3">Site Incharge Signature</p>
-            <div className="h-20 flex items-center justify-center text-xs text-gray-500">
-              Signature preview
+            <div className="h-24 flex items-center justify-center">
+              {data.siteSignatureUrl ? (
+                <img src={data.siteSignatureUrl} alt="Site Signature" className="max-h-20 object-contain" />
+              ) : (
+                <span className="text-xs text-gray-500">Not captured</span>
+              )}
             </div>
           </div>
         </div>
@@ -394,6 +424,11 @@ export default function GenerateReportStep({ data, onNext, onBack }: any) {
         {submitError && (
           <div className="p-3 border-2 border-red-500 bg-red-50 text-red-700 text-sm">
             {submitError}
+          </div>
+        )}
+        {!hasImageEvidence && (
+          <div className="p-3 border-2 border-amber-500 bg-amber-50 text-amber-800 text-sm">
+            Images are required before you can submit the report. Please return to Record Work and upload them.
           </div>
         )}
 

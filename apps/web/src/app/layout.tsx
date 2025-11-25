@@ -2,33 +2,27 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import '../index.css'
-import { DataProvider } from '@/lib/data-context';
-import { AuthProvider } from '@/lib/auth-context';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { DataProvider } from '@/lib/data-context'
+import { AuthProvider } from '@/lib/auth-context'
+import { SidebarProvider } from '@/components/ui/sidebar'
+import { PwaProvider } from '@/components/pwa-provider'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const _geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
+const _geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
 export const metadata: Metadata = {
-  title: 'Service Maintenance PWA',
-  description: 'Progressive Web App for service maintenance workflow',
-  generator: 'v0.app',
+  title: 'Ascomp INC Service Portal',
+  description: 'Ascomp INC field-service and maintenance workflow portal.',
+  applicationName: 'Ascomp INC',
+  manifest: '/manifest.json',
   icons: {
     icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
+      { url: '/favicon/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/LOGO/Ascomp.png', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon/apple-touch-icon.png', rel: 'apple-touch-icon', sizes: '180x180' },
     ],
-    apple: '/apple-icon.png',
+    apple: '/favicon/apple-touch-icon.png',
   },
 }
 
@@ -47,7 +41,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
+      <body className={`${_geist.variable} ${_geistMono.variable} font-sans antialiased bg-white text-slate-900`}>
+        <PwaProvider />
         <AuthProvider>
           <SidebarProvider>
             <DataProvider>{children}</DataProvider>
