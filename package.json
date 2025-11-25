@@ -28,7 +28,8 @@
     "db:start": "bun run --filter @my-better-t-app/db db:start",
     "db:watch": "bun run --filter @my-better-t-app/db db:watch",
     "db:stop": "bun run --filter @my-better-t-app/db db:stop",
-    "db:down": "bun run --filter @my-better-t-app/db db:down"
+    "db:down": "bun run --filter @my-better-t-app/db db:down",
+    "postinstall": "pnpm -w --filter @my-better-t-app/db run generate"
   },
   "packageManager": "bun@1.2.23",
   "dependencies": {
