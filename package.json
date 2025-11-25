@@ -21,14 +21,14 @@
     "check-types": "bun run --filter '*' check-types",
     "dev:native": "bun run --filter native dev",
     "dev:web": "bun run --filter web dev",
-    "db:push": "bun run --filter @my-better-t-app/db db:push",
-    "db:studio": "bun run --filter @my-better-t-app/db db:studio",
-    "db:generate": "bun run --filter @my-better-t-app/db db:generate",
-    "db:migrate": "bun run --filter @my-better-t-app/db db:migrate",
-    "db:start": "bun run --filter @my-better-t-app/db db:start",
-    "db:watch": "bun run --filter @my-better-t-app/db db:watch",
-    "db:stop": "bun run --filter @my-better-t-app/db db:stop",
-    "db:down": "bun run --filter @my-better-t-app/db db:down"
+    "db:push": "cd apps/web && bunx prisma db push",
+    "db:studio": "cd apps/web && bunx prisma studio",
+    "db:generate": "cd apps/web && bunx prisma generate",
+    "db:migrate": "cd apps/web && bunx prisma migrate dev",
+    "db:start": "cd apps/web && docker compose up -d",
+    "db:watch": "cd apps/web && docker compose up",
+    "db:stop": "cd apps/web && docker compose stop",
+    "db:down": "cd apps/web && docker compose down"
   },
   "packageManager": "bun@1.2.23",
   "dependencies": {

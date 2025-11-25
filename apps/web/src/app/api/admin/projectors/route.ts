@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@my-better-t-app/db"
+import prisma from "@/lib/db"
 
 // Helper function to generate MongoDB-style ObjectId
 function generateObjectId(): string {

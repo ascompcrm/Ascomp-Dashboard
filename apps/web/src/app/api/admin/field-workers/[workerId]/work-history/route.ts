@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma, { ServiceStatus } from "@my-better-t-app/db"
+import prisma, { ServiceStatus } from "@/lib/db"
 
 export async function GET(
   _request: NextRequest,

@@ -12,16 +12,13 @@ echo ""
 cd "$(dirname "$0")"
 
 # Check if .env file exists and DATABASE_URL is set
-if [ ! -f "../../apps/web/.env" ]; then
-  echo "⚠️  Warning: .env file not found at apps/web/.env"
+if [ ! -f ".env" ]; then
+  echo "⚠️  Warning: .env file not found in apps/web directory"
   echo "   Please ensure DATABASE_URL is set in your environment"
 fi
 
-# Check if Prisma client is generated
-if [ ! -d "prisma/generated" ]; then
-  echo "📦 Generating Prisma client..."
-  bun run db:generate
-fi
+echo "📦 Generating Prisma client..."
+bunx prisma generate
 
 # Check if node_modules exists
 if [ ! -d "node_modules" ]; then

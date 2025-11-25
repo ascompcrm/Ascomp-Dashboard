@@ -93,10 +93,6 @@ export default function WorkflowPage() {
     router.push(path as any)
   }
 
-  if (!isLoaded) {
-    return <div className="min-h-screen bg-white" />
-  }
-
   const userInitials = useMemo(() => {
     if (!user) return "U"
     const base = user.name || user.email || "U"
@@ -106,6 +102,10 @@ export default function WorkflowPage() {
       .slice(0, 2)
       .join("")
   }, [user])
+
+  if (!isLoaded) {
+    return <div className="min-h-screen bg-white" />
+  }
 
   return (
     <div className="min-h-screen w-full bg-white">

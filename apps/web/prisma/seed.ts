@@ -1,14 +1,14 @@
 import dotenv from 'dotenv'
-import { PrismaClient, Role, ServiceStatus } from './generated/client'
+import { PrismaClient, Role, ServiceStatus } from '@prisma/client'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { auth } from '@my-better-t-app/auth'
+import { auth } from '../src/lib/auth'
 
 // Load environment variables
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 dotenv.config({
-  path: path.resolve(__dirname, '../../../apps/web/.env'),
+  path: path.resolve(__dirname, '../.env'),
 })
 
 const prisma = new PrismaClient()

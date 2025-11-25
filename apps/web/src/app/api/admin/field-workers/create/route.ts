@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@my-better-t-app/auth"
+import { auth } from "@/lib/auth"
 import { Resend } from "resend"
-import prisma, { Role } from "@my-better-t-app/db"
+import prisma, { Role } from "@/lib/db"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 

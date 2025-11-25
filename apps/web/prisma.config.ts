@@ -3,7 +3,7 @@ import type { PrismaConfig } from "prisma";
 import dotenv from "dotenv";
 
 dotenv.config({
-	path: "../../apps/web/.env",
+	path: path.join(process.cwd(), ".env"),
 });
 
 export default {
