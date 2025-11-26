@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma, { ServiceStatus } from "@/lib/db"
+import prisma from "@/lib/db"
 
 export async function GET(
   _request: NextRequest,
@@ -14,12 +14,17 @@ export async function GET(
         projector: {
           include: {
             serviceRecords: {
-              where: {
-                status: {
-                  in: [ServiceStatus.SCHEDULED, ServiceStatus.IN_PROGRESS],
+              orderBy: {
+                updatedAt: "desc",
+              },
+              take: 5,
+              include: {
+                assignedTo: {
+                  select: {
+                    name: true,
+                  },
                 },
               },
-              take: 1,
             },
           },
           orderBy: {
@@ -56,6 +61,17 @@ export async function GET(
           status = "pending"
         }
 
+        const serviceHistory = proj.serviceRecords.map((record) => ({
+          id: record.id,
+          date: record.updatedAt?.toISOString() || record.date?.toISOString() || null,
+          technician: record.assignedTo?.name || "Unassigned",
+          notes: record.remarks || null,
+          nextDue: proj.nextServiceAt?.toISOString().split("T")[0] || null,
+          status: record.status,
+          reportUrl: record.reportUrl,
+          reportGenerated: record.reportGenerated,
+        }))
+
         return {
           id: proj.id,
           name: `${proj.projectorModel} (${proj.serialNo})`,
@@ -65,7 +81,7 @@ export async function GET(
           lastServiceDate: proj.lastServiceAt?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
           status,
           nextServiceDue: proj.nextServiceAt?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
-          serviceHistory: [],
+          serviceHistory,
         }
       }),
     }

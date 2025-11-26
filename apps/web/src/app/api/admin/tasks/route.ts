@@ -99,11 +99,15 @@ export async function GET(request: NextRequest) {
         siteId: task.siteId,
         fieldWorkerId: task.assignedToId || "",
         scheduledDate: task.date?.toISOString().split("T")[0] || "",
+        completedAt: task.updatedAt?.toISOString() || "",
         status,
         projectorName: `${task.projector.projectorModel} (${task.projector.serialNo})`,
         workerName: task.assignedTo?.name || "Unassigned",
         siteName: task.projector.site.siteName,
         rawStatus: task.status,
+        reportGenerated: task.reportGenerated,
+        reportUrl: task.reportUrl || null,
+        serviceNumber: task.serviceNumber,
       }
     })
 

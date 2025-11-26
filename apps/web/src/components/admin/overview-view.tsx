@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import Link from "next/link"
+import type { Route } from "next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -11,6 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import ScheduleServiceModal from "@/components/admin/modals/schedule-service-modal"
 
 interface OverviewStats {
   totalSites: number
@@ -20,26 +24,6 @@ interface OverviewStats {
   completedServices: number
   scheduledServices: number
   activeWorkers: number
-}
-
-interface PendingProjector {
-  id: string
-  name: string
-  siteName: string
-  siteId: string
-  lastServiceAt: string | null
-  nextServiceAt: string | null
-}
-
-interface RecentWorker {
-  id: string
-  name: string
-  email: string
-  sitesCompleted: number
-  pendingTasks: number
-  totalTasks: number
-  lastActiveDate: string
-  joinDate: string
 }
 
 interface RecentTask {
@@ -57,9 +41,20 @@ interface RecentTask {
 
 interface OverviewData {
   stats: OverviewStats
-  pendingProjectors: PendingProjector[]
-  recentWorkers: RecentWorker[]
   recentTasks: RecentTask[]
+}
+
+interface CompletedService {
+  id: string
+  projectorId: string
+  siteId: string
+  siteName: string
+  projectorName: string
+  workerName: string
+  scheduledDate: string
+  completedAt?: string
+  reportUrl?: string | null
+  serviceNumber?: number
 }
 
 export default function OverviewView() {
@@ -70,6 +65,9 @@ export default function OverviewView() {
   const [tasksLoading, setTasksLoading] = useState(false)
   const [timeRange, setTimeRange] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [scheduleTarget, setScheduleTarget] = useState<{ siteId: string; projectorId: string } | null>(null)
+  const [completedServices, setCompletedServices] = useState<CompletedService[]>([])
+  const [completedLoading, setCompletedLoading] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -93,34 +91,69 @@ export default function OverviewView() {
     fetchData()
   }, [])
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setTasksLoading(true)
-        const params = new URLSearchParams()
-        if (timeRange !== "all") {
-          params.append("timeRange", timeRange)
-        }
-        if (statusFilter !== "all") {
-          params.append("status", statusFilter)
-        }
-
-        const response = await fetch(`/api/admin/tasks?${params.toString()}`)
-        if (!response.ok) {
-          throw new Error("Failed to fetch tasks")
-        }
-        const result = await response.json()
-        setTasks(result.tasks || [])
-      } catch (err) {
-        console.error("Error fetching tasks:", err)
-        setTasks([])
-      } finally {
-        setTasksLoading(false)
+  const fetchTasks = useCallback(async () => {
+    try {
+      setTasksLoading(true)
+      const params = new URLSearchParams()
+      if (timeRange !== "all") {
+        params.append("timeRange", timeRange)
       }
-    }
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter)
+      }
 
+      const response = await fetch(`/api/admin/tasks?${params.toString()}`)
+      if (!response.ok) {
+        throw new Error("Failed to fetch tasks")
+      }
+      const result = await response.json()
+      setTasks(result.tasks || [])
+    } catch (err) {
+      console.error("Error fetching tasks:", err)
+      setTasks([])
+    } finally {
+      setTasksLoading(false)
+    }
+  }, [statusFilter, timeRange])
+
+  const fetchCompletedServices = useCallback(async () => {
+    try {
+      setCompletedLoading(true)
+      const response = await fetch("/api/admin/tasks?status=completed&timeRange=30d")
+      if (!response.ok) {
+        throw new Error("Failed to fetch completed services")
+      }
+      const result = await response.json()
+      const services: CompletedService[] = (result.tasks || [])
+        .slice(0, 5)
+        .map((service: any) => ({
+          id: service.id,
+          projectorId: service.projectorId,
+          siteId: service.siteId,
+          siteName: service.siteName,
+          projectorName: service.projectorName,
+          workerName: service.workerName,
+          scheduledDate: service.scheduledDate,
+          completedAt: service.completedAt,
+          reportUrl: service.reportUrl,
+          serviceNumber: service.serviceNumber,
+        }))
+      setCompletedServices(services)
+    } catch (err) {
+      console.error("Error fetching completed services:", err)
+      setCompletedServices([])
+    } finally {
+      setCompletedLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
     fetchTasks()
-  }, [timeRange, statusFilter])
+  }, [fetchTasks])
+
+  useEffect(() => {
+    fetchCompletedServices()
+  }, [fetchCompletedServices])
 
   if (loading) {
     return <OverviewSkeleton />
@@ -141,7 +174,7 @@ export default function OverviewView() {
     )
   }
 
-  const { stats, pendingProjectors, recentWorkers } = data
+  const { stats } = data
 
   const statCards = [
     { label: "Total Sites", value: stats.totalSites, color: "text-slate-700" },
@@ -151,6 +184,13 @@ export default function OverviewView() {
     { label: "Completed", value: stats.completedServices, color: "text-green-600" },
     { label: "Scheduled", value: stats.scheduledServices, color: "text-slate-700" },
   ]
+
+  const buildProjectorRoute = (siteId?: string | null, projectorId?: string | null): Route | null => {
+    if (!siteId || !projectorId) {
+      return null
+    }
+    return `/admin/dashboard/sites/${siteId}/projectors/${projectorId}` as Route
+  }
 
   return (
     <div className="space-y-6">
@@ -214,47 +254,90 @@ export default function OverviewView() {
               </div>
             </div>
           ) : tasks.length > 0 ? (
-            <div className="space-y-2 flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-              {tasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex min-w-[18vw] max-w-[18vw] justify-between p-3 h-[20vh] bg-muted/50 rounded-lg border border-border"
-                >
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div className="flex flex-col gap-1">
-                    <p className="font-medium text-foreground">{task.projectorName}</p>
-                    <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">{new Date(task.scheduledDate).toLocaleDateString()}</span>
-                    <span
-                      className={`px-2.5 py-1 h-fit rounded-md text-xs font-medium whitespace-nowrap ${
-                        task.status === "pending"
-                          ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+              {tasks.map((task) => {
+                const scheduledDate = task.scheduledDate ? new Date(task.scheduledDate) : null
+                const hasValidDate = scheduledDate && !Number.isNaN(scheduledDate.getTime())
+                const formattedDate = hasValidDate
+                  ? scheduledDate.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : null
+
+                const isUnassigned =
+                  !task.workerName || task.workerName.trim() === "" || task.workerName === "Unassigned"
+
+                const statusBadge =
+                  task.status === "pending"
+                    ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                    : task.status === "scheduled"
+                      ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                      : task.status === "in_progress"
+                        ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"
+                        : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+
+                return (
+                  <div
+                    key={task.id}
+                    className="flex min-w-[260px] max-w-[300px] flex-col gap-3 rounded-lg border bg-muted/40 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{task.projectorName}</p>
+                        <p className="text-xs text-muted-foreground">{task.siteName}</p>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-md text-xs font-medium ${statusBadge}`}>
+                        {task.status === "pending"
+                          ? "Pending"
                           : task.status === "scheduled"
-                            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                            ? "Scheduled"
                             : task.status === "in_progress"
-                              ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400"
-                              : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                      }`}
-                    >
-                      {task.status === "pending"
-                        ? "Pending"
-                        : task.status === "scheduled"
-                          ? "Scheduled"
-                          : task.status === "in_progress"
-                            ? "In Progress"
-                            : "Completed"}
-                    </span>
-                  </div>
+                              ? "In Progress"
+                              : "Completed"}
+                      </span>
                     </div>
-                    <div className="">
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Assigned to {task.workerName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{task.siteName}</p>
+
+                    <div className="space-y-2 rounded-md bg-white/70 p-3 text-xs shadow-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Scheduled for</span>
+                        <span className={hasValidDate ? "font-semibold text-foreground" : "font-semibold text-amber-600"}>
+                          {hasValidDate ? formattedDate : "Not scheduled"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Assigned to</span>
+                        <span className={isUnassigned ? "font-semibold text-amber-600" : "font-semibold text-foreground"}>
+                          {isUnassigned ? "Unassigned" : task.workerName}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {task.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-dashed"
+                          disabled={!task.siteId || !task.projectorId}
+                          onClick={() => {
+                            if (!task.siteId || !task.projectorId) return
+                            setScheduleTarget({ siteId: task.siteId, projectorId: task.projectorId })
+                          }}
+                        >
+                          Schedule visit
+                        </Button>
+                      )}
+                      {task.status === "completed" && buildProjectorRoute(task.siteId, task.projectorId) && (
+                        <Button size="sm" variant="secondary" asChild>
+                          <Link href={buildProjectorRoute(task.siteId, task.projectorId)!}>View report</Link>
+                        </Button>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="flex items-center justify-center py-12">
@@ -264,78 +347,100 @@ export default function OverviewView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 mt-4 lg:grid-cols-2 gap-6">
-        {pendingProjectors.length > 0 && (
-          <Card>
-            <CardHeader className="">
-              <CardTitle className="text-base font-semibold">Pending Service Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {pendingProjectors.map((proj) => (
-                  <div
-                    key={proj.id}
-                    className="flex items-start justify-between p-3 bg-muted/50 rounded-lg border border-border hover:bg-muted transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate mb-1">{proj.name}</p>
-                      <p className="text-xs text-muted-foreground mb-1">{proj.siteName}</p>
-                      {proj.lastServiceAt && (
-                        <p className="text-xs text-muted-foreground">
-                          Last service: {new Date(proj.lastServiceAt).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                    <span className="ml-3 px-2.5 py-1 bg-muted text-foreground rounded-md text-xs font-medium whitespace-nowrap border border-border">
-                      Pending
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
+      <div className="w-full">
         <Card>
-          <CardHeader className="">
-            <CardTitle className="text-base font-semibold">Active Workers (Last 7 Days)</CardTitle>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Latest Completed Services</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {recentWorkers.length > 0 ? (
-                recentWorkers.map((worker) => (
-                  <div
-                    key={worker.id}
-                    className="p-3 bg-muted/50 rounded-lg border border-border hover:bg-muted transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-foreground mb-1">{worker.name}</h4>
-                        <p className="text-xs text-muted-foreground truncate mb-2">{worker.email}</p>
-                        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-0.5">Completed</p>
-                            <p className="text-sm font-semibold text-foreground">{worker.sitesCompleted}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-0.5">Pending</p>
-                            <p className="text-sm font-semibold text-foreground">{worker.pendingTasks}</p>
-                          </div>
+            {completedLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="p-4 border border-border rounded-lg bg-muted/30 animate-pulse h-24" />
+                ))}
+              </div>
+            ) : completedServices.length > 0 ? (
+              <div className="space-y-3">
+                {completedServices.map((service) => {
+                  const completedDate = service.completedAt || service.scheduledDate
+                  const formattedCompletedDate = completedDate
+                    ? new Date(completedDate).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "Not available"
+                  const projectorRoute = buildProjectorRoute(service.siteId, service.projectorId)
+
+                  return (
+                    <div
+                      key={service.id}
+                      className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{service.projectorName}</p>
+                          <p className="text-xs text-muted-foreground">{service.siteName}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Last active: {new Date(worker.lastActiveDate).toLocaleDateString()}
-                        </p>
+                        <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-green-100 text-green-700">
+                          Completed
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div>
+                          <p className="text-muted-foreground mb-0.5">Completed</p>
+                          <p className="font-semibold text-foreground">{formattedCompletedDate}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground mb-0.5">Assigned To</p>
+                          <p className="font-semibold text-foreground">{service.workerName}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground mb-0.5">Service #</p>
+                          <p className="font-semibold text-foreground">
+                            {service.serviceNumber ? `#${service.serviceNumber}` : "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {projectorRoute && (
+                          <Button size="sm" variant="secondary" asChild>
+                            <Link href={projectorRoute}>View report</Link>
+                          </Button>
+                        )}
+                        {service.reportUrl && (
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={service.reportUrl} target="_blank" rel="noopener noreferrer">
+                              Download PDF
+                            </a>
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No active workers in the last 7 days</p>
-              )}
-            </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No completed services recorded for this period.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+      {scheduleTarget && (
+        <ScheduleServiceModal
+          siteId={scheduleTarget.siteId}
+          projectorId={scheduleTarget.projectorId}
+          onClose={() => setScheduleTarget(null)}
+          onSuccess={async () => {
+            setScheduleTarget(null)
+            await Promise.all([fetchTasks(), fetchCompletedServices()])
+          }}
+        />
+      )}
     </div>
   )
 }
