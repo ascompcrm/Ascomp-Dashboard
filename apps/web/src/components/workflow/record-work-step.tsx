@@ -3,9 +3,28 @@ import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 
 type IssueNotes = Record<string, string>
 type UploadedImage = { name: string; url: string; size?: number }
+type ProjectorPart = {
+  projector_model: string
+  part_number: string
+  description: string
+}
+type RecommendedPart = {
+  part_number: string
+  description: string
+}
 type RecordWorkForm = ReturnType<typeof createInitialFormData>
 
 const OPTICAL_FIELDS = ['reflector', 'uvFilter', 'integratorRod', 'coldMirror', 'foldMirror'] as const
@@ -117,6 +136,7 @@ const createInitialFormData = () => ({
   reportGenerated: false,
   reportUrl: '',
   issueNotes: {} as IssueNotes,
+  recommendedParts: [] as RecommendedPart[],
 })
 
 const FormSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -152,6 +172,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const [referenceImages, setReferenceImages] = useState<UploadedImage[]>([])
   const [imageError, setImageError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [partsData, setPartsData] = useState<ProjectorPart[]>([])
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedPartIds, setSelectedPartIds] = useState<Set<string>>(new Set())
   const brokenImagesRef = useRef<UploadedImage[]>([])
   const referenceImagesRef = useRef<UploadedImage[]>([])
 
@@ -173,6 +196,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         ...initial,
         ...data.workDetails,
         issueNotes: data.workDetails.issueNotes || {},
+        recommendedParts: data.workDetails.recommendedParts || [],
       })
     } else if (typeof window !== 'undefined') {
       const savedFormData = localStorage.getItem('recordWorkFormData')
@@ -182,6 +206,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           ...initial,
           ...parsed,
           issueNotes: parsed.issueNotes || {},
+          recommendedParts: parsed.recommendedParts || [],
         })
       }
     }
@@ -219,6 +244,34 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   useEffect(() => {
     referenceImagesRef.current = referenceImages
   }, [referenceImages])
+
+  // Load projector parts data
+  useEffect(() => {
+    const loadPartsData = async () => {
+      try {
+        const response = await fetch('/data/Projector.json')
+        if (response.ok) {
+          const data = await response.json()
+          setPartsData(data.projector_parts || [])
+        }
+      } catch (error) {
+        console.error('Failed to load projector parts data:', error)
+      }
+    }
+    loadPartsData()
+  }, [])
+
+  // Sync selected parts when dialog opens
+  useEffect(() => {
+    if (isDialogOpen) {
+      const currentParts = getValues('recommendedParts') || []
+      if (Array.isArray(currentParts) && currentParts.length > 0) {
+        setSelectedPartIds(new Set(currentParts.map((p: RecommendedPart) => p.part_number)))
+      } else {
+        setSelectedPartIds(new Set())
+      }
+    }
+  }, [isDialogOpen, getValues])
 
   const persistImages = (broken: UploadedImage[], other: UploadedImage[]) => {
     setBrokenImages(broken)
@@ -304,6 +357,37 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const reportGeneratedField = register('reportGenerated')
 
   const hasRequiredImages = brokenImages.length > 0 && referenceImages.length > 0
+
+  // Filter parts by projector model
+  const projectorModel = watch('projectorModel')
+  const filteredParts = partsData.filter(
+    (part) => part.projector_model.toLowerCase() === projectorModel?.toLowerCase()
+  )
+
+  // Handle part selection
+  const handlePartToggle = (part: ProjectorPart) => {
+    const newSelectedIds = new Set(selectedPartIds)
+    if (newSelectedIds.has(part.part_number)) {
+      newSelectedIds.delete(part.part_number)
+    } else {
+      newSelectedIds.add(part.part_number)
+    }
+    setSelectedPartIds(newSelectedIds)
+  }
+
+  // Save selected parts to form
+  const handleSaveSelectedParts = () => {
+    const selectedParts: RecommendedPart[] = filteredParts
+      .filter((part) => selectedPartIds.has(part.part_number))
+      .map((part) => ({
+        part_number: part.part_number,
+        description: part.description,
+      }))
+    setValue('recommendedParts', selectedParts, { shouldDirty: true })
+    setIsDialogOpen(false)
+  }
+
+  const recommendedParts = watch('recommendedParts') || []
 
   const StatusSelectWithNote = ({
     field,
@@ -773,6 +857,121 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               <Input {...register('reportUrl')} placeholder="https://" className="border-2 border-black text-sm" />
             </FormField>
           </FormRow>
+        </FormSection>
+
+        <FormSection title="Recommended Parts">
+          <div className="space-y-3">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-2 border-black text-black hover:bg-gray-100"
+                  disabled={!projectorModel}
+                >
+                  {recommendedParts.length > 0
+                    ? `Update Selected Parts (${recommendedParts.length})`
+                    : 'Select Recommended Parts'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                <DialogHeader>
+                  <DialogTitle>
+                    Select Recommended Parts
+                    {projectorModel && (
+                      <span className="text-sm font-normal text-gray-600 ml-2">
+                        for {projectorModel}
+                      </span>
+                    )}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {projectorModel
+                      ? `Select parts recommended for projector model ${projectorModel}`
+                      : 'Please enter a projector model first to view available parts'}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex-1 overflow-y-auto px-1">
+                  {!projectorModel ? (
+                    <p className="text-sm text-gray-600 py-4">
+                      Please enter a projector model in the form above to view available parts.
+                    </p>
+                  ) : filteredParts.length === 0 ? (
+                    <p className="text-sm text-gray-600 py-4">
+                      No parts found for projector model "{projectorModel}". Please check the model
+                      name.
+                    </p>
+                  ) : (
+                    <div className="space-y-3 py-2">
+                      {filteredParts.map((part) => {
+                        const isSelected = selectedPartIds.has(part.part_number)
+                        return (
+                          <div
+                            key={part.part_number}
+                            className="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-md hover:border-black transition-colors"
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handlePartToggle(part)}
+                              id={part.part_number}
+                              className="mt-1"
+                            />
+                            <Label
+                              htmlFor={part.part_number}
+                              className="flex-1 cursor-pointer text-sm"
+                            >
+                              <div className="font-semibold text-black">{part.description}</div>
+                              <div className="text-xs text-gray-600 mt-1">
+                                Part Number: {part.part_number}
+                              </div>
+                            </Label>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                    className="border-2 border-black text-black hover:bg-gray-100"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSaveSelectedParts}
+                    disabled={!projectorModel || filteredParts.length === 0}
+                    className="bg-black text-white hover:bg-gray-800 border-2 border-black"
+                  >
+                    Save Selected ({selectedPartIds.size})
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            {recommendedParts.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs sm:text-sm font-semibold text-black">Selected Parts:</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto border-2 border-gray-200 p-3 rounded-md">
+                  {recommendedParts.map((part: RecommendedPart, index: number) => (
+                    <div
+                      key={`${part.part_number}-${index}`}
+                      className="text-xs sm:text-sm border-b border-gray-200 pb-2 last:border-b-0 last:pb-0"
+                    >
+                      <div className="font-semibold text-black">{part.description}</div>
+                      <div className="text-gray-600">Part Number: {part.part_number}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!projectorModel && (
+              <p className="text-xs text-gray-600">
+                Please enter a projector model above to select recommended parts.
+              </p>
+            )}
+          </div>
         </FormSection>
 
         <FormSection title="Remarks">

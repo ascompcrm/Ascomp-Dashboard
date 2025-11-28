@@ -104,11 +104,23 @@ export async function POST(request: NextRequest) {
       'images', 'brokenImages', 'date' // date is the scheduled date, don't overwrite
     ])
 
+    // Handle recommendedParts as JSON
+    if (workDetails?.recommendedParts) {
+      const recommendedParts = workDetails.recommendedParts
+      // Only save if it's a non-empty array
+      if (Array.isArray(recommendedParts) && recommendedParts.length > 0) {
+        updateData.recommendedParts = recommendedParts
+      } else if (!Array.isArray(recommendedParts) && recommendedParts) {
+        // If it's not an array but exists, save it anyway (for flexibility)
+        updateData.recommendedParts = recommendedParts
+      }
+    }
+
     // Add work details with proper type conversion
     if (workDetails) {
       Object.keys(workDetails).forEach((key) => {
-        // Skip readonly fields and issueNotes
-        if (readonlyFields.has(key)) return
+        // Skip readonly fields, issueNotes, and recommendedParts (handled separately)
+        if (readonlyFields.has(key) || key === 'recommendedParts') return
         
         const converted = convertValue(key, workDetails[key])
         if (converted !== undefined) {

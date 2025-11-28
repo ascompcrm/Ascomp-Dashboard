@@ -206,6 +206,7 @@ model ServiceRecord {
   signatures                    Json?
   reportGenerated               Boolean       @default(false)
   reportUrl                     String?
+  recommendedParts              Json?
   images                        String[] @default([])
   brokenImages                  String[] @default([])
 
