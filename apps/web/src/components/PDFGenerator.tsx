@@ -122,6 +122,40 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const timesRomanBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
+  // Load and embed the company logo
+  let logoImage;
+  let logoImage2;
+  try {
+    // Try to load from public folder (works in browser/client-side)
+    const logoResponse = await fetch('/LOGO/Ascomp.png');
+    const logoResponse2 = await fetch('/LOGO/Christie.png');
+    if (logoResponse.ok) {
+      const logoBytes = await logoResponse.arrayBuffer();
+      logoImage = await pdfDoc.embedPng(logoBytes);
+    }
+    if (logoResponse2.ok) {
+      const logoBytes = await logoResponse2.arrayBuffer();
+      logoImage2 = await pdfDoc.embedPng(logoBytes);
+    }
+  } catch (error) {
+    // If fetch fails (e.g., server-side), try using file system
+    try {
+      if (typeof window === 'undefined') {
+        // Server-side: use Node.js fs
+        const fs = require('fs');
+        const path = require('path');
+        const logoPath = path.join(process.cwd(), 'public', 'LOGO', 'Ascomp.png');
+        const logoPath2 = path.join(process.cwd(), 'public', 'LOGO', 'Christie.png');
+        const logoBytes = fs.readFileSync(logoPath);
+        const logoBytes2 = fs.readFileSync(logoPath2);
+        logoImage = await pdfDoc.embedPng(logoBytes);
+        logoImage2 = await pdfDoc.embedPng(logoBytes2);
+      }
+    } catch (fsError) {
+      console.warn('Could not load logo image, falling back to text:', fsError);
+    }
+  }
+
   const page1 = pdfDoc.addPage([595, 842]);
   const page2 = pdfDoc.addPage([595, 842]);
 
@@ -138,13 +172,51 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     borderWidth: 1,
   });
 
-  page1.drawText('ASCOMP INC.', {
-    x: 50,
-    y: yPos - 20,
-    size: 16,
-    font: timesRomanBold,
-    color: rgb(0.2, 0.6, 0.8),
-  });
+  if (logoImage) {
+    // Draw the logo image (scaled to fit nicely in the header)
+    const logoScale = 0.016; // Reduced scale for smaller logo
+    const logoDims = logoImage.scale(logoScale);
+    const logoHeight = logoDims.height;
+    const headerCenterY = yPos - 15; // Center of the 30px header box
+    page1.drawImage(logoImage, {
+      x: 50,
+      y: headerCenterY - logoHeight / 2,
+      width: logoDims.width,
+      height: logoHeight,
+    });
+  } else {
+    // Fallback to text if logo couldn't be loaded
+    page1.drawText('ASCOMP INC.', {
+      x: 50,
+      y: yPos - 20,
+      size: 16,
+      font: timesRomanBold,
+      color: rgb(0.2, 0.6, 0.8),
+    });
+  }
+
+  if (logoImage2) {
+    // Draw the logo image (scaled to fit nicely in the header)
+    const logoScale = 0.2; // Reduced scale for smaller logo
+    const logoDims = logoImage2.scale(logoScale);
+    const logoHeight = logoDims.height;
+    const headerCenterY = yPos - 15; // Center of the 30px header box
+    page1.drawImage(logoImage2, {
+      x: 500,
+      y: headerCenterY - logoHeight / 2,
+      width: logoDims.width,
+      height: logoHeight,
+    });
+  } else {
+    // Fallback to text if logo couldn't be loaded
+    page1.drawText('ASCOMP INC.', {
+      x: 450,
+      y: 10,
+      size: 16,
+      font: timesRomanBold,
+      color: rgb(0.2, 0.6, 0.8),
+    });
+  }
 
   page1.drawText('EW - Preventive Maintenance Report', {
     x: 220,
@@ -156,31 +228,85 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 
   yPos -= 35;
 
+  // Contact Details Section - Highlighted format
+  const contactBoxHeight = 50;
+  const contactBoxY = yPos - contactBoxHeight;
+  
+  // Background highlight
   page1.drawRectangle({
     x: 40,
-    y: yPos - 45,
+    y: contactBoxY,
     width: width - 60,
-    height: 45,
+    height: contactBoxHeight,
+    color: rgb(0.95, 0.95, 0.95), // Light gray background
     borderColor: rgb(0, 0, 0),
     borderWidth: 1,
   });
 
-  page1.drawText('Address: 9, Community Centre, 2nd Floor, Phase I, Mayapuri, New Delhi, Delhi 110064', {
+  // Contact Details heading
+  page1.drawText('Contact Details', {
     x: 50,
-    y: yPos - 20,
+    y: yPos - 12,
+    size: 10,
+    font: timesRomanBold,
+    color: rgb(0.2, 0.6, 0.8),
+  });
+
+  // Address
+  page1.drawText('Address:', {
+    x: 50,
+    y: yPos - 28,
+    size: 9,
+    font: timesRomanBold,
+  });
+  page1.drawText('9, Community Centre, 2nd Floor, Phase I, Mayapuri, New Delhi, Delhi 110064', {
+    x: 120,
+    y: yPos - 28,
     size: 8,
     font: timesRoman,
   });
 
-  yPos -= 15;
-  page1.drawText('Landline: 011-45501226  |  Mobile - 8882475207  |  Email - helpdesk@ascompinc.in  |  www.ascompinc.in', {
+  // Contact information
+  page1.drawText('Landline:', {
     x: 50,
-    y: yPos - 20,
+    y: yPos - 40,
+    size: 9,
+    font: timesRomanBold,
+  });
+  page1.drawText('011-45501226', {
+    x: 120,
+    y: yPos - 40,
     size: 8,
     font: timesRoman,
   });
 
-  yPos -= 30;
+  page1.drawText('Mobile:', {
+    x: 240,
+    y: yPos - 40,
+    size: 9,
+    font: timesRomanBold,
+  });
+  page1.drawText('8882475207', {
+    x: 300,
+    y: yPos - 40,
+    size: 8,
+    font: timesRoman,
+  });
+
+  page1.drawText('Email:', {
+    x: 400,
+    y: yPos - 40,
+    size: 9,
+    font: timesRomanBold,
+  });
+  page1.drawText('helpdesk@ascompinc.in', {
+    x: 450,
+    y: yPos - 40,
+    size: 8,
+    font: timesRoman,
+  });
+
+  yPos -= 50;
 
   drawTableRow(page1, timesRomanBold, timesRoman, 40, yPos, width - 80,
     ['CINEMA NAME:', data.cinemaName, 'DATE:', data.date], [100, 150, 80, 205], 20);
@@ -258,28 +384,10 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   ])
 
   if (data.projectorEnvironment) {
-    page1.drawText('Projector placement, room and environment', {
-      x: 50,
-      y: yPos - 15,
-      size: 9,
-      font: timesRomanBold,
-    })
-    page1.drawText(data.projectorEnvironment, {
-      x: 50,
-      y: yPos - 28,
-      size: 8,
-      font: timesRoman,
-      maxWidth: width - 100,
-    })
-    yPos -= 35
+    drawTableRow(page1, timesRomanBold, timesRoman, 40, yPos, width - 80,
+      ['Projector placement, room and environment:', data.projectorEnvironment], [200, 335], 40);
+    yPos -= 40;
   }
-
-  page1.drawText('PM Report Version 6.3.5', {
-    x: width - 150,
-    y: 30,
-    size: 8,
-    font: timesRoman,
-  });
 
   yPos = height - 50;
 
@@ -299,7 +407,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     ['', data.voltageParams.pvn, data.voltageParams.pve, data.voltageParams.nve], [150, 122, 122, 121], 20);
   yPos -= 20;
 
-  drawTableRow(page2, timesRomanBold, timesRoman, 40, yPos, width - 80,
+  drawTableRow(page2, timesRomanBold, timesRomanBold, 40, yPos, width - 80,
     ['fL measurements:', 'Before', 'After'], [150, 150, 215, 365], 20);
   yPos -= 20;
   drawTableRow(page2, timesRoman, timesRoman, 40, yPos, width - 80,
@@ -307,11 +415,11 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   yPos -= 20;
 
   drawTableRow(page2, timesRomanBold, timesRoman, 40, yPos, width - 80,
-    ['Content Player Model:', data.contentPlayer, 'AC Status: Working – Not Working – Not Available'], [150, 150, 185], 20);
+    ['Content Player Model:', data.contentPlayer, 'AC Status:', data.acStatus], [150, 150, 95, 120], 20);
   yPos -= 20;
 
   drawTableRow(page2, timesRomanBold, timesRoman, 40, yPos, width - 80,
-    ['LE Status during PM: Removed – Not removed, Good fL – Not removed, DE-bonded'], [515], 20);
+    ['LE Status during PM:', data.leStatus], [150, 315], 20);
   yPos -= 20;
 
   drawTableRow(page2, timesRomanBold, timesRoman, 40, yPos, width - 80,
@@ -333,14 +441,18 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   let leftY = yPos
 
   drawTableRow(page2, timesRomanBold, timesRoman, leftTableX, leftY, 240,
-    ['Software Version'], [240], 20);
-  leftY -= 20;
+    ['Software Version', data.softwareVersion], [80, 160], 20);
+  leftY -= 45;
+
+  page2.drawText('Screen Information in metres', {
+    x: leftTableX,
+    y: leftY,
+    size: 10,
+    font: timesRomanBold,
+  });
+  leftY -= 10;
 
   drawTableRow(page2, timesRomanBold, timesRomanBold, leftTableX, leftY, 240,
-    ['Screen Information in metres'], [240], 20);
-  leftY -= 20;
-
-  drawTableRow(page2, timesRomanBold, timesRoman, leftTableX, leftY, 240,
     ['', 'Height', 'Width', 'Gain'], [60, 60, 60, 60], 20);
   leftY -= 20;
 
@@ -438,9 +550,13 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     ['B2K /4K', data.mcgdData.b2k4k.fl, data.mcgdData.b2k4k.x, data.mcgdData.b2k4k.y], [120, 45, 45, 45], 20);
   rightY -= 40;
 
-  drawTableRow(page2, timesRomanBold, timesRomanBold, rightTableX, rightY, 255,
-    ['CIE XYZ Color Accuracy'], [255], 20);
-  rightY -= 20;
+  page2.drawText('CIE XYZ Color Accuracy', {
+    x: rightTableX,
+    y: rightY,
+    size: 10,
+    font: timesRomanBold,
+  });
+  rightY -= 10;
 
   drawTableRow(page2, timesRomanBold, timesRoman, rightTableX, rightY, 255,
     ['Test Pattern', 'x', 'y', 'fL'], [120, 45, 45, 45], 20);
@@ -451,8 +567,15 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   rightY -= 40;
 
   // Recommended Parts on the right side - Always displayed
+  page2.drawText('Recommended Parts', {
+    x: rightTableX,
+    y: rightY,
+    size: 10,
+    font: timesRomanBold,
+  });
+  rightY -= 10;
   drawTableRow(page2, timesRomanBold, timesRomanBold, rightTableX, rightY, 255,
-    ['Recommended Parts', 'Part #'], [180, 75], 20);
+    ['Part Name', 'Part Number'], [180, 75], 20);
   rightY -= 20;
   if (data.recommendedParts && data.recommendedParts.length > 0) {
     data.recommendedParts.forEach((part) => {
@@ -490,27 +613,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, width - 80,
     ['', data.airPollution.hcho, data.airPollution.tvoc, data.airPollution.pm100, data.airPollution.pm25, data.airPollution.pm10, data.airPollution.temperature, data.airPollution.humidity], [100, 59, 59, 59, 59, 59, 59, 59], 20);
 
-  // Report Summary positioned above signatures (around y=110) - Always displayed
-  const summaryBaseY = 110;
-  page2.drawText('Report Summary', {
-    x: 40,
-    y: summaryBaseY,
-    size: 10,
-    font: timesRomanBold,
-  });
-  page2.drawText(`Report Generated: ${data.reportGenerated !== undefined ? (data.reportGenerated ? 'Yes' : 'No') : 'N/A'}`, {
-    x: 40,
-    y: summaryBaseY - 12,
-    size: 9,
-    font: timesRoman,
-  });
-  page2.drawText(`Report URL: ${data.reportUrl || 'N/A'}`, {
-    x: 40,
-    y: summaryBaseY - 24,
-    size: 8,
-    font: timesRoman,
-    maxWidth: width - 80,
-  });
+
 
   page2.drawText("Client's Signature & Stamp", {
     x: 60,
@@ -524,13 +627,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     y: 60,
     size: 10,
     font: timesRomanBold,
-  });
-
-  page2.drawText('PM Report Version 6.3.5', {
-    x: width - 150,
-    y: 30,
-    size: 8,
-    font: timesRoman,
   });
 
   return await pdfDoc.save();
