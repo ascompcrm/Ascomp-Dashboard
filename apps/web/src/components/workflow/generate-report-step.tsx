@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import jsPDF from 'jspdf'
+import { generateMaintenanceReport, type MaintenanceReportData } from '@/components/PDFGenerator'
 
 export default function GenerateReportStep({ data, onBack }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -97,221 +97,173 @@ export default function GenerateReportStep({ data, onBack }: any) {
     localStorage.setItem('serviceReports', JSON.stringify(reports))
   }
 
-  const generatePDF = async (issues: { label: string; value: string }[]) => {
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    })
-
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
-    let yPosition = 10
-
-    // Header
-    pdf.setFontSize(16)
-    pdf.text('EW - Preventive Maintenance Report', pageWidth / 2, yPosition, {
-      align: 'center',
-    })
-    yPosition += 8
-
-    pdf.setFontSize(9)
-    pdf.text('ASCOMP INC', pageWidth / 2, yPosition, { align: 'center' })
-    yPosition += 5
-    pdf.text('Address: 9, Community Centre, 2nd Floor, Phase I, Mayapuri, New Delhi', pageWidth / 2, yPosition, {
-      align: 'center',
-    })
-    yPosition += 5
-    pdf.text('Phone: 011-45501226 | Mobile: 8882475207 | Email: helpdesk@ascompinc.in', pageWidth / 2, yPosition, {
-      align: 'center',
-    })
-    yPosition += 10
-
-    // Service Details
-    const service = data.selectedService
-    pdf.setFontSize(11)
-    pdf.text('SERVICE DETAILS', 10, yPosition)
-    yPosition += 6
-
-    pdf.setFontSize(9)
-    const details = [
-      `Site: ${service.site}`,
-      `Projector: ${service.projector}`,
-      `Type: ${service.type}`,
-      `Date: ${service.date}`,
-    ]
-
-    details.forEach((detail) => {
-      pdf.text(detail, 15, yPosition)
-      yPosition += 5
-    })
-    yPosition += 5
-
-    // Projector Information
-    const workDetails = data.workDetails
-    pdf.text('PROJECTOR INFORMATION', 10, yPosition)
-    yPosition += 6
-
-    const projectorInfo = [
-      `Model: ${workDetails.projectorModel}`,
-      `Serial No.: ${workDetails.projectorSerialNumber}`,
-      `Running Hours: ${workDetails.projectorRunningHours}`,
-    ]
-
-    projectorInfo.forEach((info) => {
-      pdf.text(info, 15, yPosition)
-      yPosition += 5
-    })
-    yPosition += 5
-
-    // Cinema Details
-    if (yPosition > pageHeight - 50) {
-      pdf.addPage()
-      yPosition = 10
-    }
-    pdf.text('CINEMA DETAILS', 10, yPosition)
-    yPosition += 6
-
-    const cinemaInfo = [
-      `Cinema Name: ${workDetails.cinemaName}`,
-      `Address: ${workDetails.address}`,
-      `Location: ${workDetails.location}`,
-      `Screen No: ${workDetails.screenNumber}`,
-      `Contact: ${workDetails.contactDetails}`,
-      `Service Type: ${workDetails.serviceVisitType}`,
-    ]
-
-    cinemaInfo.forEach((info) => {
-      pdf.text(info, 15, yPosition)
-      yPosition += 5
-    })
-    yPosition += 5
-
-    // Opticals Status
-    if (yPosition > pageHeight - 50) {
-      pdf.addPage()
-      yPosition = 10
-    }
-    pdf.text('COMPONENTS STATUS', 10, yPosition)
-    yPosition += 6
-
-    const componentsStatus = [
-      `Reflector: ${workDetails.reflector}`,
-      `UV Filter: ${workDetails.uvFilter}`,
-      `Integrator Rod: ${workDetails.integratorRod}`,
-      `Cold Mirror: ${workDetails.coldMirror}`,
-      `Fold Mirror: ${workDetails.foldMirror}`,
-      `Touch Panel: ${workDetails.touchPanel}`,
-      `Coolant Level: ${workDetails.coolantLevelColor}`,
-    ]
-
-    componentsStatus.forEach((component) => {
-      if (yPosition > pageHeight - 10) {
-        pdf.addPage()
-        yPosition = 10
-      }
-      pdf.text(component, 15, yPosition)
-      yPosition += 5
-    })
-    yPosition += 5
-
-    // Light Engine Tests
-    if (yPosition > pageHeight - 40) {
-      pdf.addPage()
-      yPosition = 10
-    }
-    pdf.text('LIGHT ENGINE TEST RESULTS', 10, yPosition)
-    yPosition += 6
-
-    const lightEngineTests = [
-      `White: ${workDetails.lightEngineWhite}`,
-      `Red: ${workDetails.lightEngineRed}`,
-      `Green: ${workDetails.lightEngineGreen}`,
-      `Blue: ${workDetails.lightEngineBlue}`,
-      `Black: ${workDetails.lightEngineBlack}`,
-    ]
-
-    lightEngineTests.forEach((test) => {
-      pdf.text(test, 15, yPosition)
-      yPosition += 5
-    })
-    yPosition += 5
-
-    // Additional Details
-    if (yPosition > pageHeight - 40) {
-      pdf.addPage()
-      yPosition = 10
-    }
-    pdf.text('ADDITIONAL DETAILS', 10, yPosition)
-    yPosition += 6
-
-    const additionalInfo = [
-      `Software Version: ${workDetails.softwareVersion}`,
-      `Lamp Make/Model: ${workDetails.lampMakeModel}`,
-      `Screen Make: ${workDetails.screenMake}`,
-      `AC Status: ${workDetails.acStatus}`,
-    ]
-
-    additionalInfo.forEach((info) => {
-      pdf.text(info, 15, yPosition)
-      yPosition += 5
-    })
-    yPosition += 5
-
-    // Issues & Remarks
-    if (yPosition > pageHeight - 30) {
-      pdf.addPage()
-      yPosition = 10
-    }
-    pdf.text('ISSUES & REMARKS', 10, yPosition)
-    yPosition += 6
-    if (issues.length > 0) {
-      issues.forEach((issue) => {
-        if (yPosition > pageHeight - 10) {
-          pdf.addPage()
-          yPosition = 10
-        }
-        pdf.text(`• ${issue.label}: ${issue.value}`, 15, yPosition)
-        yPosition += 5
-      })
-    } else {
-      pdf.text('No issues reported. All components OK.', 15, yPosition)
-      yPosition += 5
-    }
-    const remarksText = pdf.splitTextToSize(workDetails.remarks || 'No remarks provided.', pageWidth - 20)
-    remarksText.forEach((line: string) => {
-      if (yPosition > pageHeight - 10) {
-        pdf.addPage()
-        yPosition = 10
-      }
-      pdf.text(line, 15, yPosition)
-      yPosition += 5
-    })
-
-    // Signatures
-    if (yPosition > pageHeight - 40) {
-      pdf.addPage()
-      yPosition = 10
-    }
-    pdf.text('SIGNATURES', 10, yPosition)
-    yPosition += 8
-    pdf.rect(10, yPosition, pageWidth / 2 - 15, 20)
-    pdf.text('Engineer Signature', 15, yPosition + 15)
-    pdf.rect(pageWidth / 2 + 5, yPosition, pageWidth / 2 - 15, 20)
-    pdf.text('Site Incharge Signature', pageWidth / 2 + 10, yPosition + 15)
-    yPosition += 28
-
-    // Footer
-    if (yPosition > pageHeight - 20) {
-      pdf.addPage()
-      yPosition = pageHeight - 25
+  const buildPdfPayload = (): MaintenanceReportData => {
+    const workDetails = data.workDetails || {}
+    const service = data.selectedService || {}
+    const safe = (value: unknown) => (value ?? '').toString()
+    const toStatus = (value: unknown) => ({ status: safe(value) })
+    const formatDateTime = (value?: string) => {
+      if (!value) return ''
+      const date = new Date(value)
+      return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
     }
 
-    pdf.setFontSize(10)
-    pdf.text('SERVICE REPORT GENERATED', 10, yPosition)
-    pdf.text(`Date: ${new Date().toLocaleString()}`, 10, yPosition + 5)
+    const issueNotesEntries =
+      workDetails.issueNotes && typeof workDetails.issueNotes === 'object'
+        ? Object.entries(workDetails.issueNotes).map(([label, note]) => ({
+            label,
+            note: String(note ?? ''),
+          }))
+        : []
 
-    pdf.save(`Service_Report_${service.projector}_${new Date().getTime()}.pdf`)
+    const recommendedParts =
+      Array.isArray(workDetails.recommendedParts) && workDetails.recommendedParts.length > 0
+        ? workDetails.recommendedParts.map((part: any) => ({
+            description: safe(part.description),
+            partNumber: safe(part.part_number ?? part.partNumber),
+          }))
+        : []
+
+    const detectedIssues = getIssueEntries().map((issue) => ({
+      label: issue.label,
+      value: issue.value,
+    }))
+
+    return {
+      cinemaName: safe(workDetails.cinemaName || service.site),
+      date: safe(workDetails.date || service.date),
+      address: safe(workDetails.address || service.address),
+      contactDetails: safe(workDetails.contactDetails || service.contactDetails),
+      location: safe(workDetails.location),
+      screenNo: safe(workDetails.screenNumber),
+      serviceVisit: safe(workDetails.serviceVisitType || service.type),
+      projectorModel: safe(workDetails.projectorModel || service.projector),
+      serialNo: safe(workDetails.projectorSerialNumber),
+      runningHours: safe(workDetails.projectorRunningHours),
+      projectorEnvironment: safe(workDetails.projectorPlacementEnvironment),
+      startTime: formatDateTime(workDetails.startTime),
+      endTime: formatDateTime(workDetails.endTime),
+      opticals: {
+        reflector: toStatus(workDetails.reflector),
+        uvFilter: toStatus(workDetails.uvFilter),
+        integratorRod: toStatus(workDetails.integratorRod),
+        coldMirror: toStatus(workDetails.coldMirror),
+        foldMirror: toStatus(workDetails.foldMirror),
+      },
+      electronics: {
+        touchPanel: toStatus(workDetails.touchPanel),
+        evbImcb: toStatus(workDetails.evbImcbBoard),
+        pibIcp: toStatus(workDetails.pibIcpBoard),
+        imbS: toStatus(workDetails.imbSBoard),
+      },
+      serialVerified: toStatus(workDetails.serialNumberVerified),
+      disposableConsumables: toStatus(workDetails.disposableConsumables),
+      coolant: toStatus(workDetails.coolantLevelColor),
+      lightEngineTest: {
+        white: toStatus(workDetails.lightEngineWhite),
+        red: toStatus(workDetails.lightEngineRed),
+        green: toStatus(workDetails.lightEngineGreen),
+        blue: toStatus(workDetails.lightEngineBlue),
+        black: toStatus(workDetails.lightEngineBlack),
+      },
+      mechanical: {
+        acBlower: toStatus(workDetails.acBlowerVane),
+        extractor: toStatus(workDetails.extractorVane),
+        exhaustCFM: toStatus(workDetails.exhaustCfm),
+        lightEngine4Fans: toStatus(workDetails.lightEngineFans),
+        cardCageFans: toStatus(workDetails.cardCageFans),
+        radiatorFan: toStatus(workDetails.radiatorFanPump),
+        connectorHose: toStatus(workDetails.pumpConnectorHose),
+        securityLock: toStatus(workDetails.securityLampHouseLock),
+      },
+      lampLOC: toStatus(workDetails.lampLocMechanism),
+      lampMake: safe(workDetails.lampMakeModel),
+      lampHours: safe(workDetails.lampTotalRunningHours),
+      currentLampHours: safe(workDetails.lampCurrentRunningHours),
+      voltageParams: {
+        pvn: safe(workDetails.pvVsN),
+        pve: safe(workDetails.pvVsE),
+        nve: safe(workDetails.nvVsE),
+      },
+      flMeasurements: [
+        `Center: ${safe(workDetails.flCenter)}`,
+        `Left: ${safe(workDetails.flLeft)}`,
+        `Right: ${safe(workDetails.flRight)}`,
+      ]
+        .filter(Boolean)
+        .join(' | '),
+      contentPlayer: safe(workDetails.contentPlayerModel),
+      acStatus: safe(workDetails.acStatus),
+      leStatus: safe(workDetails.leStatus),
+      remarks: safe(workDetails.remarks),
+      leSerialNo: safe(workDetails.lightEngineSerialNumber),
+      mcgdData: {
+        w2k4k: { fl: safe(workDetails.whiteFl), x: safe(workDetails.whiteX), y: safe(workDetails.whiteY) },
+        r2k4k: { fl: safe(workDetails.redFl), x: safe(workDetails.redX), y: safe(workDetails.redY) },
+        g2k4k: { fl: safe(workDetails.greenFl), x: safe(workDetails.greenX), y: safe(workDetails.greenY) },
+        b2k4k: { fl: safe(workDetails.blueFl), x: safe(workDetails.blueX), y: safe(workDetails.blueY) },
+      },
+      cieXyz: {
+        x: safe(workDetails.whiteX),
+        y: safe(workDetails.whiteY),
+        fl: safe(workDetails.whiteFl),
+      },
+      softwareVersion: safe(workDetails.softwareVersion),
+      screenInfo: {
+        scope: {
+          height: safe(workDetails.screenHeight),
+          width: safe(workDetails.screenWidth),
+          gain: safe(workDetails.screenGain),
+        },
+        flat: {
+          height: safe(workDetails.screenHeight),
+          width: safe(workDetails.screenWidth),
+          gain: safe(workDetails.screenGain),
+        },
+        make: safe(workDetails.screenMake),
+      },
+      throwDistance: safe(workDetails.throwDistance),
+      imageEvaluation: {
+        focusBoresite: safe(workDetails.focusBoresight),
+        integratorPosition: safe(workDetails.integratorPosition),
+        spotOnScreen: safe(workDetails.spotsOnScreen),
+        screenCropping: safe(workDetails.screenCroppingOk),
+        convergence: safe(workDetails.convergenceOk),
+        channelsChecked: safe(workDetails.channelsCheckedOk),
+        pixelDefects: safe(workDetails.pixelDefects),
+        imageVibration: safe(workDetails.imageVibration),
+        liteLOC: safe(workDetails.liteloc),
+      },
+      airPollution: {
+        hcho: safe(workDetails.hcho),
+        tvoc: safe(workDetails.tvoc),
+        pm10: safe(workDetails.pm10),
+        pm25: safe(workDetails.pm2_5),
+        pm100: safe(workDetails.pm1),
+        temperature: safe(workDetails.temperature),
+        humidity: safe(workDetails.humidity),
+      },
+      recommendedParts,
+      issueNotes: issueNotesEntries,
+      detectedIssues,
+      reportGenerated: Boolean(workDetails.reportGenerated),
+      reportUrl: safe(workDetails.reportUrl),
+    }
+  }
+
+  const generatePDF = async () => {
+    const pdfData = buildPdfPayload()
+    const pdfBytes = await generateMaintenanceReport(pdfData)
+    const typedArray = new Uint8Array(pdfBytes)
+    const blob = new Blob([typedArray], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `Service_Report_${pdfData.projectorModel.replace(/\s+/g, '_')}_${Date.now()}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   const submitServiceRecord = async () => {
@@ -374,7 +326,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
       const issues = getIssueEntries()
       
       // Generate PDF first
-      await generatePDF(issues)
+      await generatePDF()
       
       // Submit to database
       await submitServiceRecord()
