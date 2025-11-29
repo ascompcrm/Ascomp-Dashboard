@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         assignedToId: fieldWorker.id,
         projectorId: projector.id,
         siteId: site.id,
-        serviceNumber: nextServiceNumber + 1,
+        serviceNumber: nextServiceNumber + 1, // Keep as number to match type
         status: ServiceStatus.SCHEDULED,
         date: parsedDate,
         cinemaName: site.siteName,

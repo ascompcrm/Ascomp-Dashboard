@@ -116,7 +116,7 @@ model ServiceRecord {
   projector                     Projector     @relation(fields: [projectorId], references: [id], onDelete: Cascade)
   siteId                        String
   site                          Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  serviceNumber                 Int
+  serviceNumber                 String
   status                        ServiceStatus @default(DRAFT)
   date                          DateTime?
   cinemaName                    String?
@@ -136,7 +136,6 @@ model ServiceRecord {
   pibIcpBoard                   String?
   imbSBoard                     String?
   serialNumberVerified          Boolean       @default(false)
-  disposableConsumables         String?
   coolantLevelColor             String?
   lightEngineWhite              String?
   lightEngineRed                String?
@@ -152,10 +151,28 @@ model ServiceRecord {
   pumpConnectorHose             String?
   securityLampHouseLock         String?
   lampLocMechanism              String?
+  reflectorNote                 String?
+  uvFilterNote                  String?
+  integratorRodNote             String?
+  coldMirrorNote                String?
+  foldMirrorNote                String?
+  touchPanelNote                String?
+  evbImcbBoardNote              String?
+  pibIcpBoardNote               String?
+  imbSBoardNote                 String?
+  acBlowerVaneNote              String?
+  extractorVaneNote             String?
+  lightEngineFansNote           String?
+  cardCageFansNote              String?
+  radiatorFanPumpNote           String?
+  pumpConnectorHoseNote         String?
+  lampLocMechanismNote          String?
   projectorPlacementEnvironment String?
   softwareVersion               String?
   screenHeight                  Float?
   screenWidth                   Float?
+  flatHeight                    Float?
+  flatWidth                     Float?
   screenGain                    Float?
   screenMake                    String?
   throwDistance                 Float?
@@ -165,24 +182,35 @@ model ServiceRecord {
   pvVsN                         String?
   pvVsE                         String?
   nvVsE                         String?
-  flCenter                      Float?
   flLeft                        Float?
   flRight                       Float?
   contentPlayerModel            String?
   acStatus                      String?
   leStatus                      String?
-  whiteX                        Float?
-  whiteY                        Float?
-  whiteFl                       Float?
-  redX                          Float?
-  redY                          Float?
-  redFl                         Float?
-  greenX                        Float?
-  greenY                        Float?
-  greenFl                       Float?
-  blueX                         Float?
-  blueY                         Float?
-  blueFl                        Float?
+  white2Kx                      Float?
+  white2Ky                      Float?
+  white2Kfl                     Float?
+  white4Kx                      Float?
+  white4Ky                      Float?
+  white4Kfl                     Float?
+  red2Kx                        Float?
+  red2Ky                        Float?
+  red2Kfl                       Float?
+  red4Kx                        Float?
+  red4Ky                        Float?
+  red4Kfl                       Float?
+  green2Kx                      Float?
+  green2Ky                      Float?
+  green2Kfl                     Float?
+  green4Kx                      Float?
+  green4Ky                      Float?
+  green4Kfl                     Float?
+  blue2Kx                       Float?
+  blue2Ky                       Float?
+  blue2Kfl                      Float?
+  blue4Kx                       Float?
+  blue4Ky                       Float?
+  blue4Kfl                      Float?
   focusBoresight                Boolean       @default(false)
   integratorPosition            Boolean       @default(false)
   spotsOnScreen                 Boolean       @default(false)
@@ -199,6 +227,7 @@ model ServiceRecord {
   pm10                          Float?
   temperature                   Float?
   humidity                      Float?
+  airPollutionLevel             String?
   remarks                       String?
   lightEngineSerialNumber       String?
   startTime                     DateTime?
@@ -209,6 +238,62 @@ model ServiceRecord {
   recommendedParts              Json?
   images                        String[] @default([])
   brokenImages                  String[] @default([])
+  yes1                          String?
+  yes2                          String?
+  yes3                          String?
+  yes4                          String?
+  yes5                          String?
+  yes6                          String?
+  yes7                          String?
+  yes8                          String?
+  yes9                          String?
+  yes10                         String?
+  yes11                         String?
+  yes12                         String?
+  yes13                         String?
+  yes14                         String?
+  yes15                         String?
+  yes16                         String?
+  yes17                         String?
+  yes18                         String?
+  yes19                         String?
+  yes20                         String?
+  yes21                         String?
+  yes22                         String?
+  yes23                         String?
+  yes24                         String?
+  yes25                         String?
+  yes26                         String?
+  yes27                         String?
+  yes28                         String?
+  yes1Note                      String?
+  yes2Note                      String?
+  yes3Note                      String?
+  yes4Note                      String?
+  yes5Note                      String?
+  yes6Note                      String?
+  yes7Note                      String?
+  yes8Note                      String?
+  yes9Note                      String?
+  yes10Note                     String?
+  yes11Note                     String?
+  yes12Note                     String?
+  yes13Note                     String?
+  yes14Note                     String?
+  yes15Note                     String?
+  yes16Note                     String?
+  yes17Note                     String?
+  yes18Note                     String?
+  yes19Note                     String?
+  yes20Note                     String?
+  yes21Note                     String?
+  yes22Note                     String?
+  yes23Note                     String?
+  yes24Note                     String?
+  yes25Note                     String?
+  yes26Note                     String?
+  yes27Note                     String?
+  yes28Note                     String?
 
   @@unique([projectorId, serviceNumber])
   @@index([projectorId, serviceNumber])

@@ -31,10 +31,10 @@ const OPTICAL_FIELDS = ['reflector', 'uvFilter', 'integratorRod', 'coldMirror', 
 const ELECTRONIC_FIELDS = ['touchPanel', 'evbImcbBoard', 'pibIcpBoard', 'imbSBoard'] as const
 const MECHANICAL_FIELDS = ['acBlowerVane', 'extractorVane', 'lightEngineFans', 'cardCageFans', 'radiatorFanPump'] as const
 const COLOR_ACCURACY = [
-  { name: 'White', fields: ['whiteX', 'whiteY', 'whiteFl'] },
-  { name: 'Red', fields: ['redX', 'redY', 'redFl'] },
-  { name: 'Green', fields: ['greenX', 'greenY', 'greenFl'] },
-  { name: 'Blue', fields: ['blueX', 'blueY', 'blueFl'] },
+  { name: 'White', fields: ['white2Kx', 'white2Ky', 'white2Kfl', 'white4Kx', 'white4Ky', 'white4Kfl'] },
+  { name: 'Red', fields: ['red2Kx', 'red2Ky', 'red2Kfl', 'red4Kx', 'red4Ky', 'red4Kfl'] },
+  { name: 'Green', fields: ['green2Kx', 'green2Ky', 'green2Kfl', 'green4Kx', 'green4Ky', 'green4Kfl'] },
+  { name: 'Blue', fields: ['blue2Kx', 'blue2Ky', 'blue2Kfl', 'blue4Kx', 'blue4Ky', 'blue4Kfl'] },
 ] as const
 const IMAGE_EVAL_FIELDS = [
   { field: 'focusBoresight', label: 'Focus/Boresight OK' },
@@ -43,6 +43,36 @@ const IMAGE_EVAL_FIELDS = [
   { field: 'screenCroppingOk', label: 'Screen Cropping OK' },
   { field: 'convergenceOk', label: 'Convergence OK' },
   { field: 'channelsCheckedOk', label: 'Channels Checked OK' },
+] as const
+const YES_CHECKLIST = [
+  { field: 'yes1', label: 'Reflector' },
+  { field: 'yes2', label: 'UV Filter' },
+  { field: 'yes3', label: 'Integrator Rod' },
+  { field: 'yes4', label: 'Cold Mirror' },
+  { field: 'yes5', label: 'Fold Mirror' },
+  { field: 'yes6', label: 'Touch Panel' },
+  { field: 'yes7', label: 'EVB and IMCB Board' },
+  { field: 'yes8', label: 'PIB and ICP Board' },
+  { field: 'yes9', label: 'IMB/S Board' },
+  { field: 'yes10', label: 'Chassis label vs Touch Panel' },
+  { field: 'yes11', label: 'Air Intake, LAD and RAD' },
+  { field: 'yes12', label: 'Coolant Level and Color' },
+  { field: 'yes13', label: 'Light Engine - White' },
+  { field: 'yes14', label: 'Light Engine - Red' },
+  { field: 'yes15', label: 'Light Engine - Green' },
+  { field: 'yes16', label: 'Light Engine - Blue' },
+  { field: 'yes17', label: 'Light Engine - Black' },
+  { field: 'yes18', label: 'AC Blower and Vane Switch' },
+  { field: 'yes19', label: 'Extractor Vane Switch' },
+  { field: 'yes20', label: 'Exhaust CFM' },
+  { field: 'yes21', label: 'Light Engine 4 fans with LAD fan' },
+  { field: 'yes22', label: 'Card Cage Top and Bottom fans' },
+  { field: 'yes23', label: 'Radiator fan and Pump' },
+  { field: 'yes24', label: 'Connector and hose for the Pump' },
+  { field: 'yes25', label: 'Security and lamp house lock switch' },
+  { field: 'yes26', label: 'Lamp LOC Mechanism X, Y and Z movement' },
+  { field: 'yes27', label: 'Additional Check 27' },
+  { field: 'yes28', label: 'Additional Check 28' },
 ] as const
 
 const createInitialFormData = () => ({
@@ -56,35 +86,52 @@ const createInitialFormData = () => ({
   projectorModel: '',
   projectorSerialNumber: '',
   projectorRunningHours: '',
-  reflector: '',
-  uvFilter: '',
-  integratorRod: '',
-  coldMirror: '',
-  foldMirror: '',
-  touchPanel: '',
-  evbImcbBoard: '',
-  pibIcpBoard: '',
-  imbSBoard: '',
-  disposableConsumables: '',
+  reflector: 'OK',
+  uvFilter: 'OK',
+  integratorRod: 'OK',
+  coldMirror: 'OK',
+  foldMirror: 'OK',
+  touchPanel: 'OK',
+  evbImcbBoard: 'OK',
+  pibIcpBoard: 'OK',
+  imbSBoard: 'OK',
+  reflectorNote: '',
+  uvFilterNote: '',
+  integratorRodNote: '',
+  coldMirrorNote: '',
+  foldMirrorNote: '',
+  touchPanelNote: '',
+  evbImcbBoardNote: '',
+  pibIcpBoardNote: '',
+  imbSBoardNote: '',
   coolantLevelColor: '',
   lightEngineWhite: '',
   lightEngineRed: '',
   lightEngineGreen: '',
   lightEngineBlue: '',
   lightEngineBlack: '',
-  acBlowerVane: '',
-  extractorVane: '',
+  acBlowerVane: 'OK',
+  extractorVane: 'OK',
   exhaustCfm: '',
-  lightEngineFans: '',
-  cardCageFans: '',
-  radiatorFanPump: '',
-  pumpConnectorHose: '',
+  lightEngineFans: 'OK',
+  cardCageFans: 'OK',
+  radiatorFanPump: 'OK',
+  pumpConnectorHose: 'OK',
   securityLampHouseLock: '',
-  lampLocMechanism: '',
+  lampLocMechanism: 'OK',
+  acBlowerVaneNote: '',
+  extractorVaneNote: '',
+  lightEngineFansNote: '',
+  cardCageFansNote: '',
+  radiatorFanPumpNote: '',
+  pumpConnectorHoseNote: '',
+  lampLocMechanismNote: '',
   projectorPlacementEnvironment: '',
   softwareVersion: '',
   screenHeight: '',
   screenWidth: '',
+  flatHeight: '',
+  flatWidth: '',
   screenGain: '',
   screenMake: '',
   throwDistance: '',
@@ -94,7 +141,6 @@ const createInitialFormData = () => ({
   pvVsN: '',
   pvVsE: '',
   nvVsE: '',
-  flCenter: '',
   flLeft: '',
   flRight: '',
   contentPlayerModel: '',
@@ -102,18 +148,30 @@ const createInitialFormData = () => ({
   leStatus: '',
   remarks: '',
   lightEngineSerialNumber: '',
-  whiteX: '',
-  whiteY: '',
-  whiteFl: '',
-  redX: '',
-  redY: '',
-  redFl: '',
-  greenX: '',
-  greenY: '',
-  greenFl: '',
-  blueX: '',
-  blueY: '',
-  blueFl: '',
+  white2Kx: '',
+  white2Ky: '',
+  white2Kfl: '',
+  white4Kx: '',
+  white4Ky: '',
+  white4Kfl: '',
+  red2Kx: '',
+  red2Ky: '',
+  red2Kfl: '',
+  red4Kx: '',
+  red4Ky: '',
+  red4Kfl: '',
+  green2Kx: '',
+  green2Ky: '',
+  green2Kfl: '',
+  green4Kx: '',
+  green4Ky: '',
+  green4Kfl: '',
+  blue2Kx: '',
+  blue2Ky: '',
+  blue2Kfl: '',
+  blue4Kx: '',
+  blue4Ky: '',
+  blue4Kfl: '',
   focusBoresight: '',
   integratorPosition: '',
   spotsOnScreen: '',
@@ -130,6 +188,7 @@ const createInitialFormData = () => ({
   pm10: '',
   temperature: '',
   humidity: '',
+  airPollutionLevel: '',
   startTime: '',
   endTime: '',
   signatures: '',
@@ -396,23 +455,29 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   }: {
     field: keyof RecordWorkForm & string
     label: string
-    options: Array<{ value: string; label: string }>
+    options: Array<{ value: string; label: string; description?: string }>
   }) => {
-    const status = watch(field as keyof RecordWorkForm)
+    const status = watch(field as keyof RecordWorkForm) || 'OK'
+    const noteField = `${field}Note` as keyof RecordWorkForm
+    
     return (
       <FormField label={label}>
-        <select {...wrapStatusChange(field)} className="w-full border-2 border-black p-2 text-black text-sm">
+        <select 
+          {...wrapStatusChange(field)} 
+          className="w-full border-2 border-black p-2 text-black text-sm"
+          defaultValue="OK"
+        >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {option.label} {option.description && `(${option.description})`}
             </option>
           ))}
         </select>
-        {status === 'Not OK' && (
+        {status === 'YES' && (
           <Input
-            {...register(`issueNotes.${field}` as const)}
-            placeholder="Add detail for this component"
-            className="border border-black text-xs mt-2"
+            {...register(noteField)}
+            placeholder="Enter replacement details..."
+            className="border-2 border-black text-sm mt-2"
           />
         )}
       </FormField>
@@ -489,14 +554,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               <Input type="number" {...register('screenNumber')} placeholder="Screen number" className="border-2 border-black text-sm" />
             </FormField>
             <FormField label="Service Visit Type">
-              <select {...register('serviceVisitType')} className="w-full border-2 border-black p-2 text-black text-sm">
-                <option value="">Select type</option>
-                <option value="Quarterly">Quarterly</option>
-                <option value="Monthly">Monthly</option>
-                <option value="Breakdown">Breakdown</option>
-                <option value="Installation">Installation</option>
-                <option value="Other">Other</option>
-              </select>
+              <Input type="number" {...register('serviceVisitType')} placeholder="Service visit type" className="border-2 border-black text-sm" />
             </FormField>
           </div>
         </FormSection>
@@ -536,10 +594,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 field={field}
                 label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
                 options={[
-                  { value: '', label: 'Select' },
-                  { value: 'OK', label: 'OK' },
-                  { value: 'Not OK', label: 'Not OK' },
-                  { value: 'Needs Replacement', label: 'Needs Replacement' },
+                  { value: 'OK', label: 'OK', description: 'Part is OK' },
+                  { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                  { value: 'NO', label: 'NO', description: 'Not available' },
                 ]}
               />
             ))}
@@ -554,25 +611,14 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 field={field}
                 label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
                 options={[
-                  { value: '', label: 'Select' },
-                  { value: 'OK', label: 'OK' },
-                  { value: 'Not OK', label: 'Not OK' },
+                  { value: 'OK', label: 'OK', description: 'Part is OK' },
+                  { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                  { value: 'NO', label: 'NO', description: 'Not available' },
                 ]}
               />
             ))}
           </FormRow>
           <FormRow>
-            <StatusSelectWithNote
-              field="disposableConsumables"
-              label="Disposable Consumables"
-              options={[
-                { value: '', label: 'Select' },
-                { value: 'Cleaned', label: 'Cleaned' },
-                { value: 'Replaced', label: 'Replaced' },
-                { value: 'OK', label: 'OK' },
-                { value: 'Not OK', label: 'Not OK' },
-              ]}
-            />
             <FormField label="Coolant Level & Color">
               <select {...register('coolantLevelColor')} className="w-full border-2 border-black p-2 text-sm">
                 <option value="">Select</option>
@@ -607,9 +653,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 field={field}
                 label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
                 options={[
-                  { value: '', label: 'Select' },
-                  { value: 'OK', label: 'OK' },
-                  { value: 'Not OK', label: 'Not OK' },
+                  { value: 'OK', label: 'OK', description: 'Part is OK' },
+                  { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                  { value: 'NO', label: 'NO', description: 'Not available' },
                 ]}
               />
             ))}
@@ -627,9 +673,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               field="pumpConnectorHose"
               label="Pump Connector & Hose"
               options={[
-                { value: '', label: 'Select' },
-                { value: 'OK', label: 'OK' },
-                { value: 'Not OK', label: 'Not OK' },
+                { value: 'OK', label: 'OK', description: 'Part is OK' },
+                { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                { value: 'NO', label: 'NO', description: 'Not available' },
               ]}
             />
           </FormRow>
@@ -645,9 +691,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               field="lampLocMechanism"
               label="Lamp LOC Mechanism"
               options={[
-                { value: '', label: 'Select' },
-                { value: 'OK', label: 'OK' },
-                { value: 'Not OK', label: 'Not OK' },
+                { value: 'OK', label: 'OK', description: 'Part is OK' },
+                { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                { value: 'NO', label: 'NO', description: 'Not available' },
               ]}
             />
           </FormRow>
@@ -665,18 +711,31 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           <FormField label="Software Version">
             <Input {...register('softwareVersion')} placeholder="Version" className="border-2 border-black text-sm" />
           </FormField>
+          <div className="mb-3">
+            <p className="text-xs font-semibold text-gray-700 mb-1">Scope Dimensions</p>
+            <FormRow>
+              <FormField label="Screen Height (m)">
+                <Input type="number" step="0.01" {...register('screenHeight')} placeholder="Height" className="border-2 border-black text-sm" />
+              </FormField>
+              <FormField label="Screen Width (m)">
+                <Input type="number" step="0.01" {...register('screenWidth')} placeholder="Width" className="border-2 border-black text-sm" />
+              </FormField>
+            </FormRow>
+          </div>
+          <div className="mb-3">
+            <p className="text-xs font-semibold text-gray-700 mb-1">Flat Dimensions</p>
+            <FormRow>
+              <FormField label="Flat Height (m)">
+                <Input type="number" step="0.01" {...register('flatHeight')} placeholder="Height" className="border-2 border-black text-sm" />
+              </FormField>
+              <FormField label="Flat Width (m)">
+                <Input type="number" step="0.01" {...register('flatWidth')} placeholder="Width" className="border-2 border-black text-sm" />
+              </FormField>
+            </FormRow>
+          </div>
           <FormRow>
-            <FormField label="Screen Height (m)">
-              <Input type="number" step="0.01" {...register('screenHeight')} placeholder="Height" className="border-2 border-black text-sm" />
-            </FormField>
-            <FormField label="Screen Width (m)">
-              <Input type="number" step="0.01" {...register('screenWidth')} placeholder="Width" className="border-2 border-black text-sm" />
-            </FormField>
             <FormField label="Screen Gain">
               <Input type="number" step="0.1" {...register('screenGain')} placeholder="Gain" className="border-2 border-black text-sm" />
-            </FormField>
-            <FormField label="Screen Make">
-              <Input {...register('screenMake')} placeholder="Make" className="border-2 border-black text-sm" />
             </FormField>
             <FormField label="Throw Distance (m)">
               <Input type="number" step="0.1" {...register('throwDistance')} placeholder="Distance" className="border-2 border-black text-sm" />
@@ -714,9 +773,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
         <FormSection title="fL Measurements">
           <FormRow>
-            <FormField label="Center">
-              <Input type="number" {...register('flCenter')} placeholder="Center fL" className="border-2 border-black text-sm" />
-            </FormField>
             <FormField label="Left">
               <Input type="number" {...register('flLeft')} placeholder="Left fL" className="border-2 border-black text-sm" />
             </FormField>
@@ -752,21 +808,72 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
         <FormSection title="Color Accuracy - CIE XYZ">
           {COLOR_ACCURACY.map(({ name, fields }) => (
-            <div key={name} className="mb-3">
+            <div key={name} className="mb-4">
               <p className="font-semibold text-black text-sm mb-2">{name}</p>
-              <FormRow>
-                {fields.map((field) => (
-                  <FormField key={field} label={field.replace(name.toLowerCase(), '').toUpperCase()}>
+              <div className="mb-3">
+                <p className="text-xs font-semibold text-gray-700 mb-1">2K Values</p>
+                <FormRow>
+                  <FormField label="X">
                     <Input
                       type="number"
                       step="0.001"
-                      {...register(field as keyof RecordWorkForm)}
-                      placeholder={field.replace(name.toLowerCase(), '')}
+                      {...register(fields[0] as keyof RecordWorkForm)}
+                      placeholder="X"
                       className="border-2 border-black text-black text-sm"
                     />
                   </FormField>
-                ))}
-              </FormRow>
+                  <FormField label="Y">
+                    <Input
+                      type="number"
+                      step="0.001"
+                      {...register(fields[1] as keyof RecordWorkForm)}
+                      placeholder="Y"
+                      className="border-2 border-black text-black text-sm"
+                    />
+                  </FormField>
+                  <FormField label="fL">
+                    <Input
+                      type="number"
+                      step="0.001"
+                      {...register(fields[2] as keyof RecordWorkForm)}
+                      placeholder="fL"
+                      className="border-2 border-black text-black text-sm"
+                    />
+                  </FormField>
+                </FormRow>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-700 mb-1">4K Values</p>
+                <FormRow>
+                  <FormField label="X">
+                    <Input
+                      type="number"
+                      step="0.001"
+                      {...register(fields[3] as keyof RecordWorkForm)}
+                      placeholder="X"
+                      className="border-2 border-black text-black text-sm"
+                    />
+                  </FormField>
+                  <FormField label="Y">
+                    <Input
+                      type="number"
+                      step="0.001"
+                      {...register(fields[4] as keyof RecordWorkForm)}
+                      placeholder="Y"
+                      className="border-2 border-black text-black text-sm"
+                    />
+                  </FormField>
+                  <FormField label="fL">
+                    <Input
+                      type="number"
+                      step="0.001"
+                      {...register(fields[5] as keyof RecordWorkForm)}
+                      placeholder="fL"
+                      className="border-2 border-black text-black text-sm"
+                    />
+                  </FormField>
+                </FormRow>
+              </div>
             </div>
           ))}
         </FormSection>
@@ -786,25 +893,23 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           <FormRow>
             <FormField label="Pixel Defects">
               <select {...register('pixelDefects')} className="w-full border-2 border-black p-2 text-sm">
-                <option value="">Select</option>
-                <option value="None">None</option>
-                <option value="Few">Few</option>
-                <option value="Many">Many</option>
+              <option value="">Select</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
               </select>
             </FormField>
             <FormField label="Image Vibration">
               <select {...register('imageVibration')} className="w-full border-2 border-black p-2 text-sm">
-                <option value="">Select</option>
-                <option value="None">None</option>
-                <option value="Slight">Slight</option>
-                <option value="Severe">Severe</option>
+              <option value="">Select</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
               </select>
             </FormField>
             <FormField label="LiteLOC Status">
               <select {...register('liteloc')} className="w-full border-2 border-black p-2 text-sm">
-                <option value="">Select</option>
-                <option value="Working">Working</option>
-                <option value="Not Working">Not Working</option>
+              <option value="">Select</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
               </select>
             </FormField>
           </FormRow>
@@ -823,41 +928,12 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
             <FormField label="Humidity (%)">
               <Input type="number" step="0.1" {...register('humidity')} className="border-2 border-black text-sm" />
             </FormField>
+            <FormField label="Air Pollution Level">
+              <Input {...register('airPollutionLevel')} placeholder="Level" className="border-2 border-black text-sm" />
+            </FormField>
           </FormRow>
         </FormSection>
 
-        <FormSection title="Service Timing & Report">
-          <FormRow>
-            <FormField label="Start Time">
-              <Input type="datetime-local" {...register('startTime')} className="border-2 border-black text-sm" />
-            </FormField>
-            <FormField label="End Time">
-              <Input type="datetime-local" {...register('endTime')} className="border-2 border-black text-sm" />
-            </FormField>
-          </FormRow>
-          <FormRow>
-            <FormField label="Report Generated">
-              <select
-                ref={reportGeneratedField.ref}
-                name={reportGeneratedField.name}
-                onBlur={reportGeneratedField.onBlur}
-                value={watch('reportGenerated') ? 'yes' : 'no'}
-                onChange={(event) =>
-                  setValue('reportGenerated', event.target.value === 'yes', {
-                    shouldDirty: true,
-                  })
-                }
-                className="w-full border-2 border-black p-2 text-sm"
-              >
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </FormField>
-            <FormField label="Report URL">
-              <Input {...register('reportUrl')} placeholder="https://" className="border-2 border-black text-sm" />
-            </FormField>
-          </FormRow>
-        </FormSection>
 
         <FormSection title="Recommended Parts">
           <div className="space-y-3">

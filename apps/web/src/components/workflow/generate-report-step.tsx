@@ -101,7 +101,16 @@ export default function GenerateReportStep({ data, onBack }: any) {
     const workDetails = data.workDetails || {}
     const service = data.selectedService || {}
     const safe = (value: unknown) => (value ?? '').toString()
-    const toStatus = (value: unknown) => ({ status: safe(value) })
+    const toStatus = (value: unknown, noteField?: string) => {
+      const statusValue = safe(value)
+      const note = noteField ? safe(workDetails[noteField]) : ''
+      // If status is YES and there's a note, use note as status, otherwise use status value
+      const status = (statusValue === 'YES' && note) ? note : statusValue
+      return { 
+        status: status,
+        yesNo: statusValue // YES/NO/OK value
+      }
+    }
     const formatDateTime = (value?: string) => {
       if (!value) return ''
       const date = new Date(value)
@@ -144,20 +153,19 @@ export default function GenerateReportStep({ data, onBack }: any) {
       startTime: formatDateTime(workDetails.startTime),
       endTime: formatDateTime(workDetails.endTime),
       opticals: {
-        reflector: toStatus(workDetails.reflector),
-        uvFilter: toStatus(workDetails.uvFilter),
-        integratorRod: toStatus(workDetails.integratorRod),
-        coldMirror: toStatus(workDetails.coldMirror),
-        foldMirror: toStatus(workDetails.foldMirror),
+        reflector: toStatus(workDetails.reflector, 'reflectorNote'),
+        uvFilter: toStatus(workDetails.uvFilter, 'uvFilterNote'),
+        integratorRod: toStatus(workDetails.integratorRod, 'integratorRodNote'),
+        coldMirror: toStatus(workDetails.coldMirror, 'coldMirrorNote'),
+        foldMirror: toStatus(workDetails.foldMirror, 'foldMirrorNote'),
       },
       electronics: {
-        touchPanel: toStatus(workDetails.touchPanel),
-        evbImcb: toStatus(workDetails.evbImcbBoard),
-        pibIcp: toStatus(workDetails.pibIcpBoard),
-        imbS: toStatus(workDetails.imbSBoard),
+        touchPanel: toStatus(workDetails.touchPanel, 'touchPanelNote'),
+        evbImcb: toStatus(workDetails.evbImcbBoard, 'evbImcbBoardNote'),
+        pibIcp: toStatus(workDetails.pibIcpBoard, 'pibIcpBoardNote'),
+        imbS: toStatus(workDetails.imbSBoard, 'imbSBoardNote'),
       },
       serialVerified: toStatus(workDetails.serialNumberVerified),
-      disposableConsumables: toStatus(workDetails.disposableConsumables),
       coolant: toStatus(workDetails.coolantLevelColor),
       lightEngineTest: {
         white: toStatus(workDetails.lightEngineWhite),
@@ -167,16 +175,16 @@ export default function GenerateReportStep({ data, onBack }: any) {
         black: toStatus(workDetails.lightEngineBlack),
       },
       mechanical: {
-        acBlower: toStatus(workDetails.acBlowerVane),
-        extractor: toStatus(workDetails.extractorVane),
+        acBlower: toStatus(workDetails.acBlowerVane, 'acBlowerVaneNote'),
+        extractor: toStatus(workDetails.extractorVane, 'extractorVaneNote'),
         exhaustCFM: toStatus(workDetails.exhaustCfm),
-        lightEngine4Fans: toStatus(workDetails.lightEngineFans),
-        cardCageFans: toStatus(workDetails.cardCageFans),
-        radiatorFan: toStatus(workDetails.radiatorFanPump),
-        connectorHose: toStatus(workDetails.pumpConnectorHose),
+        lightEngine4Fans: toStatus(workDetails.lightEngineFans, 'lightEngineFansNote'),
+        cardCageFans: toStatus(workDetails.cardCageFans, 'cardCageFansNote'),
+        radiatorFan: toStatus(workDetails.radiatorFanPump, 'radiatorFanPumpNote'),
+        connectorHose: toStatus(workDetails.pumpConnectorHose, 'pumpConnectorHoseNote'),
         securityLock: toStatus(workDetails.securityLampHouseLock),
       },
-      lampLOC: toStatus(workDetails.lampLocMechanism),
+      lampLOC: toStatus(workDetails.lampLocMechanism, 'lampLocMechanismNote'),
       lampMake: safe(workDetails.lampMakeModel),
       lampHours: safe(workDetails.lampTotalRunningHours),
       currentLampHours: safe(workDetails.lampCurrentRunningHours),
@@ -185,28 +193,27 @@ export default function GenerateReportStep({ data, onBack }: any) {
         pve: safe(workDetails.pvVsE),
         nve: safe(workDetails.nvVsE),
       },
-      flMeasurements: [
-        `Center: ${safe(workDetails.flCenter)}`,
-        `Left: ${safe(workDetails.flLeft)}`,
-        `Right: ${safe(workDetails.flRight)}`,
-      ]
-        .filter(Boolean)
-        .join(' | '),
+      flBefore: safe(workDetails.flLeft),
+      flAfter: safe(workDetails.flRight),
       contentPlayer: safe(workDetails.contentPlayerModel),
       acStatus: safe(workDetails.acStatus),
       leStatus: safe(workDetails.leStatus),
       remarks: safe(workDetails.remarks),
       leSerialNo: safe(workDetails.lightEngineSerialNumber),
       mcgdData: {
-        w2k4k: { fl: safe(workDetails.whiteFl), x: safe(workDetails.whiteX), y: safe(workDetails.whiteY) },
-        r2k4k: { fl: safe(workDetails.redFl), x: safe(workDetails.redX), y: safe(workDetails.redY) },
-        g2k4k: { fl: safe(workDetails.greenFl), x: safe(workDetails.greenX), y: safe(workDetails.greenY) },
-        b2k4k: { fl: safe(workDetails.blueFl), x: safe(workDetails.blueX), y: safe(workDetails.blueY) },
+        white2K: { fl: safe(workDetails.white2Kfl), x: safe(workDetails.white2Kx), y: safe(workDetails.white2Ky) },
+        white4K: { fl: safe(workDetails.white4Kfl), x: safe(workDetails.white4Kx), y: safe(workDetails.white4Ky) },
+        red2K: { fl: safe(workDetails.red2Kfl), x: safe(workDetails.red2Kx), y: safe(workDetails.red2Ky) },
+        red4K: { fl: safe(workDetails.red4Kfl), x: safe(workDetails.red4Kx), y: safe(workDetails.red4Ky) },
+        green2K: { fl: safe(workDetails.green2Kfl), x: safe(workDetails.green2Kx), y: safe(workDetails.green2Ky) },
+        green4K: { fl: safe(workDetails.green4Kfl), x: safe(workDetails.green4Kx), y: safe(workDetails.green4Ky) },
+        blue2K: { fl: safe(workDetails.blue2Kfl), x: safe(workDetails.blue2Kx), y: safe(workDetails.blue2Ky) },
+        blue4K: { fl: safe(workDetails.blue4Kfl), x: safe(workDetails.blue4Kx), y: safe(workDetails.blue4Ky) },
       },
       cieXyz: {
-        x: safe(workDetails.whiteX),
-        y: safe(workDetails.whiteY),
-        fl: safe(workDetails.whiteFl),
+        x: safe(workDetails.white2Kx) || safe(workDetails.white4Kx),
+        y: safe(workDetails.white2Ky) || safe(workDetails.white4Ky),
+        fl: safe(workDetails.white2Kfl) || safe(workDetails.white4Kfl),
       },
       softwareVersion: safe(workDetails.softwareVersion),
       screenInfo: {
@@ -235,6 +242,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
         liteLOC: safe(workDetails.liteloc),
       },
       airPollution: {
+        airPollutionLevel: safe(workDetails.airPollutionLevel),
         hcho: safe(workDetails.hcho),
         tvoc: safe(workDetails.tvoc),
         pm10: safe(workDetails.pm10),
@@ -248,6 +256,8 @@ export default function GenerateReportStep({ data, onBack }: any) {
       detectedIssues,
       reportGenerated: Boolean(workDetails.reportGenerated),
       reportUrl: safe(workDetails.reportUrl),
+      engineerSignatureUrl: data.engineerSignatureUrl || '',
+      siteSignatureUrl: data.siteSignatureUrl || '',
     }
   }
 

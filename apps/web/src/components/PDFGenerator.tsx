@@ -36,7 +36,6 @@ export interface MaintenanceReportData {
   };
 
   serialVerified: StatusItem;
-  disposableConsumables: StatusItem;
   coolant: StatusItem;
 
   lightEngineTest: {
@@ -64,7 +63,8 @@ export interface MaintenanceReportData {
   lampHours: string;
   currentLampHours: string;
   voltageParams: { pvn: string; pve: string; nve: string };
-  flMeasurements: string;
+  flBefore: string;
+  flAfter: string;
   contentPlayer: string;
   acStatus: string;
   leStatus: string;
@@ -72,10 +72,14 @@ export interface MaintenanceReportData {
   leSerialNo: string;
 
   mcgdData: {
-    w2k4k: { fl: string; x: string; y: string };
-    r2k4k: { fl: string; x: string; y: string };
-    g2k4k: { fl: string; x: string; y: string };
-    b2k4k: { fl: string; x: string; y: string };
+    white2K: { fl: string; x: string; y: string };
+    white4K: { fl: string; x: string; y: string };
+    red2K: { fl: string; x: string; y: string };
+    red4K: { fl: string; x: string; y: string };
+    green2K: { fl: string; x: string; y: string };
+    green4K: { fl: string; x: string; y: string };
+    blue2K: { fl: string; x: string; y: string };
+    blue4K: { fl: string; x: string; y: string };
   };
 
   cieXyz: { x: string; y: string; fl: string };
@@ -101,6 +105,7 @@ export interface MaintenanceReportData {
   };
 
   airPollution: {
+    airPollutionLevel: string;
     hcho: string
     tvoc: string
     pm10: string
@@ -115,6 +120,8 @@ export interface MaintenanceReportData {
   detectedIssues?: Array<{ label: string; value: string }>
   reportGenerated?: boolean
   reportUrl?: string
+  engineerSignatureUrl?: string
+  siteSignatureUrl?: string
 }
 
 export async function generateMaintenanceReport(data: MaintenanceReportData): Promise<Uint8Array> {
@@ -122,11 +129,9 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const timesRomanBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
-  // Load and embed the company logo
   let logoImage;
   let logoImage2;
   try {
-    // Try to load from public folder (works in browser/client-side)
     const logoResponse = await fetch('/LOGO/Ascomp.png');
     const logoResponse2 = await fetch('/LOGO/Christie.png');
     if (logoResponse.ok) {
@@ -138,10 +143,8 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
       logoImage2 = await pdfDoc.embedPng(logoBytes);
     }
   } catch (error) {
-    // If fetch fails (e.g., server-side), try using file system
     try {
       if (typeof window === 'undefined') {
-        // Server-side: use Node.js fs
         const fs = require('fs');
         const path = require('path');
         const logoPath = path.join(process.cwd(), 'public', 'LOGO', 'Ascomp.png');
@@ -154,6 +157,51 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     } catch (fsError) {
       console.warn('Could not load logo image, falling back to text:', fsError);
     }
+  }
+
+  // Load signature images
+  let engineerSignatureImage;
+  let siteSignatureImage;
+  
+  const loadSignatureImage = async (url: string) => {
+    try {
+      let signatureBytes: ArrayBuffer;
+      
+      // Handle data URLs (base64)
+      if (url.startsWith('data:')) {
+        const base64Data = url.split(',')[1];
+        if (!base64Data) return null;
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        signatureBytes = bytes.buffer;
+      } else {
+        // Handle regular URLs
+        const signatureResponse = await fetch(url);
+        if (!signatureResponse.ok) return null;
+        signatureBytes = await signatureResponse.arrayBuffer();
+      }
+      
+      // Try PNG first, then JPG
+      try {
+        return await pdfDoc.embedPng(signatureBytes);
+      } catch {
+        return await pdfDoc.embedJpg(signatureBytes);
+      }
+    } catch (error) {
+      console.warn('Could not load signature image:', error);
+      return null;
+    }
+  };
+
+  if (data.engineerSignatureUrl) {
+    engineerSignatureImage = await loadSignatureImage(data.engineerSignatureUrl);
+  }
+
+  if (data.siteSignatureUrl) {
+    siteSignatureImage = await loadSignatureImage(data.siteSignatureUrl);
   }
 
   const page1 = pdfDoc.addPage([595, 842]);
@@ -173,11 +221,10 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   });
 
   if (logoImage) {
-    // Draw the logo image (scaled to fit nicely in the header)
-    const logoScale = 0.016; // Reduced scale for smaller logo
+    const logoScale = 0.016;
     const logoDims = logoImage.scale(logoScale);
     const logoHeight = logoDims.height;
-    const headerCenterY = yPos - 15; // Center of the 30px header box
+    const headerCenterY = yPos - 15;
     page1.drawImage(logoImage, {
       x: 50,
       y: headerCenterY - logoHeight / 2,
@@ -185,7 +232,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
       height: logoHeight,
     });
   } else {
-    // Fallback to text if logo couldn't be loaded
     page1.drawText('ASCOMP INC.', {
       x: 50,
       y: yPos - 20,
@@ -196,11 +242,10 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   }
 
   if (logoImage2) {
-    // Draw the logo image (scaled to fit nicely in the header)
-    const logoScale = 0.2; // Reduced scale for smaller logo
+    const logoScale = 0.2;
     const logoDims = logoImage2.scale(logoScale);
     const logoHeight = logoDims.height;
-    const headerCenterY = yPos - 15; // Center of the 30px header box
+    const headerCenterY = yPos - 15;
     page1.drawImage(logoImage2, {
       x: 500,
       y: headerCenterY - logoHeight / 2,
@@ -208,7 +253,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
       height: logoHeight,
     });
   } else {
-    // Fallback to text if logo couldn't be loaded
     page1.drawText('ASCOMP INC.', {
       x: 450,
       y: 10,
@@ -228,22 +272,19 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 
   yPos -= 35;
 
-  // Contact Details Section - Highlighted format
   const contactBoxHeight = 50;
   const contactBoxY = yPos - contactBoxHeight;
   
-  // Background highlight
   page1.drawRectangle({
     x: 40,
     y: contactBoxY,
     width: width - 60,
     height: contactBoxHeight,
-    color: rgb(0.95, 0.95, 0.95), // Light gray background
+    color: rgb(0.95, 0.95, 0.95),
     borderColor: rgb(0, 0, 0),
     borderWidth: 1,
   });
 
-  // Contact Details heading
   page1.drawText('Contact Details', {
     x: 50,
     y: yPos - 12,
@@ -252,7 +293,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     color: rgb(0.2, 0.6, 0.8),
   });
 
-  // Address
   page1.drawText('Address:', {
     x: 50,
     y: yPos - 28,
@@ -266,7 +306,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     font: timesRoman,
   });
 
-  // Contact information
   page1.drawText('Landline:', {
     x: 50,
     y: yPos - 40,
@@ -328,7 +367,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     ['Projector Model:', data.projectorModel, 'Serial No.:', data.serialNo, 'Running Hours:', data.runningHours], [80, 80, 80, 80, 80, 135], 20);
   yPos -= 20;
 
-
   drawTableRow(page1, timesRomanBold, timesRomanBold, 40, yPos, width - 80,
     ['SECTIONS', 'DESCRIPTION', 'STATUS', 'YES/NO - OK'], [120, 235, 100, 80], 20);
   yPos -= 20;
@@ -350,10 +388,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 
   yPos = drawSection(page1, timesRomanBold, timesRoman, 40, yPos, width - 80, 'Serial Number verified', [
     ['Chassis label vs Touch Panel', data.serialVerified.status, data.serialVerified.yesNo || ''],
-  ]);
-
-  yPos = drawSection(page1, timesRomanBold, timesRoman, 40, yPos, width - 80, 'Disposable Consumables', [
-    ['Air Intake, LAD and RAD', data.disposableConsumables.status, data.disposableConsumables.yesNo || ''],
   ]);
 
   yPos = drawSection(page1, timesRomanBold, timesRoman, 40, yPos, width - 80, 'Coolant', [
@@ -408,10 +442,10 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   yPos -= 20;
 
   drawTableRow(page2, timesRomanBold, timesRomanBold, 40, yPos, width - 80,
-    ['fL measurements:', 'Before', 'After'], [150, 150, 215, 365], 20);
+    ['fL measurements:', 'Before', 'After'], [150, 150, 215], 20);
   yPos -= 20;
   drawTableRow(page2, timesRoman, timesRoman, 40, yPos, width - 80,
-    ['', data.flMeasurements, data.flMeasurements], [150, 150, 215], 20);
+    ['', data.flBefore, data.flAfter], [150, 150, 215], 20);
   yPos -= 20;
 
   drawTableRow(page2, timesRomanBold, timesRoman, 40, yPos, width - 80,
@@ -422,19 +456,98 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     ['LE Status during PM:', data.leStatus], [150, 315], 20);
   yPos -= 20;
 
-  drawTableRow(page2, timesRomanBold, timesRoman, 40, yPos, width - 80,
-    ['Remarks:', data.remarks, 'LE S. No.', data.leSerialNo], [80, 285, 80, 70], 40)
-  yPos -= 40
+  // Draw remarks row with multi-line support
+  const remarksText = data.remarks || '';
+  const remarksWidth = 285;
+  const textSize = 8;
+  const lineHeight = 12;
+  const maxRemarksWidth = remarksWidth - 6;
+  
+  // Calculate how many lines the remarks will take
+  const remarksLines = wrapText(remarksText, maxRemarksWidth, timesRoman, textSize);
+  const remarksRowHeight = Math.max(40, (remarksLines.length * lineHeight) + 8);
+  
+  // Draw the row with dynamic height
+  let currentX = 40;
+  
+  // Remarks label cell
+  page2.drawRectangle({
+    x: currentX,
+    y: yPos - remarksRowHeight,
+    width: 80,
+    height: remarksRowHeight,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  page2.drawText('Remarks:', {
+    x: currentX + 3,
+    y: yPos - remarksRowHeight + (remarksRowHeight / 2) - 3,
+    size: textSize,
+    font: timesRomanBold,
+    color: rgb(0, 0, 0),
+  });
+  currentX += 80;
+  
+  // Remarks content cell (multi-line)
+  page2.drawRectangle({
+    x: currentX,
+    y: yPos - remarksRowHeight,
+    width: remarksWidth,
+    height: remarksRowHeight,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  remarksLines.forEach((line, index) => {
+    const lineY = yPos - remarksRowHeight + (remarksRowHeight - (index + 1) * lineHeight) + 4;
+    page2.drawText(line, {
+      x: currentX + 3,
+      y: lineY,
+      size: textSize,
+      font: timesRoman,
+      color: rgb(0, 0, 0),
+      maxWidth: maxRemarksWidth,
+    });
+  });
+  currentX += remarksWidth;
+  
+  // LE S. No. label cell
+  page2.drawRectangle({
+    x: currentX,
+    y: yPos - remarksRowHeight,
+    width: 80,
+    height: remarksRowHeight,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  page2.drawText('LE S. No.:', {
+    x: currentX + 3,
+    y: yPos - remarksRowHeight + (remarksRowHeight / 2) - 3,
+    size: textSize,
+    font: timesRomanBold,
+    color: rgb(0, 0, 0),
+  });
+  currentX += 80;
+  
+  // LE S. No. value cell
+  page2.drawRectangle({
+    x: currentX,
+    y: yPos - remarksRowHeight,
+    width: 70,
+    height: remarksRowHeight,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  page2.drawText(data.leSerialNo || '', {
+    x: currentX + 3,
+    y: yPos - remarksRowHeight + (remarksRowHeight / 2) - 3,
+    size: textSize,
+    font: timesRoman,
+    color: rgb(0, 0, 0),
+    maxWidth: 64,
+  });
+  
+  yPos -= remarksRowHeight
 
-  // Service Timing - Always displayed
-  // drawTableRow(page2, timesRomanBold, timesRomanBold, 40, yPos, width - 80,
-  //   ['SERVICE TIMING', 'Start Time', 'End Time'], [150, 200, 165], 20)
-  // yPos -= 20
-  // drawTableRow(page2, timesRoman, timesRoman, 40, yPos, width - 80,
-  //   ['', data.startTime || '-', data.endTime || '-'], [150, 200, 165], 20)
-  // yPos -= 30
-
-  // gain same in both
   const leftTableX = 40
   const rightTableX = 300
   const rightColumnStart = yPos
@@ -465,7 +578,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   leftY -= 20;
 
   drawTableRow(page2, timesRomanBold, timesRoman, leftTableX, leftY, 240,
-    ['Screen', 'Make'], [120, 120], 20);
+    ['Screen Make', data.screenInfo.make], [120, 120], 20);
   leftY -= 20;
 
   drawTableRow(page2, timesRomanBold, timesRoman, leftTableX, leftY, 240,
@@ -494,40 +607,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     leftY -= 16
   }
 
-  // Detected Issues - Always displayed
-  // leftY -= 10
-  // drawTableRow(page2, timesRomanBold, timesRomanBold, leftTableX, leftY, 240,
-  //   ['Detected Issues', 'Status'], [180, 60], 20)
-  // leftY -= 20
-  // if (data.detectedIssues && data.detectedIssues.length > 0) {
-  //   data.detectedIssues.forEach(({ label, value }) => {
-  //     drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, 240,
-  //       [label || '', value || ''], [180, 60], 16)
-  //     leftY -= 16
-  //   })
-  // } else {
-  //   drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, 240,
-  //     ['None', '-'], [180, 60], 16)
-  //   leftY -= 16
-  // }
-
-  // Issue Notes - Always displayed
-  // leftY -= 10
-  // drawTableRow(page2, timesRomanBold, timesRomanBold, leftTableX, leftY, 240,
-  //   ['Issue Notes', 'Details'], [120, 120], 20)
-  // leftY -= 20
-  // if (data.issueNotes && data.issueNotes.length > 0) {
-  //   data.issueNotes.forEach(({ label, note }) => {
-  //     drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, 240,
-  //       [label || '', note || ''], [120, 120], 16)
-  //     leftY -= 16
-  //   })
-  // } else {
-  //   drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, 240,
-  //     ['None', '-'], [120, 120], 16)
-  //   leftY -= 16
-  // }
-
   let rightY = rightColumnStart;
 
   drawTableRow(page2, timesRomanBold, timesRomanBold, rightTableX, rightY, 255,
@@ -535,19 +614,35 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   rightY -= 20;
 
   drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
-    ['W2K /4K', data.mcgdData.w2k4k.fl, data.mcgdData.w2k4k.x, data.mcgdData.w2k4k.y], [120, 45, 45, 45], 20);
+    ['W2K', data.mcgdData.white2K.fl, data.mcgdData.white2K.x, data.mcgdData.white2K.y], [120, 45, 45, 45], 20);
   rightY -= 20;
 
   drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
-    ['R2K /4K', data.mcgdData.r2k4k.fl, data.mcgdData.r2k4k.x, data.mcgdData.r2k4k.y], [120, 45, 45, 45], 20);
+    ['W4K', data.mcgdData.white4K.fl, data.mcgdData.white4K.x, data.mcgdData.white4K.y], [120, 45, 45, 45], 20);
   rightY -= 20;
 
   drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
-    ['G2K /4K', data.mcgdData.g2k4k.fl, data.mcgdData.g2k4k.x, data.mcgdData.g2k4k.y], [120, 45, 45, 45], 20);
+    ['R2K', data.mcgdData.red2K.fl, data.mcgdData.red2K.x, data.mcgdData.red2K.y], [120, 45, 45, 45], 20);
   rightY -= 20;
 
   drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
-    ['B2K /4K', data.mcgdData.b2k4k.fl, data.mcgdData.b2k4k.x, data.mcgdData.b2k4k.y], [120, 45, 45, 45], 20);
+    ['R4K', data.mcgdData.red4K.fl, data.mcgdData.red4K.x, data.mcgdData.red4K.y], [120, 45, 45, 45], 20);
+  rightY -= 20;
+
+  drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
+    ['G2K', data.mcgdData.green2K.fl, data.mcgdData.green2K.x, data.mcgdData.green2K.y], [120, 45, 45, 45], 20);
+  rightY -= 20;
+
+  drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
+    ['G4K', data.mcgdData.green4K.fl, data.mcgdData.green4K.x, data.mcgdData.green4K.y], [120, 45, 45, 45], 20);
+  rightY -= 20;
+
+  drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
+    ['B2K', data.mcgdData.blue2K.fl, data.mcgdData.blue2K.x, data.mcgdData.blue2K.y], [120, 45, 45, 45], 20);
+  rightY -= 20;
+
+  drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
+    ['B4K', data.mcgdData.blue4K.fl, data.mcgdData.blue4K.x, data.mcgdData.blue4K.y], [120, 45, 45, 45], 20);
   rightY -= 40;
 
   page2.drawText('CIE XYZ Color Accuracy', {
@@ -566,7 +661,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     ['BW Step-10 2K /4K', data.cieXyz.x, data.cieXyz.y, data.cieXyz.fl], [120, 45, 45, 45], 20);
   rightY -= 40;
 
-  // Recommended Parts on the right side - Always displayed
   page2.drawText('Recommended Parts', {
     x: rightTableX,
     y: rightY,
@@ -581,7 +675,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     data.recommendedParts.forEach((part) => {
       const description = part.description || ''
       const partNumber = part.partNumber || ''
-      // Split long descriptions across multiple lines if needed
       const descLines = description.length > 30 
         ? [description.substring(0, 30), description.substring(30)]
         : [description]
@@ -611,25 +704,99 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   leftY -= 20;
 
   drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, width - 80,
-    ['', data.airPollution.hcho, data.airPollution.tvoc, data.airPollution.pm100, data.airPollution.pm25, data.airPollution.pm10, data.airPollution.temperature, data.airPollution.humidity], [100, 59, 59, 59, 59, 59, 59, 59], 20);
+    [data.airPollution.airPollutionLevel, data.airPollution.hcho, data.airPollution.tvoc, data.airPollution.pm100, data.airPollution.pm25, data.airPollution.pm10, data.airPollution.temperature, data.airPollution.humidity], [100, 59, 59, 59, 59, 59, 59, 59], 20);
 
+  // Draw signature images and labels
+  const signatureLabelY = 30;
+  const signatureImageY = 50;
+  const signatureHeight = 50;
+  const signatureWidth = 120;
 
-
+  // Client's Signature (left side)
+  if (siteSignatureImage) {
+    const sigDims = siteSignatureImage.scale(0.25);
+    const imgWidth = Math.min(signatureWidth, sigDims.width);
+    const imgHeight = Math.min(signatureHeight, sigDims.height);
+    page2.drawImage(siteSignatureImage, {
+      x: 60,
+      y: signatureImageY,
+      width: imgWidth,
+      height: imgHeight,
+    });
+  }
   page2.drawText("Client's Signature & Stamp", {
     x: 60,
-    y: 60,
+    y: signatureLabelY,
     size: 10,
     font: timesRomanBold,
   });
 
+  // Engineer's Signature (right side)
+  if (engineerSignatureImage) {
+    const sigDims = engineerSignatureImage.scale(0.25);
+    const imgWidth = Math.min(signatureWidth, sigDims.width);
+    const imgHeight = Math.min(signatureHeight, sigDims.height);
+    page2.drawImage(engineerSignatureImage, {
+      x: width - 180,
+      y: signatureImageY,
+      width: imgWidth,
+      height: imgHeight,
+    });
+  }
   page2.drawText("Engineer's Signature", {
     x: width - 180,
-    y: 60,
+    y: signatureLabelY,
     size: 10,
     font: timesRomanBold,
   });
 
   return await pdfDoc.save();
+}
+
+// Helper function to wrap text into multiple lines
+function wrapText(text: string, maxWidth: number, font: any, fontSize: number): string[] {
+  if (!text) return [''];
+  
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+  
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    // Use font.widthOfTextAtSize for accurate text width measurement
+    const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+    
+    if (textWidth <= maxWidth) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      // If a single word is too long, break it (though this shouldn't happen normally)
+      if (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
+        // Break long word - split by characters
+        let wordPart = '';
+        for (const char of word) {
+          const testWordPart = wordPart + char;
+          if (font.widthOfTextAtSize(testWordPart, fontSize) <= maxWidth) {
+            wordPart = testWordPart;
+          } else {
+            if (wordPart) lines.push(wordPart);
+            wordPart = char;
+          }
+        }
+        currentLine = wordPart;
+      } else {
+        currentLine = word;
+      }
+    }
+  }
+  
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  
+  return lines.length > 0 ? lines : [''];
 }
 
 function drawTableRow(
@@ -706,7 +873,6 @@ function drawSection(
   for (let i = 0; i < items.length; i++) {
     const itemY = currentY - (i * rowHeight);
 
-    // DESCRIPTION column
     page.drawRectangle({
       x: x + 120,
       y: itemY - rowHeight,
@@ -723,7 +889,6 @@ function drawSection(
       font: regularFont,
     });
 
-    // STATUS column (free text like OK / Not OK / Needs Cleaning)
     page.drawRectangle({
       x: x + 355,
       y: itemY - rowHeight,
@@ -740,7 +905,6 @@ function drawSection(
       font: regularFont,
     });
 
-    // YES/NO column left empty for tick / handwriting
     page.drawRectangle({
       x: x + 455,
       y: itemY - rowHeight,
