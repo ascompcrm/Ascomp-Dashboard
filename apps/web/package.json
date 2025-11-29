@@ -11,7 +11,10 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "bun run prisma/seed.ts"
+    "prisma:seed": "bun run prisma/seed.ts",
+    "add-field-workers": "bun run excel/add-field-workers.ts",
+    "add-sites": "bun run excel/add-sites.ts",
+    "add-projectors": "bun run excel/add-projectors.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -72,6 +75,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
+    "xlsx": "^0.18.5",
     "zod": "^4.1.13"
   },
   "devDependencies": {

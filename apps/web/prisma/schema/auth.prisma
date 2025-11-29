@@ -18,6 +18,7 @@ model User {
   email            String
   password         String?         // Optional - better-auth stores passwords in Account table
   emailVerified    Boolean
+  phoneNumber      String?          @unique
   image            String?
   createdAt        DateTime
   updatedAt        DateTime
@@ -34,9 +35,12 @@ model User {
 model Site {
   id             String          @id @map("_id")
   siteName       String
-  address        String          @unique
+  address        String
   contactDetails String
-  screenNo       String
+  state          String?
+  region         String?
+  siteCode       String?
+  screenNo       String?
   projector      Projector[]
   serviceRecords ServiceRecord[]
 
@@ -45,15 +49,14 @@ model Site {
 
 model Projector {
   id             String          @id @map("_id")
-  projectorModel String
-  serialNo       String          @unique
+  serialNo       String          @unique  
+  modelNo        String          
   noOfservices   Int?
   runningHours   Int?
   siteId         String
   site           Site            @relation(fields: [siteId], references: [id])
   serviceRecords ServiceRecord[]
   lastServiceAt  DateTime?
-  nextServiceAt  DateTime?
 
   @@index([lastServiceAt])
   @@map("projector")
