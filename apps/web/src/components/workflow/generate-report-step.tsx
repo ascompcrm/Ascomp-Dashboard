@@ -102,13 +102,37 @@ export default function GenerateReportStep({ data, onBack }: any) {
     const service = data.selectedService || {}
     const safe = (value: unknown) => (value ?? '').toString()
     const toStatus = (value: unknown, noteField?: string) => {
-      const statusValue = safe(value)
+      const rawValue = safe(value).trim()
+      const upperValue = rawValue.toUpperCase()
       const note = noteField ? safe(workDetails[noteField]) : ''
-      // If status is YES and there's a note, use note as status, otherwise use status value
-      const status = (statusValue === 'YES' && note) ? note : statusValue
+      
+      // Normalize yesNo to only YES, NO, or OK (case-insensitive matching)
+      let yesNo = ''
+      if (upperValue === 'YES' || upperValue === 'Y') {
+        yesNo = 'YES'
+      } else if (upperValue === 'NO' || upperValue === 'N') {
+        yesNo = 'NO'
+      } else if (upperValue === 'OK' || upperValue === 'O') {
+        yesNo = 'OK'
+      }
+      // If it's not YES/NO/OK, yesNo remains empty string
+      
+      // Status column: 
+      // - If YES and has note: show the replacement note
+      // - If YES/NO/OK: show empty (these values only go in yesNo column)
+      // - Otherwise: show the original status text (e.g., "Discolored", "Bad", "2345", etc.)
+      let status = ''
+      if (yesNo === 'YES' && note) {
+        status = note // Show replacement details when YES
+      } else if (yesNo === 'YES' || yesNo === 'NO' || yesNo === 'OK') {
+        status = '' // Don't show YES/NO/OK in status column
+      } else {
+        status = rawValue // Show the original status text for other values
+      }
+      
       return { 
         status: status,
-        yesNo: statusValue // YES/NO/OK value
+        yesNo: yesNo
       }
     }
     const formatDateTime = (value?: string) => {
