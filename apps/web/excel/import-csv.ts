@@ -125,13 +125,14 @@ async function main() {
   const projectorsMap = new Map<string, any>()
   const usersMap = new Map<string, any>()
   const serviceRecords: any[] = []
+  const projectorServiceCounts = new Map<string, number>()
   
   // Track service numbers per projector (for counting, but we use text from CSV)
   
   console.log('🔄 Processing rows...')
   
   for (let i = 0; i < records.length; i++) {
-    const row = records[i]
+    const row = records[i] as Record<string, any>
     
     if (i % 100 === 0) {
       console.log(`  Processing row ${i + 1}/${records.length}...`)

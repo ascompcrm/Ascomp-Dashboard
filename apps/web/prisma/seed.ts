@@ -280,7 +280,7 @@ async function main() {
   }: {
     projector: ProjectorEntity
     site: SiteEntity
-    serviceNumber: number
+    serviceNumber: string
     status: ServiceStatus
     date: Date | null
     assignedToId?: string | null
@@ -322,7 +322,6 @@ async function main() {
         pibIcpBoard: Math.random() > 0.25 ? 'OK' : 'Not OK',
         imbSBoard: Math.random() > 0.25 ? 'OK' : 'Not OK',
         serialNumberVerified: Math.random() > 0.1,
-        disposableConsumables: Math.random() > 0.5 ? 'Replaced' : 'Cleaned',
         coolantLevelColor: Math.random() > 0.8 ? 'Low' : 'OK',
         lightEngineWhite: Math.random() > 0.2 ? 'OK' : 'Bad',
         lightEngineRed: Math.random() > 0.2 ? 'OK' : 'Bad',
@@ -351,7 +350,6 @@ async function main() {
         pvVsN: (Math.random() * 240).toFixed(1),
         pvVsE: (Math.random() * 240).toFixed(1),
         nvVsE: (Math.random() * 240).toFixed(1),
-        flCenter: parseFloat((Math.random() * 4 + 12).toFixed(2)),
         flLeft: parseFloat((Math.random() * 4 + 12).toFixed(2)),
         flRight: parseFloat((Math.random() * 4 + 12).toFixed(2)),
         contentPlayerModel: 'Dolby IMS3000',
@@ -359,18 +357,18 @@ async function main() {
         leStatus: Math.random() > 0.2 ? 'Removed' : 'Not removed – Good fL',
         remarks,
         lightEngineSerialNumber: `LE-${Math.floor(Math.random() * 9000) + 1000}`,
-        whiteX: parseFloat((Math.random() * 0.1 + 0.3).toFixed(3)),
-        whiteY: parseFloat((Math.random() * 0.1 + 0.3).toFixed(3)),
-        whiteFl: parseFloat((Math.random() * 4 + 12).toFixed(2)),
-        redX: parseFloat((Math.random() * 0.1 + 0.6).toFixed(3)),
-        redY: parseFloat((Math.random() * 0.1 + 0.2).toFixed(3)),
-        redFl: parseFloat((Math.random() * 2 + 8).toFixed(2)),
-        greenX: parseFloat((Math.random() * 0.1 + 0.2).toFixed(3)),
-        greenY: parseFloat((Math.random() * 0.1 + 0.6).toFixed(3)),
-        greenFl: parseFloat((Math.random() * 2 + 8).toFixed(2)),
-        blueX: parseFloat((Math.random() * 0.1 + 0.1).toFixed(3)),
-        blueY: parseFloat((Math.random() * 0.1 + 0.1).toFixed(3)),
-        blueFl: parseFloat((Math.random() * 2 + 8).toFixed(2)),
+        white2Kx: parseFloat((Math.random() * 0.1 + 0.3).toFixed(3)),
+        white2Ky: parseFloat((Math.random() * 0.1 + 0.3).toFixed(3)),
+        white2Kfl: parseFloat((Math.random() * 4 + 12).toFixed(2)),
+        red2Kx: parseFloat((Math.random() * 0.1 + 0.6).toFixed(3)),
+        red2Ky: parseFloat((Math.random() * 0.1 + 0.2).toFixed(3)),
+        red2Kfl: parseFloat((Math.random() * 2 + 8).toFixed(2)),
+        green2Kx: parseFloat((Math.random() * 0.1 + 0.2).toFixed(3)),
+        green2Ky: parseFloat((Math.random() * 0.1 + 0.6).toFixed(3)),
+        green2Kfl: parseFloat((Math.random() * 2 + 8).toFixed(2)),
+        blue2Kx: parseFloat((Math.random() * 0.1 + 0.1).toFixed(3)),
+        blue2Ky: parseFloat((Math.random() * 0.1 + 0.1).toFixed(3)),
+        blue2Kfl: parseFloat((Math.random() * 2 + 8).toFixed(2)),
         focusBoresight: Math.random() > 0.2,
         integratorPosition: Math.random() > 0.2,
         spotsOnScreen: Math.random() > 0.8,
@@ -411,7 +409,7 @@ async function main() {
       await createServiceRecord({
         projector,
         site,
-        serviceNumber: i + 1,
+        serviceNumber: String(i + 1),
         status: ServiceStatus.COMPLETED,
         date: monthsAgo(monthsBack),
         assignedToId: workerForCompleted ? workerForCompleted.id : undefined,
@@ -423,7 +421,7 @@ async function main() {
       await createServiceRecord({
         projector,
         site,
-        serviceNumber: completedCount + 1,
+        serviceNumber: String(completedCount + 1),
         status: ServiceStatus.PENDING,
         date: null,
       })
@@ -437,7 +435,7 @@ async function main() {
         await createServiceRecord({
           projector,
           site,
-          serviceNumber: completedCount + 2,
+          serviceNumber: String(completedCount + 2),
           status: ServiceStatus.SCHEDULED,
           date: monthsFromNow(futureMonths),
           assignedToId: worker.id,

@@ -44,36 +44,6 @@ const IMAGE_EVAL_FIELDS = [
   { field: 'convergenceOk', label: 'Convergence OK' },
   { field: 'channelsCheckedOk', label: 'Channels Checked OK' },
 ] as const
-const YES_CHECKLIST = [
-  { field: 'yes1', label: 'Reflector' },
-  { field: 'yes2', label: 'UV Filter' },
-  { field: 'yes3', label: 'Integrator Rod' },
-  { field: 'yes4', label: 'Cold Mirror' },
-  { field: 'yes5', label: 'Fold Mirror' },
-  { field: 'yes6', label: 'Touch Panel' },
-  { field: 'yes7', label: 'EVB and IMCB Board' },
-  { field: 'yes8', label: 'PIB and ICP Board' },
-  { field: 'yes9', label: 'IMB/S Board' },
-  { field: 'yes10', label: 'Chassis label vs Touch Panel' },
-  { field: 'yes11', label: 'Air Intake, LAD and RAD' },
-  { field: 'yes12', label: 'Coolant Level and Color' },
-  { field: 'yes13', label: 'Light Engine - White' },
-  { field: 'yes14', label: 'Light Engine - Red' },
-  { field: 'yes15', label: 'Light Engine - Green' },
-  { field: 'yes16', label: 'Light Engine - Blue' },
-  { field: 'yes17', label: 'Light Engine - Black' },
-  { field: 'yes18', label: 'AC Blower and Vane Switch' },
-  { field: 'yes19', label: 'Extractor Vane Switch' },
-  { field: 'yes20', label: 'Exhaust CFM' },
-  { field: 'yes21', label: 'Light Engine 4 fans with LAD fan' },
-  { field: 'yes22', label: 'Card Cage Top and Bottom fans' },
-  { field: 'yes23', label: 'Radiator fan and Pump' },
-  { field: 'yes24', label: 'Connector and hose for the Pump' },
-  { field: 'yes25', label: 'Security and lamp house lock switch' },
-  { field: 'yes26', label: 'Lamp LOC Mechanism X, Y and Z movement' },
-  { field: 'yes27', label: 'Additional Check 27' },
-  { field: 'yes28', label: 'Additional Check 28' },
-] as const
 
 const createInitialFormData = () => ({
   cinemaName: '',
@@ -412,8 +382,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
       },
     }
   }
-
-  const reportGeneratedField = register('reportGenerated')
 
   const hasRequiredImages = brokenImages.length > 0 && referenceImages.length > 0
 
