@@ -11,6 +11,7 @@ interface Service {
   siteId: string
   address: string
   contactDetails: string
+  screenNumber: string | null
   projector: string
   projectorId: string
   projectorModel: string

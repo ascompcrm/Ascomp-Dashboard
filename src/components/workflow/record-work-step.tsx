@@ -47,7 +47,7 @@ const IMAGE_EVAL_FIELDS = [
 
 const createInitialFormData = () => ({
   cinemaName: '',
-  date: new Date().toISOString().split('T')[0],
+  date: new Date().toISOString().split('T')[0] ?? '',
   address: '',
   contactDetails: '',
   location: '',
@@ -142,6 +142,12 @@ const createInitialFormData = () => ({
   blue4Kx: '',
   blue4Ky: '',
   blue4Kfl: '',
+  BW_Step_10_2Kx: '',
+  BW_Step_10_2Ky: '',
+  BW_Step_10_2Kfl: '',
+  BW_Step_10_4Kx: '',
+  BW_Step_10_4Ky: '',
+  BW_Step_10_4Kfl: '',
   focusBoresight: '',
   integratorPosition: '',
   spotsOnScreen: '',
@@ -218,24 +224,57 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     defaultValues: createInitialFormData(),
   })
 
+  const safeDate = (dateStr: any, fallback: string) => {
+    if (!dateStr || typeof dateStr !== 'string') return fallback
+    const d = new Date(dateStr)
+    return isNaN(d.getTime()) ? fallback : (d.toISOString().split('T')[0] ?? fallback)
+  }
+
   useEffect(() => {
     const initial = createInitialFormData()
     if (data?.workDetails) {
       reset({
         ...initial,
+        cinemaName: data.selectedService?.site || initial.cinemaName,
+        date: safeDate(data.selectedService?.date, initial.date),
+        address: data.selectedService?.address || initial.address,
+        contactDetails: data.selectedService?.contactDetails || initial.contactDetails,
+        projectorModel: data.selectedService?.projectorModel || initial.projectorModel,
+        projectorSerialNumber: data.selectedService?.projector || initial.projectorSerialNumber,
+        screenNumber: data.selectedService?.screenNumber || initial.screenNumber,
         ...data.workDetails,
         issueNotes: data.workDetails.issueNotes || {},
         recommendedParts: data.workDetails.recommendedParts || [],
       })
-    } else if (typeof window !== 'undefined') {
-      const savedFormData = localStorage.getItem('recordWorkFormData')
+    } else if (typeof window !== 'undefined' && data?.selectedService?.id) {
+      const storageKey = `recordWorkFormData_${data.selectedService.id}`
+      const savedFormData = localStorage.getItem(storageKey)
       if (savedFormData) {
         const parsed = JSON.parse(savedFormData)
         reset({
           ...initial,
+          cinemaName: data.selectedService?.site || initial.cinemaName,
+          date: safeDate(data.selectedService?.date, initial.date),
+          address: data.selectedService?.address || initial.address,
+          contactDetails: data.selectedService?.contactDetails || initial.contactDetails,
+          projectorModel: data.selectedService?.projectorModel || initial.projectorModel,
+          projectorSerialNumber: data.selectedService?.projector || initial.projectorSerialNumber,
+          screenNumber: data.selectedService?.screenNumber || initial.screenNumber,
           ...parsed,
           issueNotes: parsed.issueNotes || {},
           recommendedParts: parsed.recommendedParts || [],
+        })
+      } else {
+        // No saved data, but we have service details
+        reset({
+          ...initial,
+          cinemaName: data.selectedService?.site || initial.cinemaName,
+          date: safeDate(data.selectedService?.date, initial.date),
+          address: data.selectedService?.address || initial.address,
+          contactDetails: data.selectedService?.contactDetails || initial.contactDetails,
+          projectorModel: data.selectedService?.projectorModel || initial.projectorModel,
+          projectorSerialNumber: data.selectedService?.projector || initial.projectorSerialNumber,
+          screenNumber: data.selectedService?.screenNumber || initial.screenNumber,
         })
       }
     }
@@ -248,8 +287,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         setBrokenImages(data.workImages.broken || [])
         setReferenceImages(data.workImages.other || [])
       }
-    } else if (typeof window !== 'undefined') {
-      const savedImages = localStorage.getItem('recordWorkImages')
+    } else if (typeof window !== 'undefined' && data?.selectedService?.id) {
+      const storageKey = `recordWorkImages_${data.selectedService.id}`
+      const savedImages = localStorage.getItem(storageKey)
       if (savedImages) {
         const parsed = JSON.parse(savedImages)
         setBrokenImages(parsed.broken || [])
@@ -259,12 +299,13 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   }, [data, reset])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || !data?.selectedService?.id) return
     const subscription = watch((value) => {
-      localStorage.setItem('recordWorkFormData', JSON.stringify(value))
+      const storageKey = `recordWorkFormData_${data.selectedService.id}`
+      localStorage.setItem(storageKey, JSON.stringify(value))
     })
     return () => subscription.unsubscribe()
-  }, [watch])
+  }, [watch, data?.selectedService?.id])
 
   useEffect(() => {
     brokenImagesRef.current = brokenImages
@@ -305,8 +346,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const persistImages = (broken: UploadedImage[], other: UploadedImage[]) => {
     setBrokenImages(broken)
     setReferenceImages(other)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('recordWorkImages', JSON.stringify({ broken, other }))
+    if (typeof window !== 'undefined' && data?.selectedService?.id) {
+      const storageKey = `recordWorkImages_${data.selectedService.id}`
+      localStorage.setItem(storageKey, JSON.stringify({ broken, other }))
     }
   }
 
@@ -347,6 +389,20 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     }
   }
 
+  const handleRemoveImage = (type: 'broken' | 'reference', index: number) => {
+    if (type === 'broken') {
+      const newImages = [...brokenImages]
+      newImages.splice(index, 1)
+      setBrokenImages(newImages)
+      persistImages(newImages, referenceImages)
+    } else {
+      const newImages = [...referenceImages]
+      newImages.splice(index, 1)
+      setReferenceImages(newImages)
+      persistImages(brokenImages, newImages)
+    }
+  }
+
   const handleResetForm = () => {
     if (typeof window !== 'undefined' && !window.confirm('Reset all saved data?')) {
       return
@@ -354,9 +410,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     reset(createInitialFormData())
     persistImages([], [])
     setImageError(null)
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('recordWorkFormData')
-      localStorage.removeItem('recordWorkImages')
+    if (typeof window !== 'undefined' && data?.selectedService?.id) {
+      localStorage.removeItem(`recordWorkFormData_${data.selectedService.id}`)
+      localStorage.removeItem(`recordWorkImages_${data.selectedService.id}`)
     }
   }
 
@@ -512,9 +568,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             <FormField label="Contact Details">
               <Input {...register('contactDetails')} placeholder="Phone/Email" className="border-2 border-black text-sm" />
-            </FormField>
-            <FormField label="Location">
-              <Input {...register('location')} placeholder="Location" className="border-2 border-black text-sm" />
             </FormField>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
@@ -741,11 +794,11 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
         <FormSection title="fL Measurements">
           <FormRow>
-            <FormField label="Left">
-              <Input type="number" {...register('flLeft')} placeholder="Left fL" className="border-2 border-black text-sm" />
+            <FormField label="Before">
+              <Input type="number" {...register('flLeft')} placeholder="Before fL" className="border-2 border-black text-sm" />
             </FormField>
-            <FormField label="Right">
-              <Input type="number" {...register('flRight')} placeholder="Right fL" className="border-2 border-black text-sm" />
+            <FormField label="After">
+              <Input type="number" {...register('flRight')} placeholder="After fL" className="border-2 border-black text-sm" />
             </FormField>
           </FormRow>
         </FormSection>
@@ -774,7 +827,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           </FormRow>
         </FormSection>
 
-        <FormSection title="Color Accuracy - CIE XYZ">
+        <FormSection title="Color Accuracy - MCGD">
           {COLOR_ACCURACY.map(({ name, fields }) => (
             <div key={name} className="mb-4">
               <p className="font-semibold text-black text-sm mb-2">{name}</p>
@@ -844,6 +897,76 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               </div>
             </div>
           ))}
+        </FormSection>
+
+        <FormSection title="Color Accuracy - CIE XYZ">
+          <div className="mb-4">
+            <p className="font-semibold text-black text-sm mb-2">BW Step 10</p>
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-gray-700 mb-1">2K Values</p>
+              <FormRow>
+                <FormField label="X">
+                  <Input
+                    type="number"
+                    step="0.001"
+                    {...register('BW_Step_10_2Kx')}
+                    placeholder="X"
+                    className="border-2 border-black text-black text-sm"
+                  />
+                </FormField>
+                <FormField label="Y">
+                  <Input
+                    type="number"
+                    step="0.001"
+                    {...register('BW_Step_10_2Ky')}
+                    placeholder="Y"
+                    className="border-2 border-black text-black text-sm"
+                  />
+                </FormField>
+                <FormField label="fL">
+                  <Input
+                    type="number"
+                    step="0.001"
+                    {...register('BW_Step_10_2Kfl')}
+                    placeholder="fL"
+                    className="border-2 border-black text-black text-sm"
+                  />
+                </FormField>
+              </FormRow>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-700 mb-1">4K Values</p>
+              <FormRow>
+                <FormField label="X">
+                  <Input
+                    type="number"
+                    step="0.001"
+                    {...register('BW_Step_10_4Kx')}
+                    placeholder="X"
+                    className="border-2 border-black text-black text-sm"
+                  />
+                </FormField>
+                <FormField label="Y">
+                  <Input
+                    type="number"
+                    step="0.001"
+                    {...register('BW_Step_10_4Ky')}
+                    placeholder="Y"
+                    className="border-2 border-black text-black text-sm"
+                  />
+                </FormField>
+                <FormField label="fL">
+                  <Input
+                    type="number"
+                    step="0.001"
+                    {...register('BW_Step_10_4Kfl')}
+                    placeholder="fL"
+                    className="border-2 border-black text-black text-sm"
+                  />
+                </FormField>
+              </FormRow>
+            </div>
+          </div>
         </FormSection>
 
         <FormSection title="Image Evaluation">
@@ -1053,8 +1176,16 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               {brokenImages.length > 0 && (
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   {brokenImages.map((file, index) => (
-                    <div key={`broken-${index}`} className="border border-gray-200 p-1">
+                    <div key={`broken-${index}`} className="relative border border-gray-200 p-1 group">
                       <img src={file.url} alt={file.name} className="w-full h-24 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage('broken', index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove image"
+                      >
+                        ✕
+                      </button>
                       <p className="text-[11px] text-gray-600 truncate mt-1">{file.name}</p>
                     </div>
                   ))}
@@ -1073,8 +1204,16 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               {referenceImages.length > 0 && (
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   {referenceImages.map((file, index) => (
-                    <div key={`reference-${index}`} className="border border-gray-200 p-1">
+                    <div key={`reference-${index}`} className="relative border border-gray-200 p-1 group">
                       <img src={file.url} alt={file.name} className="w-full h-24 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage('reference', index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove image"
+                      >
+                        ✕
+                      </button>
                       <p className="text-[11px] text-gray-600 truncate mt-1">{file.name}</p>
                     </div>
                   ))}

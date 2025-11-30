@@ -82,7 +82,8 @@ export interface MaintenanceReportData {
     blue4K: { fl: string; x: string; y: string };
   };
 
-  cieXyz: { x: string; y: string; fl: string };
+  cieXyz2K: { x: string; y: string; fl: string };
+  cieXyz4K: { x: string; y: string; fl: string };
 
   softwareVersion: string;
   screenInfo: {
@@ -658,7 +659,11 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   rightY -= 20;
 
   drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
-    ['BW Step-10 2K /4K', data.cieXyz.x, data.cieXyz.y, data.cieXyz.fl], [120, 45, 45, 45], 20);
+    ['BW Step-10 2K', data.cieXyz2K.x, data.cieXyz2K.y, data.cieXyz2K.fl], [120, 45, 45, 45], 20);
+  rightY -= 20;
+
+  drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
+    ['BW Step-10 4K', data.cieXyz4K.x, data.cieXyz4K.y, data.cieXyz4K.fl], [120, 45, 45, 45], 20);
   rightY -= 40;
 
   page2.drawText('Recommended Parts', {

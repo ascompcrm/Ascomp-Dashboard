@@ -73,7 +73,8 @@ const mockData: MaintenanceReportData = {
     blue2K: { fl: '6.8', x: '0.150', y: '0.060' },
     blue4K: { fl: '6.8', x: '0.150', y: '0.060' },
   },
-  cieXyz: { x: '0.312', y: '0.329', fl: '12.5' },
+  cieXyz2K: { x: '0.312', y: '0.329', fl: '12.5' },
+cieXyz4K: { x: '0.3', y: '0.39', fl: '4' },
   softwareVersion: 'v6.3.5',
   screenInfo: {
     scope: { height: '6.5', width: '15.2', gain: '1.3' },

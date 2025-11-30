@@ -297,10 +297,15 @@ function ServiceDetailView({
           blue4K: { fl: service.workDetails?.blue4Kfl?.toString() || '', x: service.workDetails?.blue4Kx?.toString() || '', y: service.workDetails?.blue4Ky?.toString() || '' },
         },
         
-        cieXyz: {
-          x: service.workDetails?.whiteX?.toString() || '',
-          y: service.workDetails?.whiteY?.toString() || '',
-          fl: service.workDetails?.whiteFl?.toString() || '',
+        cieXyz2K: {
+          x: service.workDetails?.BW_Step_10_2Kx?.toString() || '',
+          y: service.workDetails?.BW_Step_10_2Ky?.toString() || '',
+          fl: service.workDetails?.BW_Step_10_2Kfl?.toString() || '',
+        },
+        cieXyz4K: {
+          x: service.workDetails?.BW_Step_10_4Kx?.toString() || '',
+          y: service.workDetails?.BW_Step_10_4Ky?.toString() || '',
+          fl: service.workDetails?.BW_Step_10_4Kfl?.toString() || '',
         },
         
         softwareVersion: service.workDetails?.softwareVersion || '',

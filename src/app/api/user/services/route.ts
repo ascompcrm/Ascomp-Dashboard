@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
         siteId: service.site.id,
         address: service.site.address,
         contactDetails: service.site.contactDetails,
+        screenNumber: service.screenNumber,
         projector: service.projector.serialNo,
         projectorId: service.projector.id,
         projectorModel: service.projector.modelNo,

@@ -234,10 +234,15 @@ export default function GenerateReportStep({ data, onBack }: any) {
         blue2K: { fl: safe(workDetails.blue2Kfl), x: safe(workDetails.blue2Kx), y: safe(workDetails.blue2Ky) },
         blue4K: { fl: safe(workDetails.blue4Kfl), x: safe(workDetails.blue4Kx), y: safe(workDetails.blue4Ky) },
       },
-      cieXyz: {
-        x: safe(workDetails.white2Kx) || safe(workDetails.white4Kx),
-        y: safe(workDetails.white2Ky) || safe(workDetails.white4Ky),
-        fl: safe(workDetails.white2Kfl) || safe(workDetails.white4Kfl),
+      cieXyz2K: {
+        x: safe(workDetails.BW_Step_10_2Kx),
+        y: safe(workDetails.BW_Step_10_2Ky),
+        fl: safe(workDetails.BW_Step_10_2Kfl),
+      },
+      cieXyz4K: {
+        x: safe(workDetails.BW_Step_10_4Kx),
+        y: safe(workDetails.BW_Step_10_4Ky),
+        fl: safe(workDetails.BW_Step_10_4Kfl),
       },
       softwareVersion: safe(workDetails.softwareVersion),
       screenInfo: {
