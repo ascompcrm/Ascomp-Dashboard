@@ -1,0 +1,265 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  FIELD_WORKER
+}
+
+enum ServiceStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  PENDING
+  CANCELLED
+}
+
+model User {
+  id               String          @id @map("_id")
+  name             String
+  email            String
+  password         String?         // Optional - better-auth stores passwords in Account table
+  emailVerified    Boolean
+  phoneNumber      String?          @unique
+  image            String?
+  createdAt        DateTime
+  updatedAt        DateTime
+  sessions         Session[]
+  accounts         Account[]
+  createdServices  ServiceRecord[] @relation("CreatedServices")
+  assignedServices ServiceRecord[] @relation("AssignedServices")
+  role             Role            @default(FIELD_WORKER)
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Site {
+  id             String          @id @map("_id")
+  siteName       String
+  address        String
+  contactDetails String
+  siteCode       String?
+  projector      Projector[]
+  serviceRecords ServiceRecord[]
+
+  @@map("site")
+}
+
+model Projector {
+  id             String          @id @map("_id")
+  serialNo       String          @unique  
+  modelNo        String          
+  noOfservices   Int?
+  status         ServiceStatus @default(DRAFT)
+  siteId         String
+  site           Site            @relation(fields: [siteId], references: [id])
+  serviceRecords ServiceRecord[]
+  lastServiceAt  DateTime?
+
+  @@index([lastServiceAt])
+  @@map("projector")
+}
+
+model Session {
+  id        String   @id @map("_id")
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @map("_id")
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @map("_id")
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+model ServiceRecord {
+  id                            String        @id @map("_id")
+  createdAt                     DateTime      @default(now())
+  userId                        String
+  user                          User          @relation("CreatedServices", fields: [userId], references: [id], onDelete: Cascade)
+  assignedToId                  String?
+  assignedTo                    User?         @relation("AssignedServices", fields: [assignedToId], references: [id], onDelete: SetNull)
+  projectorId                   String
+  projector                     Projector     @relation(fields: [projectorId], references: [id], onDelete: Cascade)
+  siteId                        String
+  site                          Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  serviceNumber                 String
+  date                          DateTime?
+  cinemaName                    String?
+  address                       String?
+  contactDetails                String?
+  location                      String?
+  screenNumber                  String?
+  projectorRunningHours         Int?
+  reflector                     String?
+  uvFilter                      String?
+  integratorRod                 String?
+  coldMirror                    String?
+  foldMirror                    String?
+  touchPanel                    String?
+  evbImcbBoard                  String?
+  pibIcpBoard                   String?
+  imbSBoard                     String?
+  serialNumberVerified          Boolean       @default(false)
+  coolantLevelColor             String?
+  lightEngineWhite              String?
+  lightEngineRed                String?
+  lightEngineGreen              String?
+  lightEngineBlue               String?
+  lightEngineBlack              String?
+  acBlowerVane                  String?
+  extractorVane                 String?
+  exhaustCfm                    String?
+  lightEngineFans               String?
+  cardCageFans                  String?
+  radiatorFanPump               String?
+  pumpConnectorHose             String?
+  securityLampHouseLock         String?
+  lampLocMechanism              String?
+  reflectorNote                 String?
+  uvFilterNote                  String?
+  integratorRodNote             String?
+  coldMirrorNote                String?
+  foldMirrorNote                String?
+  touchPanelNote                String?
+  evbImcbBoardNote              String?
+  pibIcpBoardNote               String?
+  imbSBoardNote                 String?
+  acBlowerVaneNote              String?
+  extractorVaneNote             String?
+  lightEngineFansNote           String?
+  cardCageFansNote              String?
+  radiatorFanPumpNote           String?
+  pumpConnectorHoseNote         String?
+  lampLocMechanismNote          String?
+  projectorPlacementEnvironment String?
+  softwareVersion               String?
+  screenHeight                  Float?
+  screenWidth                   Float?
+  flatHeight                    Float?
+  flatWidth                     Float?
+  screenGain                    Float?
+  screenMake                    String?
+  throwDistance                 Float?
+  lampMakeModel                 String?
+  lampTotalRunningHours         Int?
+  lampCurrentRunningHours       Int?
+  pvVsN                         String?
+  pvVsE                         String?
+  nvVsE                         String?
+  flLeft                        Float?
+  flRight                       Float?
+  contentPlayerModel            String?
+  acStatus                      String?
+  leStatus                      String?
+  white2Kx                      Float?
+  white2Ky                      Float?
+  white2Kfl                     Float?
+  white4Kx                      Float?
+  white4Ky                      Float?
+  white4Kfl                     Float?
+  red2Kx                        Float?
+  red2Ky                        Float?
+  red2Kfl                       Float?
+  red4Kx                        Float?
+  red4Ky                        Float?
+  red4Kfl                       Float?
+  green2Kx                      Float?
+  green2Ky                      Float?
+  green2Kfl                     Float?
+  green4Kx                      Float?
+  green4Ky                      Float?
+  green4Kfl                     Float?
+  blue2Kx                       Float?
+  blue2Ky                       Float?
+  blue2Kfl                      Float?
+  blue4Kx                       Float?
+  blue4Ky                       Float?
+  blue4Kfl                      Float?
+  focusBoresight                Boolean       @default(false)
+  integratorPosition            Boolean       @default(false)
+  spotsOnScreen                 Boolean       @default(false)
+  screenCroppingOk              Boolean       @default(false)
+  convergenceOk                 Boolean       @default(false)
+  channelsCheckedOk             Boolean       @default(false)
+  pixelDefects                  String?
+  imageVibration                String?
+  liteloc                       String?
+  hcho                          Float?
+  tvoc                          Float?
+  pm1                           Float?
+  pm2_5                         Float?
+  pm10                          Float?
+  temperature                   Float?
+  humidity                      Float?
+  airPollutionLevel             String?
+  remarks                       String?
+  lightEngineSerialNumber       String?
+  startTime                     DateTime?
+  endTime                       DateTime?
+  signatures                    Json?
+  reportGenerated               Boolean       @default(false)
+  reportUrl                     String?
+  recommendedParts              Json?
+  images                        String[] @default([])
+  brokenImages                  String[] @default([])
+  BW_Step_10_2Kx                  String?
+  BW_Step_10_2Ky                  String?
+  BW_Step_10_2Kfl                 String?
+  BW_Step_10_4Kx                  String?
+  BW_Step_10_4Ky                  String?
+  BW_Step_10_4Kfl                 String?
+  photosDriveLink               String?
+
+  @@unique([projectorId, serviceNumber])
+  @@index([projectorId, serviceNumber])
+  @@index([projectorId, date])
+  @@index([projectorId])
+  @@index([userId, date])
+  @@index([siteId, date])
+  @@index([date])
+  @@index([assignedToId])
+  @@map("service_record")
+}

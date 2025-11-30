@@ -1,0 +1,398 @@
+"use client"
+
+import { useState, useMemo, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import SearchBar from "../search-bar"
+
+import AddSiteModal from "./modals/add-site-modal"
+import AddProjectorModal from "./modals/add-projector-modal"
+import ScheduleServiceModal from "./modals/schedule-service-modal"
+import ProjectorDetails from "./projector-details"
+import { ChevronDown, ChevronUp } from "lucide-react"
+import type { Site, Projector } from "@/lib/types"
+
+interface ProjectorData {
+  id: string
+  name: string
+  model: string
+  serialNumber: string
+  installDate: string
+  lastServiceDate: string
+  status: "completed" | "pending" | "scheduled"
+  nextServiceDue: string
+  serviceHistory: any[]
+}
+
+interface SiteData {
+  id: string
+  name: string
+  location: string
+  address: string
+  contactDetails: string
+  screenNo: string
+  createdDate: string
+  totalCompletedServices?: number
+  projectors: ProjectorData[]
+}
+
+export default function SitesView() {
+  const router = useRouter()
+  const [sites, setSites] = useState<SiteData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [expandedSites, setExpandedSites] = useState<Set<string>>(new Set())
+  const [showAddSite, setShowAddSite] = useState(false)
+  const [selectedSite, setSelectedSite] = useState<string | null>(null)
+  const [selectedProjector, setSelectedProjector] = useState<{ siteId: string; projectorId: string } | null>(null)
+  const [_showSchedule, setShowSchedule] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [projectorFilter] = useState<string>("ALL")
+
+  const fetchSites = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("/api/admin/sites")
+      
+      if (!response.ok) {
+        let errorMessage = "Failed to fetch sites"
+        try {
+          const errorResult = await response.json()
+          errorMessage = errorResult.error || errorMessage
+        } catch {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage
+        }
+        console.error("Error fetching sites:", errorMessage, response.status)
+        throw new Error(errorMessage)
+      }
+      
+      const result = await response.json()
+      setSites(result.sites || [])
+      // Don't expand sites by default - keep them closed
+    } catch (error) {
+      console.error("Error fetching sites:", error)
+      setSites([])
+      // Error is logged but we don't show it to user to avoid breaking the UI
+      // The empty sites array will show "No sites found" message
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchSites()
+  }, [])
+
+  const toggleSite = (siteId: string) => {
+    const newExpanded = new Set(expandedSites)
+    if (newExpanded.has(siteId)) {
+      newExpanded.delete(siteId)
+    } else {
+      newExpanded.add(siteId)
+    }
+    setExpandedSites(newExpanded)
+  }
+
+  const filteredSites = useMemo(() => {
+    return sites
+      .filter(
+        (site) =>
+          site.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          site.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          site.projectors.some(
+            (p) =>
+              p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              p.serialNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              p.model.toLowerCase().includes(searchQuery.toLowerCase()),
+          ),
+      )
+      .map((site) => ({
+        ...site,
+        projectors: site.projectors.filter((p) => {
+          if (projectorFilter === "all") return true
+          if (projectorFilter === "completed") return p.status === "completed"
+          if (projectorFilter === "pending") return p.status === "pending"
+          if (projectorFilter === "scheduled") return p.status === "scheduled"
+          return true
+        }),
+      }))
+  }, [sites, searchQuery, projectorFilter])
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-foreground">Sites & Projectors</h2>
+        <Button onClick={() => setShowAddSite(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">
+          Add Site
+        </Button>
+      </div>
+
+      <SearchBar
+        placeholder="Search by site name, address, projector name or serial number..."
+        value={searchQuery}
+        onChange={setSearchQuery}
+      />
+
+      {/* <div className="space-y-3">
+        <p className="text-sm font-medium text-foreground">Projector Status</p>
+        <FilterTabs
+          tabs={["all", "completed", "pending", "scheduled"]}
+          activeTab={projectorFilter}
+          onTabChange={setProjectorFilter}
+        />
+      </div> */}
+
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="border-border">
+              <div className="p-4">
+                <Skeleton className="h-6 w-48 mb-2" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
+          {filteredSites.length === 0 ? (
+            <div className="border border-border p-6 text-center bg-background">
+              <p className="text-muted-foreground">No sites found matching your search.</p>
+            </div>
+          ) : (
+          filteredSites.map((site) => {
+            const completedCount = site.projectors.filter((p) => p.status === "completed").length
+            const pendingCount = site.projectors.filter((p) => p.status === "pending").length
+            const scheduledCount = site.projectors.filter((p) => p.status === "scheduled").length
+
+            const siteInfo = site as any // Type assertion to access additional fields
+
+            return (
+              <div key={site.id} className="border border-border bg-background rounded-lg shadow-sm">
+                <div className="p-5">
+                  {/* Site Header */}
+                  <div className="mb-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-foreground mb-1">{site.name}</h3>
+                        {siteInfo?.siteCode && (
+                          <p className="text-sm text-muted-foreground">Site Code: {siteInfo.siteCode}</p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          router.push(`/admin/dashboard/sites/${site.id}`)
+                        }}
+                        className="border-border shrink-0"
+                      >
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Site Information */}
+                  <div className="space-y-2 mb-4">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Address</p>
+                      <p className="text-sm text-foreground">{site.address}</p>
+                    </div>
+                    {site.contactDetails && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Contact Details</p>
+                        <p className="text-sm text-foreground">{site.contactDetails}</p>
+                      </div>
+                    )}
+                    {/* <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Created Date</p>
+                      <p className="text-sm text-foreground">
+                        {new Date(site.createdDate).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div> */}
+                  </div>
+
+                  {/* Statistics */}
+                  <div className="flex flex-col items-center justify-between gap-4 pt-4 border-t border-border pb-4">
+                    <div className="flex items-center w-full justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Total Projectors</p>
+                      <p className="text-xl font-bold text-foreground">{site.projectors.length}</p>
+                    </div>
+                    {/* <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Total Services</p>
+                      <p className="text-xl font-bold text-right text-foreground">{totalServices}</p>
+                    </div> */}
+                    </div>
+                    <div className="flex items-center w-full justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Pending</p>
+                      <p className="text-xl font-bold text-red-600">{pendingCount}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Scheduled</p>
+                      <p className="text-xl font-bold text-center text-blue-600">{scheduledCount}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Completed</p>
+                      <p className="text-xl font-bold text-right text-green-600">{completedCount}</p>
+                    </div>
+                    </div>
+                  </div>
+
+                  {/* Toggle Button at the end */}
+                  <div className="pt-4 border-t border-border mt-4">
+                    <div className="flex justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          toggleSite(site.id)
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        {expandedSites.has(site.id) ? (
+                          <>
+                            <ChevronUp className="h-4 w-4" />
+                            Hide Projectors
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4" />
+                            Show Projectors ({site.projectors.length})
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {expandedSites.has(site.id) && (
+                  <div className="border-t border-border bg-muted/20 p-5">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-0.5">Projectors</h4>
+                        <p className="text-xs text-muted-foreground">{site.projectors.length} projector{site.projectors.length !== 1 ? 's' : ''}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedSite(site.id)
+                        }}
+                        className="border-border"
+                      >
+                        Add Projector
+                      </Button>
+                    </div>
+
+                    {site.projectors.length === 0 ? (
+                      <div className="py-6 text-center border border-dashed border-border">
+                        <p className="text-sm text-muted-foreground mb-3">No projectors match the selected filter.</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedSite(site.id)
+                          }}
+                          className="border-border"
+                        >
+                          Add First Projector
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {site.projectors.map((projector) => {
+                          const projectorForDetails: Projector = {
+                            id: projector.id,
+                            name: projector.name,
+                            model: projector.model,
+                            serialNumber: projector.serialNumber,
+                            installDate: projector.installDate,
+                            lastServiceDate: projector.lastServiceDate,
+                            status: projector.status,
+                            nextServiceDue: projector.nextServiceDue,
+                            serviceHistory: projector.serviceHistory,
+                          }
+                          const siteForDetails: Site = {
+                            id: site.id,
+                            name: site.name,
+                            location: site.location,
+                            address: site.address,
+                            createdDate: site.createdDate,
+                            projectors: [],
+                          }
+                          return (
+                            <ProjectorDetails
+                              key={projector.id}
+                              site={siteForDetails}
+                              projector={projectorForDetails}
+                              onSchedule={() => {
+                                setSelectedProjector({ siteId: site.id, projectorId: projector.id })
+                                setShowSchedule(true)
+                              }}
+                              onViewDetails={() =>
+                                router.push(`/admin/dashboard/sites/${site.id}/projectors/${projector.id}`)
+                              }
+                            />
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })
+          )}
+        </div>
+      )}
+
+      {showAddSite && (
+        <AddSiteModal
+          onClose={() => setShowAddSite(false)}
+          onSuccess={() => {
+            fetchSites()
+          }}
+        />
+      )}
+      {selectedSite && (
+        <AddProjectorModal
+          siteId={selectedSite}
+          onClose={() => setSelectedSite(null)}
+          onSuccess={() => {
+            fetchSites()
+            setSelectedSite(null)
+          }}
+        />
+      )}
+      {selectedProjector && (
+        <ScheduleServiceModal
+          siteId={selectedProjector.siteId}
+          projectorId={selectedProjector.projectorId}
+          onClose={() => {
+            setSelectedProjector(null)
+            setShowSchedule(false)
+          }}
+          onSuccess={() => {
+            fetchSites()
+            setSelectedProjector(null)
+            setShowSchedule(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
