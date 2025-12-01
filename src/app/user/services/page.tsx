@@ -213,6 +213,14 @@ function ServiceDetailView({
       setIsGeneratingPdf(true)
       
       // Map service data to MaintenanceReportData
+      const mapStatus = (value: string | undefined | null) => {
+        if (!value) return { status: '', yesNo: '' }
+        if (value === 'OK') return { status: 'OK', yesNo: 'YES' }
+        if (value === 'YES') return { status: 'Needs Replacement', yesNo: 'NO' }
+        if (value === 'NO') return { status: 'Not Available', yesNo: 'NO' }
+        return { status: value, yesNo: 'YES' }
+      }
+
       const reportData: MaintenanceReportData = {
         cinemaName: service.cinemaName || service.site.name || '',
         date: service.date ? new Date(service.date).toLocaleDateString() : '',
@@ -229,43 +237,46 @@ function ServiceDetailView({
         endTime: service.workDetails?.endTime,
         
         opticals: {
-          reflector: { status: service.workDetails?.reflector || '' },
-          uvFilter: { status: service.workDetails?.uvFilter || '' },
-          integratorRod: { status: service.workDetails?.integratorRod || '' },
-          coldMirror: { status: service.workDetails?.coldMirror || '' },
-          foldMirror: { status: service.workDetails?.foldMirror || '' },
+          reflector: mapStatus(service.workDetails?.reflector),
+          uvFilter: mapStatus(service.workDetails?.uvFilter),
+          integratorRod: mapStatus(service.workDetails?.integratorRod),
+          coldMirror: mapStatus(service.workDetails?.coldMirror),
+          foldMirror: mapStatus(service.workDetails?.foldMirror),
         },
         
         electronics: {
-          touchPanel: { status: service.workDetails?.touchPanel || '' },
-          evbImcb: { status: service.workDetails?.evbImcbBoard || '' },
-          pibIcp: { status: service.workDetails?.pibIcpBoard || '' },
-          imbS: { status: service.workDetails?.imbSBoard || '' },
+          touchPanel: mapStatus(service.workDetails?.touchPanel),
+          evbImcb: mapStatus(service.workDetails?.evbImcbBoard),
+          pibIcp: mapStatus(service.workDetails?.pibIcpBoard),
+          imbS: mapStatus(service.workDetails?.imbSBoard),
         },
         
-        serialVerified: { status: service.workDetails?.serialNumberVerified ? 'Yes' : 'No' },
-        coolant: { status: service.workDetails?.coolantLevelColor || '' },
+        serialVerified: { 
+          status: service.workDetails?.serialNumberVerified ? 'MATCHED' : 'NOT MATCHED',
+          yesNo: service.workDetails?.serialNumberVerified ? 'YES' : 'NO'
+        },
+        coolant: mapStatus(service.workDetails?.coolantLevelColor),
         
         lightEngineTest: {
-          white: { status: service.workDetails?.lightEngineWhite || '' },
-          red: { status: service.workDetails?.lightEngineRed || '' },
-          green: { status: service.workDetails?.lightEngineGreen || '' },
-          blue: { status: service.workDetails?.lightEngineBlue || '' },
-          black: { status: service.workDetails?.lightEngineBlack || '' },
+          white: mapStatus(service.workDetails?.lightEngineWhite),
+          red: mapStatus(service.workDetails?.lightEngineRed),
+          green: mapStatus(service.workDetails?.lightEngineGreen),
+          blue: mapStatus(service.workDetails?.lightEngineBlue),
+          black: mapStatus(service.workDetails?.lightEngineBlack),
         },
         
         mechanical: {
-          acBlower: { status: service.workDetails?.acBlowerVane || '' },
-          extractor: { status: service.workDetails?.extractorVane || '' },
-          exhaustCFM: { status: service.workDetails?.exhaustCfm || '' },
-          lightEngine4Fans: { status: service.workDetails?.lightEngineFans || '' },
-          cardCageFans: { status: service.workDetails?.cardCageFans || '' },
-          radiatorFan: { status: service.workDetails?.radiatorFanPump || '' },
-          connectorHose: { status: service.workDetails?.pumpConnectorHose || '' },
-          securityLock: { status: service.workDetails?.securityLampHouseLock || '' },
+          acBlower: mapStatus(service.workDetails?.acBlowerVane),
+          extractor: mapStatus(service.workDetails?.extractorVane),
+          exhaustCFM: mapStatus(service.workDetails?.exhaustCfm),
+          lightEngine4Fans: mapStatus(service.workDetails?.lightEngineFans),
+          cardCageFans: mapStatus(service.workDetails?.cardCageFans),
+          radiatorFan: mapStatus(service.workDetails?.radiatorFanPump),
+          connectorHose: mapStatus(service.workDetails?.pumpConnectorHose),
+          securityLock: mapStatus(service.workDetails?.securityLampHouseLock),
         },
         
-        lampLOC: { status: service.workDetails?.lampLocMechanism || '' },
+        lampLOC: mapStatus(service.workDetails?.lampLocMechanism),
         
         lampMake: service.workDetails?.lampMakeModel || '',
         lampHours: service.workDetails?.lampTotalRunningHours?.toString() || '',

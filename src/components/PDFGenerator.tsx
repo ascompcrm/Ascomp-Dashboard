@@ -702,7 +702,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   }
   rightY -= 10;
 
-  leftY -= 40;
+  leftY -= 90;
 
   drawTableRow(page2, timesRomanBold, timesRomanBold, leftTableX, leftY, width - 80,
     ['Air Pollution Level', 'HCHO', 'TVOC', 'PM1.0', 'PM2.5', 'PM10', 'Temperature C', 'Humidity %'], [100, 59, 59, 59, 59, 59, 59, 59], 20);

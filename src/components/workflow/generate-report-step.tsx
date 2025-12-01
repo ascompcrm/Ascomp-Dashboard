@@ -106,28 +106,22 @@ export default function GenerateReportStep({ data, onBack }: any) {
       const upperValue = rawValue.toUpperCase()
       const note = noteField ? safe(workDetails[noteField]) : ''
       
-      // Normalize yesNo to only YES, NO, or OK (case-insensitive matching)
-      let yesNo = ''
-      if (upperValue === 'YES' || upperValue === 'Y') {
-        yesNo = 'YES'
-      } else if (upperValue === 'NO' || upperValue === 'N') {
-        yesNo = 'NO'
-      } else if (upperValue === 'OK' || upperValue === 'O') {
-        yesNo = 'OK'
-      }
-      // If it's not YES/NO/OK, yesNo remains empty string
-      
-      // Status column: 
-      // - If YES and has note: show the replacement note
-      // - If YES/NO/OK: show empty (these values only go in yesNo column)
-      // - Otherwise: show the original status text (e.g., "Discolored", "Bad", "2345", etc.)
       let status = ''
-      if (yesNo === 'YES' && note) {
-        status = note // Show replacement details when YES
-      } else if (yesNo === 'YES' || yesNo === 'NO' || yesNo === 'OK') {
-        status = '' // Don't show YES/NO/OK in status column
+      let yesNo = ''
+
+      if (upperValue === 'OK' || upperValue === 'O') {
+        status = 'OK'
+        yesNo = 'YES'
+      } else if (upperValue === 'YES' || upperValue === 'Y') {
+        status = note || 'Needs Replacement'
+        yesNo = 'NO'
+      } else if (upperValue === 'NO' || upperValue === 'N') {
+        status = 'Not Available'
+        yesNo = 'NO'
       } else {
-        status = rawValue // Show the original status text for other values
+        // For other values (measurements etc), assume they are the status
+        status = rawValue
+        yesNo = 'YES'
       }
       
       return { 
