@@ -15,7 +15,6 @@ export const metadata: Metadata = {
   title: 'Ascomp INC Service Portal',
   description: 'Ascomp INC field-service and maintenance workflow portal.',
   applicationName: 'Ascomp INC',
-  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
