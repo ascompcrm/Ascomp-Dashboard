@@ -6,7 +6,16 @@ import Image from "next/image"
 import { useAuth } from "@/lib/auth-context"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Download, ChevronRight } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
+import { ArrowLeft, Download, ChevronRight, Search, CalendarIcon } from "lucide-react"
 
 import { generateMaintenanceReport, type MaintenanceReportData } from "@/components/PDFGenerator"
 
@@ -96,6 +105,29 @@ export default function ServicesPage() {
     })
   }
 
+  const [searchQuery, setSearchQuery] = useState("")
+  const [dateFilter, setDateFilter] = useState<Date>()
+
+  const filteredServices = services.filter((service) => {
+    const query = searchQuery.toLowerCase()
+    const matchesSearch =
+      service.site.name.toLowerCase().includes(query) ||
+      service.projector.model.toLowerCase().includes(query) ||
+      service.serviceNumber.toString().includes(query) ||
+      (service.cinemaName && service.cinemaName.toLowerCase().includes(query)) ||
+      (service.site.address && service.site.address.toLowerCase().includes(query)) ||
+      (service.address && service.address.toLowerCase().includes(query))
+
+    // Check if service date matches selected date (comparing YYYY-MM-DD parts)
+    const matchesDate = dateFilter 
+      ? service.date?.startsWith(format(dateFilter, "yyyy-MM-dd")) 
+      : true
+
+    return matchesSearch && matchesDate
+  }).sort((a, b) => {
+    return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+  })
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -125,21 +157,66 @@ export default function ServicesPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold text-black">Completed Services</h1>
-          <p className="text-gray-600 mt-2">{services.length} service{services.length !== 1 ? "s" : ""} completed</p>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-black">Completed Services</h1>
+              <p className="text-gray-600 mt-2">
+                {filteredServices.length} service{filteredServices.length !== 1 ? "s" : ""} found
+                {services.length !== filteredServices.length && ` (filtered from ${services.length})`}
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                <Input
+                  placeholder="Search site, address, model..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 border-2 border-black focus-visible:ring-0"
+                />
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-fit sm:w-[240px] justify-start text-left font-normal border-2 border-black",
+                      !dateFilter && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFilter ? format(dateFilter, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateFilter}
+                    onSelect={setDateFilter}
+                    initialFocus
+                    captionLayout="dropdown"
+                    className="rounded-md border shadow-sm"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto p-4 sm:p-6 w-full">
-        {services.length === 0 ? (
+        {filteredServices.length === 0 ? (
           <Card className="border-2 border-black">
             <CardContent className="p-12 text-center">
-              <p className="text-lg text-gray-600">No completed services yet</p>
+              <p className="text-lg text-gray-600">
+                {services.length === 0 ? "No completed services yet" : "No services match your search"}
+              </p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
-            {services.map((service) => (
+            {filteredServices.map((service) => (
               <Card
                 key={service.id}
                 className="border-2 border-black hover:bg-gray-50 cursor-pointer transition-colors"
