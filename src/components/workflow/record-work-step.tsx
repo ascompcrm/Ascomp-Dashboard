@@ -581,13 +581,22 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               />
             </FormField>
             <FormField label="Service Visit Type">
-              <Input
-                type="number"
-                step="any"
+              <select
                 {...register('serviceVisitType')}
-                placeholder="Service visit type"
-                className="border-2 border-black text-sm"
-              />
+                className="w-full border-2 border-black p-2 text-sm bg-white"
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  Select service visit type
+                </option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="special">Special service</option>
+              </select>
             </FormField>
           </div>
         </FormSection>
