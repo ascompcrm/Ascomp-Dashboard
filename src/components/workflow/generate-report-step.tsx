@@ -347,22 +347,38 @@ export default function GenerateReportStep({ data, onBack }: any) {
     return response.json()
   }
 
-  const handleGenerateAndSubmit = async () => {
+  const [isSubmitted, setIsSubmitted] = useState(false)
+
+  const handleSubmit = async () => {
     if (isSubmitting) return
 
     setIsSubmitting(true)
     setSubmitError(null)
     try {
       if (!hasImageEvidence) {
-        throw new Error('Please upload required images before generating the report.')
+        throw new Error('Please upload required images before submitting the report.')
       }
-      const issues = getIssueEntries()
-      
-      // Generate PDF first
-      await generatePDF()
-      
+
       // Submit to database
       await submitServiceRecord()
+      
+      setIsSubmitted(true)
+    } catch (error) {
+      console.error('Error submitting report:', error)
+      setSubmitError(error instanceof Error ? error.message : 'Failed to submit report. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDownloadAndFinish = async () => {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      const issues = getIssueEntries()
+      
+      // Generate PDF
+      await generatePDF()
       
       // Save to localStorage for backup
       saveReportToLocalStorage(issues)
@@ -376,10 +392,10 @@ export default function GenerateReportStep({ data, onBack }: any) {
       // Small delay to ensure PDF download starts, then redirect immediately
       setTimeout(() => {
         window.location.href = '/user/workflow'
-      }, 200)
+      }, 500)
     } catch (error) {
-      console.error('Error generating or submitting report:', error)
-      setSubmitError(error instanceof Error ? error.message : 'Failed to generate or submit report. Please try again.')
+      console.error('Error generating PDF:', error)
+      setSubmitError('Failed to generate PDF. You can try again.')
       setIsSubmitting(false)
     }
   }
@@ -389,7 +405,11 @@ export default function GenerateReportStep({ data, onBack }: any) {
   return (
     <div>
       <h2 className="text-lg sm:text-xl font-bold text-black mb-2">Generate Report</h2>
-      <p className="text-sm text-gray-700 mb-4">Fill the values and generate a PDF report</p>
+      <p className="text-sm text-gray-700 mb-4">
+        {isSubmitted 
+          ? "Report submitted successfully! Please download the PDF to finish." 
+          : "Review the details and submit the report."}
+      </p>
 
       <Card className="border-2 border-black p-4 mb-4 space-y-4">
         <div>
@@ -472,25 +492,37 @@ export default function GenerateReportStep({ data, onBack }: any) {
           </div>
         )}
 
-        <Button
-          onClick={handleGenerateAndSubmit}
-          disabled={isSubmitting}
-          className="w-full bg-black text-white hover:bg-gray-800 border-2 border-black font-bold py-2 text-sm disabled:opacity-50"
-        >
-          {isSubmitting ? 'Generating PDF...' : 'Generate PDF Report and Submit'}
-        </Button>
+        {!isSubmitted ? (
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="w-full bg-black text-white hover:bg-gray-800 border-2 border-black font-bold py-2 text-sm disabled:opacity-50"
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Report'}
+          </Button>
+        ) : (
+          <Button
+            onClick={handleDownloadAndFinish}
+            disabled={isSubmitting}
+            className="w-full bg-green-600 text-white hover:bg-green-700 border-2 border-green-800 font-bold py-2 text-sm disabled:opacity-50"
+          >
+            {isSubmitting ? 'Generating PDF...' : 'Download PDF & Finish'}
+          </Button>
+        )}
       </Card>
 
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-        <Button
-          onClick={onBack}
-          variant="outline"
-          className="border-2 border-black text-black hover:bg-gray-100 flex-1"
-          disabled={isSubmitting}
-        >
-          Back
-        </Button>
-      </div>
+      {!isSubmitted && (
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <Button
+            onClick={onBack}
+            variant="outline"
+            className="border-2 border-black text-black hover:bg-gray-100 flex-1"
+            disabled={isSubmitting}
+          >
+            Back
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
