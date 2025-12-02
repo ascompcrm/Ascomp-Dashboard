@@ -572,10 +572,22 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             <FormField label="Screen No">
-              <Input type="number" {...register('screenNumber')} placeholder="Screen number" className="border-2 border-black text-sm" />
+              <Input
+                type="number"
+                step="any"
+                {...register('screenNumber')}
+                placeholder="Screen number"
+                className="border-2 border-black text-sm"
+              />
             </FormField>
             <FormField label="Service Visit Type">
-              <Input type="number" {...register('serviceVisitType')} placeholder="Service visit type" className="border-2 border-black text-sm" />
+              <Input
+                type="number"
+                step="any"
+                {...register('serviceVisitType')}
+                placeholder="Service visit type"
+                className="border-2 border-black text-sm"
+              />
             </FormField>
           </div>
         </FormSection>
@@ -600,6 +612,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           <FormField label="Running Hours" required>
             <Input
               type="number"
+              step="any"
               {...register('projectorRunningHours')}
               placeholder="Hours"
               className="border-2 border-black text-black text-sm"
@@ -685,6 +698,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
             <FormField label="Exhaust CFM">
               <Input
                 type="number"
+                step="any"
                 {...register('exhaustCfm')}
                 placeholder="CFM value"
                 className="border-2 border-black text-black text-sm"
@@ -770,10 +784,22 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           </FormField>
           <FormRow>
             <FormField label="Total Running Hours">
-              <Input type="number" {...register('lampTotalRunningHours')} placeholder="Hours" className="border-2 border-black text-sm" />
+              <Input
+                type="number"
+                step="any"
+                {...register('lampTotalRunningHours')}
+                placeholder="Hours"
+                className="border-2 border-black text-sm"
+              />
             </FormField>
             <FormField label="Current Running Hours">
-              <Input type="number" {...register('lampCurrentRunningHours')} placeholder="Current hours" className="border-2 border-black text-sm" />
+              <Input
+                type="number"
+                step="any"
+                {...register('lampCurrentRunningHours')}
+                placeholder="Current hours"
+                className="border-2 border-black text-sm"
+              />
             </FormField>
           </FormRow>
         </FormSection>
@@ -781,13 +807,31 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         <FormSection title="Voltage Parameters">
           <FormRow>
             <FormField label="P vs N">
-              <Input type="number" {...register('pvVsN')} placeholder="Voltage" className="border-2 border-black text-sm" />
+              <Input
+                type="number"
+                step="any"
+                {...register('pvVsN')}
+                placeholder="Voltage"
+                className="border-2 border-black text-sm"
+              />
             </FormField>
             <FormField label="P vs E">
-              <Input type="number" {...register('pvVsE')} placeholder="Voltage" className="border-2 border-black text-sm" />
+              <Input
+                type="number"
+                step="any"
+                {...register('pvVsE')}
+                placeholder="Voltage"
+                className="border-2 border-black text-sm"
+              />
             </FormField>
             <FormField label="N vs E">
-              <Input type="number" {...register('nvVsE')} placeholder="Voltage" className="border-2 border-black text-sm" />
+              <Input
+                type="number"
+                step="any"
+                {...register('nvVsE')}
+                placeholder="Voltage"
+                className="border-2 border-black text-sm"
+              />
             </FormField>
           </FormRow>
         </FormSection>
@@ -795,10 +839,22 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         <FormSection title="fL Measurements">
           <FormRow>
             <FormField label="Before">
-              <Input type="number" {...register('flLeft')} placeholder="Before fL" className="border-2 border-black text-sm" />
+              <Input
+                type="number"
+                step="any"
+                {...register('flLeft')}
+                placeholder="Before fL"
+                className="border-2 border-black text-sm"
+              />
             </FormField>
             <FormField label="After">
-              <Input type="number" {...register('flRight')} placeholder="After fL" className="border-2 border-black text-sm" />
+              <Input
+                type="number"
+                step="any"
+                {...register('flRight')}
+                placeholder="After fL"
+                className="border-2 border-black text_sm"
+              />
             </FormField>
           </FormRow>
         </FormSection>
@@ -1010,7 +1066,12 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           <FormRow>
             {['hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10'].map((field) => (
               <FormField key={field} label={field.toUpperCase()}>
-                <Input type="number" {...register(field as keyof RecordWorkForm)} className="border-2 border-black text-sm" />
+                <Input
+                  type="number"
+                  step="any"
+                  {...register(field as keyof RecordWorkForm)}
+                  className="border-2 border-black text-sm"
+                />
               </FormField>
             ))}
             <FormField label="Temperature (°C)">
