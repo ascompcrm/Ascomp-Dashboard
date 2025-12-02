@@ -74,6 +74,8 @@ export default function ServicesPage() {
       const response = await fetch("/api/user/services/completed", {
         credentials: "include",
       })
+
+
       if (response.ok) {
         const data = await response.json()
         setServices(data.services || [])
@@ -289,14 +291,13 @@ function ServiceDetailView({
     try {
       setIsGeneratingPdf(true)
       
-      // Map service data to MaintenanceReportData
-      const mapStatus = (value: string | undefined | null) => {
-        if (!value) return { status: '', yesNo: '' }
-        if (value === 'OK') return { status: 'OK', yesNo: 'YES' }
-        if (value === 'YES') return { status: 'Needs Replacement', yesNo: 'NO' }
-        if (value === 'NO') return { status: 'Not Available', yesNo: 'NO' }
-        return { status: value, yesNo: 'YES' }
-      }
+      // Map DB status + note to PDF StatusItem:
+      // - yesNo: raw status value from DB (e.g. OK / YES / NO)
+      // - status: free-text note from the corresponding *Note field (or empty)
+      const mapStatus = (value?: string | null, note?: string | null) => ({
+        status: note ? String(note) : '',
+        yesNo: value ? String(value) : '',
+      })
 
       const reportData: MaintenanceReportData = {
         cinemaName: service.cinemaName || service.site.name || '',
@@ -314,18 +315,18 @@ function ServiceDetailView({
         endTime: service.workDetails?.endTime,
         
         opticals: {
-          reflector: mapStatus(service.workDetails?.reflector),
-          uvFilter: mapStatus(service.workDetails?.uvFilter),
-          integratorRod: mapStatus(service.workDetails?.integratorRod),
-          coldMirror: mapStatus(service.workDetails?.coldMirror),
-          foldMirror: mapStatus(service.workDetails?.foldMirror),
+          reflector: mapStatus(service.workDetails?.reflector, service.workDetails?.reflectorNote),
+          uvFilter: mapStatus(service.workDetails?.uvFilter, service.workDetails?.uvFilterNote),
+          integratorRod: mapStatus(service.workDetails?.integratorRod, service.workDetails?.integratorRodNote),
+          coldMirror: mapStatus(service.workDetails?.coldMirror, service.workDetails?.coldMirrorNote),
+          foldMirror: mapStatus(service.workDetails?.foldMirror, service.workDetails?.foldMirrorNote),
         },
         
         electronics: {
-          touchPanel: mapStatus(service.workDetails?.touchPanel),
-          evbImcb: mapStatus(service.workDetails?.evbImcbBoard),
-          pibIcp: mapStatus(service.workDetails?.pibIcpBoard),
-          imbS: mapStatus(service.workDetails?.imbSBoard),
+          touchPanel: mapStatus(service.workDetails?.touchPanel, service.workDetails?.touchPanelNote),
+          evbImcb: mapStatus(service.workDetails?.evbImcbBoard, service.workDetails?.evbImcbBoardNote),
+          pibIcp: mapStatus(service.workDetails?.pibIcpBoard, service.workDetails?.pibIcpBoardNote),
+          imbS: mapStatus(service.workDetails?.imbSBoard, service.workDetails?.imbSBoardNote),
         },
         
         serialVerified: { 
@@ -343,17 +344,17 @@ function ServiceDetailView({
         },
         
         mechanical: {
-          acBlower: mapStatus(service.workDetails?.acBlowerVane),
-          extractor: mapStatus(service.workDetails?.extractorVane),
-          exhaustCFM: mapStatus(service.workDetails?.exhaustCfm),
-          lightEngine4Fans: mapStatus(service.workDetails?.lightEngineFans),
-          cardCageFans: mapStatus(service.workDetails?.cardCageFans),
-          radiatorFan: mapStatus(service.workDetails?.radiatorFanPump),
-          connectorHose: mapStatus(service.workDetails?.pumpConnectorHose),
+          acBlower: mapStatus(service.workDetails?.acBlowerVane, service.workDetails?.acBlowerVaneNote),
+          extractor: mapStatus(service.workDetails?.extractorVane, service.workDetails?.extractorVaneNote),
+          exhaustCFM: mapStatus(service.workDetails?.exhaustCfm, service.workDetails?.exhaustCfmNote),
+          lightEngine4Fans: mapStatus(service.workDetails?.lightEngineFans, service.workDetails?.lightEngineFansNote),
+          cardCageFans: mapStatus(service.workDetails?.cardCageFans, service.workDetails?.cardCageFansNote),
+          radiatorFan: mapStatus(service.workDetails?.radiatorFanPump, service.workDetails?.radiatorFanPumpNote),
+          connectorHose: mapStatus(service.workDetails?.pumpConnectorHose, service.workDetails?.pumpConnectorHoseNote),
           securityLock: mapStatus(service.workDetails?.securityLampHouseLock),
         },
         
-        lampLOC: mapStatus(service.workDetails?.lampLocMechanism),
+        lampLOC: mapStatus(service.workDetails?.lampLocMechanism, service.workDetails?.lampLocMechanismNote),
         
         lampMake: service.workDetails?.lampMakeModel || '',
         lampHours: service.workDetails?.lampTotalRunningHours?.toString() || '',
@@ -441,6 +442,8 @@ function ServiceDetailView({
         engineerSignatureUrl: service.signatures?.engineer || (service.signatures as any)?.engineerSignatureUrl,
         siteSignatureUrl: service.signatures?.site || (service.signatures as any)?.siteSignatureUrl,
       }
+
+      console.log("reportData", reportData);
       
       const pdfBytes = await generateMaintenanceReport(reportData)
       const blob = new Blob([pdfBytes as any], { type: "application/pdf" })

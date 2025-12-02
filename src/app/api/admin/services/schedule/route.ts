@@ -67,8 +67,6 @@ export async function POST(request: NextRequest) {
         address: site.address,
         contactDetails: site.contactDetails,
         location: site.address,
-
-        remarks: "Scheduled via admin panel",
       },
     })
 

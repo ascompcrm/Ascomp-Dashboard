@@ -676,15 +676,20 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
         <FormSection title="Light Engine Test Pattern">
           <FormRow>
-            {['lightEngineWhite', 'lightEngineRed', 'lightEngineGreen', 'lightEngineBlue', 'lightEngineBlack'].map((field) => (
-              <FormField key={field} label={field.replace('lightEngine', '').toUpperCase()}>
-                <select {...register(field as keyof RecordWorkForm)} className="w-full border-2 border-black p-2 text-sm">
-                  <option value="">Select</option>
-                  <option value="OK">OK</option>
-                  <option value="Bad">Bad</option>
-                </select>
-              </FormField>
-            ))}
+            {['lightEngineWhite', 'lightEngineRed', 'lightEngineGreen', 'lightEngineBlue', 'lightEngineBlack'].map(
+              (field) => (
+                <StatusSelectWithNote
+                  key={field}
+                  field={field as keyof RecordWorkForm & string}
+                  label={field.replace('lightEngine', '').toUpperCase()}
+                  options={[
+                    { value: 'OK', label: 'OK', description: 'Part is OK' },
+                    { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                    { value: 'NO', label: 'NO', description: 'Not available' },
+                  ]}
+                />
+              ),
+            )}
           </FormRow>
         </FormSection>
 

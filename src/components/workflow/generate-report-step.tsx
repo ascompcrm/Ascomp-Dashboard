@@ -97,36 +97,22 @@ export default function GenerateReportStep({ data, onBack }: any) {
     localStorage.setItem('serviceReports', JSON.stringify(reports))
   }
 
-  const buildPdfPayload = (): MaintenanceReportData => {
+  const safe = (value: unknown) => (value ?? '').toString()
+
+  const buildPdfPayloadFromWorkflow = (): MaintenanceReportData => {
+    // Build PDF data from in-memory workflow state (used as a fallback)
     const workDetails = data.workDetails || {}
     const service = data.selectedService || {}
-    const safe = (value: unknown) => (value ?? '').toString()
+
+    // Map DB/workflow fields into StatusItem:
+    // - yesNo: raw DB value (e.g. OK / YES / NO)
+    // - status: corresponding note text (or empty string)
     const toStatus = (value: unknown, noteField?: string) => {
       const rawValue = safe(value).trim()
-      const upperValue = rawValue.toUpperCase()
       const note = noteField ? safe(workDetails[noteField]) : ''
-      
-      let status = ''
-      let yesNo = ''
-
-      if (upperValue === 'OK' || upperValue === 'O') {
-        status = 'OK'
-        yesNo = 'YES'
-      } else if (upperValue === 'YES' || upperValue === 'Y') {
-        status = note || 'Needs Replacement'
-        yesNo = 'NO'
-      } else if (upperValue === 'NO' || upperValue === 'N') {
-        status = 'Not Available'
-        yesNo = 'NO'
-      } else {
-        // For other values (measurements etc), assume they are the status
-        status = rawValue
-        yesNo = 'YES'
-      }
-      
-      return { 
-        status: status,
-        yesNo: yesNo
+      return {
+        status: note,
+        yesNo: rawValue,
       }
     }
     const formatDateTime = (value?: string) => {
@@ -284,8 +270,202 @@ export default function GenerateReportStep({ data, onBack }: any) {
     }
   }
 
-  const generatePDF = async () => {
-    const pdfData = buildPdfPayload()
+  // Build MaintenanceReportData from a completed service fetched from the database
+  const buildPdfPayloadFromService = (service: any): MaintenanceReportData => {
+    const mapStatus = (
+      value: string | undefined | null,
+      note?: string | undefined | null
+    ) => {
+      return {
+        status: note ? note.toString() : '',
+        yesNo: value ? value.toString() : '',
+      }
+    }
+
+    return {
+      cinemaName: service.cinemaName || service.site.name || '',
+      date: service.date ? new Date(service.date).toLocaleDateString() : '',
+      address: service.address || service.site.address || '',
+      contactDetails: service.contactDetails || service.site.contactDetails || '',
+      location: service.location || '',
+      screenNo: service.screenNumber || service.site.screenNo || '',
+      serviceVisit: service.serviceNumber.toString(),
+      projectorModel: service.projector.model,
+      serialNo: service.projector.serialNo,
+      runningHours: service.projectorRunningHours?.toString() || '',
+      projectorEnvironment: service.workDetails?.projectorPlacementEnvironment || '',
+      startTime: service.workDetails?.startTime,
+      endTime: service.workDetails?.endTime,
+
+      opticals: {
+        reflector: mapStatus(service.workDetails?.reflector, service.workDetails?.reflectorNote),
+        uvFilter: mapStatus(service.workDetails?.uvFilter, service.workDetails?.uvFilterNote),
+        integratorRod: mapStatus(service.workDetails?.integratorRod, service.workDetails?.integratorRodNote),
+        coldMirror: mapStatus(service.workDetails?.coldMirror, service.workDetails?.coldMirrorNote),
+        foldMirror: mapStatus(service.workDetails?.foldMirror, service.workDetails?.foldMirrorNote),
+      },
+
+      electronics: {
+        touchPanel: mapStatus(service.workDetails?.touchPanel, service.workDetails?.touchPanelNote),
+        evbImcb: mapStatus(service.workDetails?.evbImcbBoard, service.workDetails?.evbImcbBoardNote),
+        pibIcp: mapStatus(service.workDetails?.pibIcpBoard, service.workDetails?.pibIcpBoardNote),
+        imbS: mapStatus(service.workDetails?.imbSBoard, service.workDetails?.imbSBoardNote),
+      },
+
+      serialVerified: {
+        status: service.workDetails?.serialNumberVerified ? 'MATCHED' : 'NOT MATCHED',
+        yesNo: service.workDetails?.serialNumberVerified ? 'YES' : 'NO',
+      },
+      coolant: mapStatus(service.workDetails?.coolantLevelColor),
+
+      lightEngineTest: {
+        white: mapStatus(service.workDetails?.lightEngineWhite),
+        red: mapStatus(service.workDetails?.lightEngineRed),
+        green: mapStatus(service.workDetails?.lightEngineGreen),
+        blue: mapStatus(service.workDetails?.lightEngineBlue),
+        black: mapStatus(service.workDetails?.lightEngineBlack),
+      },
+
+      mechanical: {
+        acBlower: mapStatus(service.workDetails?.acBlowerVane, service.workDetails?.acBlowerVaneNote),
+        extractor: mapStatus(service.workDetails?.extractorVane, service.workDetails?.extractorVaneNote),
+        exhaustCFM: mapStatus(service.workDetails?.exhaustCfm),
+        lightEngine4Fans: mapStatus(service.workDetails?.lightEngineFans, service.workDetails?.lightEngineFansNote),
+        cardCageFans: mapStatus(service.workDetails?.cardCageFans, service.workDetails?.cardCageFansNote),
+        radiatorFan: mapStatus(service.workDetails?.radiatorFanPump, service.workDetails?.radiatorFanPumpNote),
+        connectorHose: mapStatus(service.workDetails?.pumpConnectorHose, service.workDetails?.pumpConnectorHoseNote),
+        securityLock: mapStatus(service.workDetails?.securityLampHouseLock),
+      },
+
+      lampLOC: mapStatus(service.workDetails?.lampLocMechanism, service.workDetails?.lampLocMechanismNote),
+
+      lampMake: service.workDetails?.lampMakeModel || '',
+      lampHours: service.workDetails?.lampTotalRunningHours?.toString() || '',
+      currentLampHours: service.workDetails?.lampCurrentRunningHours?.toString() || '',
+
+      voltageParams: {
+        pvn: service.workDetails?.pvVsN || '',
+        pve: service.workDetails?.pvVsE || '',
+        nve: service.workDetails?.nvVsE || '',
+      },
+
+      flBefore: service.workDetails?.flLeft?.toString() || '',
+      flAfter: service.workDetails?.flRight?.toString() || '',
+
+      contentPlayer: service.workDetails?.contentPlayerModel || '',
+      acStatus: service.workDetails?.acStatus || '',
+      leStatus: service.workDetails?.leStatus || '',
+      remarks: service.remarks || '',
+      leSerialNo: service.workDetails?.lightEngineSerialNumber || '',
+
+      mcgdData: {
+        white2K: {
+          fl: service.workDetails?.white2Kfl?.toString() || '',
+          x: service.workDetails?.white2Kx?.toString() || '',
+          y: service.workDetails?.white2Ky?.toString() || '',
+        },
+        white4K: {
+          fl: service.workDetails?.white4Kfl?.toString() || '',
+          x: service.workDetails?.white4Kx?.toString() || '',
+          y: service.workDetails?.white4Ky?.toString() || '',
+        },
+        red2K: {
+          fl: service.workDetails?.red2Kfl?.toString() || '',
+          x: service.workDetails?.red2Kx?.toString() || '',
+          y: service.workDetails?.red2Ky?.toString() || '',
+        },
+        red4K: {
+          fl: service.workDetails?.red4Kfl?.toString() || '',
+          x: service.workDetails?.red4Kx?.toString() || '',
+          y: service.workDetails?.red4Ky?.toString() || '',
+        },
+        green2K: {
+          fl: service.workDetails?.green2Kfl?.toString() || '',
+          x: service.workDetails?.green2Kx?.toString() || '',
+          y: service.workDetails?.green2Ky?.toString() || '',
+        },
+        green4K: {
+          fl: service.workDetails?.green4Kfl?.toString() || '',
+          x: service.workDetails?.green4Kx?.toString() || '',
+          y: service.workDetails?.green4Ky?.toString() || '',
+        },
+        blue2K: {
+          fl: service.workDetails?.blue2Kfl?.toString() || '',
+          x: service.workDetails?.blue2Kx?.toString() || '',
+          y: service.workDetails?.blue2Ky?.toString() || '',
+        },
+        blue4K: {
+          fl: service.workDetails?.blue4Kfl?.toString() || '',
+          x: service.workDetails?.blue4Kx?.toString() || '',
+          y: service.workDetails?.blue4Ky?.toString() || '',
+        },
+      },
+
+      cieXyz2K: {
+        x: service.workDetails?.BW_Step_10_2Kx?.toString() || '',
+        y: service.workDetails?.BW_Step_10_2Ky?.toString() || '',
+        fl: service.workDetails?.BW_Step_10_2Kfl?.toString() || '',
+      },
+      cieXyz4K: {
+        x: service.workDetails?.BW_Step_10_4Kx?.toString() || '',
+        y: service.workDetails?.BW_Step_10_4Ky?.toString() || '',
+        fl: service.workDetails?.BW_Step_10_4Kfl?.toString() || '',
+      },
+
+      softwareVersion: service.workDetails?.softwareVersion || '',
+
+      screenInfo: {
+        scope: {
+          height: service.workDetails?.screenHeight?.toString() || '',
+          width: service.workDetails?.screenWidth?.toString() || '',
+          gain: service.workDetails?.screenGain?.toString() || '',
+        },
+        flat: {
+          height: service.workDetails?.flatHeight?.toString() || '',
+          width: service.workDetails?.flatWidth?.toString() || '',
+          gain: service.workDetails?.screenGain?.toString() || '',
+        },
+        make: service.workDetails?.screenMake || '',
+      },
+
+      throwDistance: service.workDetails?.throwDistance?.toString() || '',
+
+      imageEvaluation: {
+        focusBoresite: service.workDetails?.focusBoresight ? 'Yes' : 'No',
+        integratorPosition: service.workDetails?.integratorPosition ? 'Yes' : 'No',
+        spotOnScreen: service.workDetails?.spotsOnScreen ? 'Yes' : 'No',
+        screenCropping: service.workDetails?.screenCroppingOk ? 'Yes' : 'No',
+        convergence: service.workDetails?.convergenceOk ? 'Yes' : 'No',
+        channelsChecked: service.workDetails?.channelsCheckedOk ? 'Yes' : 'No',
+        pixelDefects: service.workDetails?.pixelDefects || '',
+        imageVibration: service.workDetails?.imageVibration || '',
+        liteLOC: service.workDetails?.liteloc || '',
+      },
+
+      airPollution: {
+        airPollutionLevel: service.workDetails?.airPollutionLevel || '',
+        hcho: service.workDetails?.hcho?.toString() || '',
+        tvoc: service.workDetails?.tvoc?.toString() || '',
+        pm10: service.workDetails?.pm10?.toString() || '',
+        pm25: service.workDetails?.pm2_5?.toString() || '',
+        pm100: service.workDetails?.pm1?.toString() || '',
+        temperature: service.workDetails?.temperature?.toString() || '',
+        humidity: service.workDetails?.humidity?.toString() || '',
+      },
+
+      recommendedParts: service.workDetails?.recommendedParts || [],
+      engineerSignatureUrl:
+        service.signatures?.engineer || (service.signatures as any)?.engineerSignatureUrl || '',
+      siteSignatureUrl:
+        service.signatures?.site || (service.signatures as any)?.siteSignatureUrl || '',
+    }
+  }
+
+  const generatePDF = async (serviceFromDb?: any) => {
+    const pdfData = serviceFromDb
+      ? buildPdfPayloadFromService(serviceFromDb)
+      : buildPdfPayloadFromWorkflow()
+
     const pdfBytes = await generateMaintenanceReport(pdfData)
     const typedArray = new Uint8Array(pdfBytes)
     const blob = new Blob([typedArray], { type: 'application/pdf' })
@@ -376,9 +556,22 @@ export default function GenerateReportStep({ data, onBack }: any) {
     setIsSubmitting(true)
     try {
       const issues = getIssueEntries()
-      
-      // Generate PDF
-      await generatePDF()
+
+      // Refetch the completed service from the database to ensure we use persisted data
+      let serviceFromDb: any | null = null
+      try {
+        const res = await fetch('/api/user/services/completed', { credentials: 'include' })
+        if (res.ok) {
+          const json = await res.json()
+          const services = Array.isArray(json.services) ? json.services : []
+          serviceFromDb = services.find((s: any) => s.id === data.selectedService?.id) || null
+        }
+      } catch (err) {
+        console.error('Failed to refetch completed services for PDF generation:', err)
+      }
+
+      // Generate PDF – prefer DB data, fall back to in-memory workflow data if not found
+      await generatePDF(serviceFromDb || undefined)
       
       // Save to localStorage for backup
       saveReportToLocalStorage(issues)

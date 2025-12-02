@@ -125,11 +125,20 @@ export interface MaintenanceReportData {
   siteSignatureUrl?: string
 }
 
+// Normalize yes/no strings to consistent 'Yes' / 'No' for PDF display
+const normalizeYesNo = (value?: string) => {
+  if (!value) return '';
+  const v = value.trim().toLowerCase();
+  if (v === 'yes') return 'Yes';
+  if (v === 'no') return 'No';
+  return value;
+};
+
 export async function generateMaintenanceReport(data: MaintenanceReportData): Promise<Uint8Array> {
+  console.log(data);
   const pdfDoc = await PDFDocument.create();
   const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const timesRomanBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-
   let logoImage;
   let logoImage2;
   try {
@@ -604,7 +613,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 
   for (const [label, value] of evaluationItems) {
     drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, 240,
-      [label || '', value || ''], [180, 60], 16)
+      [label || '', normalizeYesNo(value)], [180, 60], 16)
     leftY -= 16
   }
 
@@ -679,7 +688,9 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   if (data.recommendedParts && data.recommendedParts.length > 0) {
     data.recommendedParts.forEach((part) => {
       const description = part.description || ''
-      const partNumber = part.partNumber || ''
+      // Support both { partNumber } and { part_number } shapes
+      const rawPartNumber = (part as any).partNumber ?? (part as any).part_number ?? ''
+      const partNumber = String(rawPartNumber || '')
       const descLines = description.length > 30 
         ? [description.substring(0, 30), description.substring(30)]
         : [description]

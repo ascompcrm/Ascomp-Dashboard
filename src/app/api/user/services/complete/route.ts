@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Float fields
+      // Note: airPollutionLevel is stored as a string in Prisma schema, so we intentionally
+      // do NOT include it here to avoid converting textual levels (e.g. "GOOD") to numbers.
       const floatFields = [
         'screenHeight', 'screenWidth', 'screenGain', 'throwDistance',
         'flCenter', 'flLeft', 'flRight', 'whiteX', 'whiteY', 'whiteFl',
@@ -117,7 +119,7 @@ export async function POST(request: NextRequest) {
       'contentPlayerModel', 'acStatus', 'leStatus',
       'whiteX', 'whiteY', 'whiteFl', 'redX', 'redY', 'redFl',
       'greenX', 'greenY', 'greenFl', 'blueX', 'blueY', 'blueFl',
-      'focusBoresight', 'integratorPosition', 'spotsOnScreen', 'screenCroppingOk',
+      'focusBoresight', 'integratorPosition', 'spotsOnScreen', 'screenCroppingOk', 'airPollutionLevel',
       'convergenceOk', 'channelsCheckedOk', 'pixelDefects', 'imageVibration', 'liteloc',
       'hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10', 'temperature', 'humidity',
       'remarks', 'lightEngineSerialNumber', 'signatures', 'recommendedParts',
@@ -294,6 +296,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("Error details:", JSON.stringify(errorDetails, null, 2))
+    
 
     return NextResponse.json(
       {
