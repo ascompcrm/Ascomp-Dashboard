@@ -48,10 +48,13 @@ export async function POST(request: NextRequest) {
       // Note: airPollutionLevel is stored as a string in Prisma schema, so we intentionally
       // do NOT include it here to avoid converting textual levels (e.g. "GOOD") to numbers.
       const floatFields = [
-        'screenHeight', 'screenWidth', 'screenGain', 'throwDistance',
-        'flCenter', 'flLeft', 'flRight', 'whiteX', 'whiteY', 'whiteFl',
-        'redX', 'redY', 'redFl', 'greenX', 'greenY', 'greenFl',
-        'blueX', 'blueY', 'blueFl', 'hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10',
+        'screenHeight', 'screenWidth', 'flatHeight', 'flatWidth', 'screenGain', 'throwDistance',
+        'flLeft', 'flRight',
+        'white2Kx', 'white2Ky', 'white2Kfl', 'white4Kx', 'white4Ky', 'white4Kfl',
+        'red2Kx', 'red2Ky', 'red2Kfl', 'red4Kx', 'red4Ky', 'red4Kfl',
+        'green2Kx', 'green2Ky', 'green2Kfl', 'green4Kx', 'green4Ky', 'green4Kfl',
+        'blue2Kx', 'blue2Ky', 'blue2Kfl', 'blue4Kx', 'blue4Ky', 'blue4Kfl',
+        'hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10',
         'temperature', 'humidity'
       ]
       if (floatFields.includes(key)) {
@@ -72,7 +75,7 @@ export async function POST(request: NextRequest) {
 
       // Boolean fields
       const boolFields = [
-        'reportGenerated', 'replacementRequired', 'serialNumberVerified', 'focusBoresight',
+        'reportGenerated', 'replacementRequired', 'focusBoresight',
         'integratorPosition', 'spotsOnScreen', 'screenCroppingOk',
         'convergenceOk', 'channelsCheckedOk'
       ]
@@ -107,23 +110,35 @@ export async function POST(request: NextRequest) {
       'cinemaName', 'address', 'contactDetails', 'location', 'screenNumber',
       'projectorRunningHours', 'replacementRequired',
       'reflector', 'uvFilter', 'integratorRod', 'coldMirror', 'foldMirror',
-      'touchPanel', 'evbImcbBoard', 'pibIcpBoard', 'imbSBoard',
-      'serialNumberVerified', 'disposableConsumables', 'coolantLevelColor',
+      'touchPanel', 'evbBoard', 'ImcbBoard', 'pibBoard', 'IcpBoard', 'imbSBoard',
+      'serialNumberVerified', 'AirIntakeLadRad', 'coolantLevelColor',
       'lightEngineWhite', 'lightEngineRed', 'lightEngineGreen', 'lightEngineBlue', 'lightEngineBlack',
       'acBlowerVane', 'extractorVane', 'exhaustCfm', 'lightEngineFans', 'cardCageFans',
       'radiatorFanPump', 'pumpConnectorHose', 'securityLampHouseLock', 'lampLocMechanism',
       'projectorPlacementEnvironment', 'softwareVersion',
-      'screenHeight', 'screenWidth', 'screenGain', 'screenMake', 'throwDistance',
+      'screenHeight', 'screenWidth', 'flatHeight', 'flatWidth', 'screenGain', 'screenMake', 'throwDistance',
       'lampMakeModel', 'lampTotalRunningHours', 'lampCurrentRunningHours',
-      'pvVsN', 'pvVsE', 'nvVsE', 'flCenter', 'flLeft', 'flRight',
+      'pvVsN', 'pvVsE', 'nvVsE', 'flLeft', 'flRight',
       'contentPlayerModel', 'acStatus', 'leStatus',
-      'whiteX', 'whiteY', 'whiteFl', 'redX', 'redY', 'redFl',
-      'greenX', 'greenY', 'greenFl', 'blueX', 'blueY', 'blueFl',
+      'white2Kx', 'white2Ky', 'white2Kfl', 'white4Kx', 'white4Ky', 'white4Kfl',
+      'red2Kx', 'red2Ky', 'red2Kfl', 'red4Kx', 'red4Ky', 'red4Kfl',
+      'green2Kx', 'green2Ky', 'green2Kfl', 'green4Kx', 'green4Ky', 'green4Kfl',
+      'blue2Kx', 'blue2Ky', 'blue2Kfl', 'blue4Kx', 'blue4Ky', 'blue4Kfl',
+      'BW_Step_10_2Kx', 'BW_Step_10_2Ky', 'BW_Step_10_2Kfl',
+      'BW_Step_10_4Kx', 'BW_Step_10_4Ky', 'BW_Step_10_4Kfl',
       'focusBoresight', 'integratorPosition', 'spotsOnScreen', 'screenCroppingOk', 'airPollutionLevel',
       'convergenceOk', 'channelsCheckedOk', 'pixelDefects', 'imageVibration', 'liteloc',
       'hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10', 'temperature', 'humidity',
       'remarks', 'lightEngineSerialNumber', 'signatures', 'recommendedParts',
-      'images', 'brokenImages', 'reportUrl'
+      'images', 'brokenImages', 'reportUrl', 'photosDriveLink',
+      // Note fields
+      'reflectorNote', 'uvFilterNote', 'integratorRodNote', 'coldMirrorNote', 'foldMirrorNote',
+      'touchPanelNote', 'evbBoardNote', 'ImcbBoardNote', 'pibBoardNote', 'IcpBoardNote', 'imbSBoardNote',
+      'serialNumberVerifiedNote', 'AirIntakeLadRadNote', 'coolantLevelColorNote',
+      'lightEngineWhiteNote', 'lightEngineRedNote', 'lightEngineGreenNote', 'lightEngineBlueNote', 'lightEngineBlackNote',
+      'acBlowerVaneNote', 'extractorVaneNote', 'exhaustCfmNote',
+      'lightEngineFansNote', 'cardCageFansNote', 'radiatorFanPumpNote', 'pumpConnectorHoseNote', 'lampLocMechanismNote',
+      'securityLampHouseLockNote'
     ])
 
     // Fields that should not be updated (read-only or set on creation)
@@ -219,7 +234,7 @@ export async function POST(request: NextRequest) {
 
         // Ensure boolean fields are always booleans (not strings)
         const boolFields = [
-          'reportGenerated', 'replacementRequired', 'serialNumberVerified', 'focusBoresight',
+          'reportGenerated', 'replacementRequired', 'focusBoresight',
           'integratorPosition', 'spotsOnScreen', 'screenCroppingOk',
           'convergenceOk', 'channelsCheckedOk'
         ]

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const services = await prisma.serviceRecord.findMany({
       where: {
         assignedToId: userId,
-        AND: [
+        OR: [
           { endTime: null },
           { reportGenerated: false },
         ],

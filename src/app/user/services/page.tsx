@@ -324,16 +324,16 @@ function ServiceDetailView({
         
         electronics: {
           touchPanel: mapStatus(service.workDetails?.touchPanel, service.workDetails?.touchPanelNote),
-          evbImcb: mapStatus(service.workDetails?.evbImcbBoard, service.workDetails?.evbImcbBoardNote),
-          pibIcp: mapStatus(service.workDetails?.pibIcpBoard, service.workDetails?.pibIcpBoardNote),
-          imbS: mapStatus(service.workDetails?.imbSBoard, service.workDetails?.imbSBoardNote),
+          evbBoard: mapStatus(service.workDetails?.evbBoard, service.workDetails?.evbBoardNote),
+          ImcbBoard: mapStatus(service.workDetails?.ImcbBoard, service.workDetails?.ImcbBoardNote),
+          pibBoard: mapStatus(service.workDetails?.pibBoard, service.workDetails?.pibBoardNote),
+          IcpBoard: mapStatus(service.workDetails?.IcpBoard, service.workDetails?.IcpBoardNote),
+          imbSBoard: mapStatus(service.workDetails?.imbSBoard, service.workDetails?.imbSBoardNote),
         },
         
-        serialVerified: { 
-          status: service.workDetails?.serialNumberVerified ? 'MATCHED' : 'NOT MATCHED',
-          yesNo: service.workDetails?.serialNumberVerified ? 'YES' : 'NO'
-        },
-        coolant: mapStatus(service.workDetails?.coolantLevelColor),
+        serialVerified: mapStatus(service.workDetails?.serialNumberVerified, service.workDetails?.serialNumberVerifiedNote),
+        AirIntakeLadRad: mapStatus(service.workDetails?.AirIntakeLadRad, service.workDetails?.AirIntakeLadRadNote),
+        coolant: mapStatus(service.workDetails?.coolantLevelColor, service.workDetails?.coolantLevelColorNote),
         
         lightEngineTest: {
           white: mapStatus(service.workDetails?.lightEngineWhite),
@@ -604,8 +604,10 @@ function ServiceDetailView({
           <Section title="Electronics">
             <StatusTable items={[
               { label: "Touch Panel", status: service.workDetails?.touchPanel },
-              { label: "EVB/IMCB", status: service.workDetails?.evbImcbBoard },
-              { label: "PIB/ICP", status: service.workDetails?.pibIcpBoard },
+              { label: "EVB Board", status: service.workDetails?.evbBoard },
+              { label: "IMCB Board", status: service.workDetails?.ImcbBoard },
+              { label: "PIB Board", status: service.workDetails?.pibBoard },
+              { label: "ICP Board", status: service.workDetails?.IcpBoard },
               { label: "IMB/S", status: service.workDetails?.imbSBoard },
               { label: "Serial Verified", status: service.workDetails?.serialNumberVerified ? "Yes" : "No" },
             ]} />

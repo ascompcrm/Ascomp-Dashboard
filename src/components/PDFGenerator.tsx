@@ -30,12 +30,15 @@ export interface MaintenanceReportData {
 
   electronics: {
     touchPanel: StatusItem;
-    evbImcb: StatusItem;
-    pibIcp: StatusItem;
-    imbS: StatusItem;
+    evbBoard: StatusItem;
+    ImcbBoard: StatusItem;
+    pibBoard: StatusItem;
+    IcpBoard: StatusItem;
+    imbSBoard: StatusItem;
   };
 
   serialVerified: StatusItem;
+  AirIntakeLadRad: StatusItem;
   coolant: StatusItem;
 
   lightEngineTest: {
@@ -116,7 +119,7 @@ export interface MaintenanceReportData {
     humidity: string
   }
 
-  recommendedParts?: Array<{ partNumber: string; description: string }>
+  recommendedParts?: Array<{ partNumber: string; name?: string }>
   issueNotes?: Array<{ label: string; note: string }>
   detectedIssues?: Array<{ label: string; value: string }>
   reportGenerated?: boolean
@@ -391,9 +394,11 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 
   yPos = drawSection(page1, timesRomanBold, timesRoman, 40, yPos, width - 80, 'ELECTRONICS', [
     ['Touch Panel', data.electronics.touchPanel.status, data.electronics.touchPanel.yesNo || ''],
-    ['EVB and IMCB Board', data.electronics.evbImcb.status, data.electronics.evbImcb.yesNo || ''],
-    ['PIB and ICP Board', data.electronics.pibIcp.status, data.electronics.pibIcp.yesNo || ''],
-    ['IMB/S Board', data.electronics.imbS.status, data.electronics.imbS.yesNo || ''],
+    ['EVB Board', data.electronics.evbBoard.status, data.electronics.evbBoard.yesNo || ''],
+    ['IMCB Board', data.electronics.ImcbBoard.status, data.electronics.ImcbBoard.yesNo || ''],
+    ['PIB Board', data.electronics.pibBoard.status, data.electronics.pibBoard.yesNo || ''],
+    ['ICP Board', data.electronics.IcpBoard.status, data.electronics.IcpBoard.yesNo || ''],
+    ['IMB/S Board', data.electronics.imbSBoard.status, data.electronics.imbSBoard.yesNo || ''],
   ]);
 
   yPos = drawSection(page1, timesRomanBold, timesRoman, 40, yPos, width - 80, 'Serial Number verified', [
@@ -402,6 +407,10 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 
   yPos = drawSection(page1, timesRomanBold, timesRoman, 40, yPos, width - 80, 'Coolant', [
     ['Level and Color', data.coolant.status, data.coolant.yesNo || ''],
+  ]);
+
+  yPos = drawSection(page1, timesRomanBold, timesRoman, 40, yPos, width - 80, 'Disposable Consumables', [
+    ['Air Intake, LAD and RAD', data.AirIntakeLadRad.status, data.AirIntakeLadRad.yesNo || ''],
   ]);
 
   yPos = drawSection(page1, timesRomanBold, timesRoman, 40, yPos, width - 80, 'Light Engine Test Pattern', [
@@ -463,7 +472,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   yPos -= 20;
 
   drawTableRow(page2, timesRomanBold, timesRoman, 40, yPos, width - 80,
-    ['LE Status during PM:', data.leStatus], [150, 315], 20);
+    ['LE Status during PM:', data.leStatus], [150, 365], 20);
   yPos -= 20;
 
   // Draw remarks row with multi-line support
@@ -687,15 +696,17 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   rightY -= 20;
   if (data.recommendedParts && data.recommendedParts.length > 0) {
     data.recommendedParts.forEach((part) => {
-      const description = part.description || ''
+      console.log("part what is it", part);
+      // Support both 'name' and 'description' fields (name takes priority)
+      const partName = (part as any).name || ''
       // Support both { partNumber } and { part_number } shapes
       const rawPartNumber = (part as any).partNumber ?? (part as any).part_number ?? ''
       const partNumber = String(rawPartNumber || '')
-      const descLines = description.length > 30 
-        ? [description.substring(0, 30), description.substring(30)]
-        : [description]
+      const nameLines = partName.length > 30 
+        ? [partName.substring(0, 30), partName.substring(30)]
+        : [partName]
       
-      descLines.forEach((line, idx) => {
+      nameLines.forEach((line, idx) => {
         if (idx === 0) {
           drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
             [line, partNumber], [180, 75], 16);

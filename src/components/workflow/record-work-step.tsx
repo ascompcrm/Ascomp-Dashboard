@@ -28,7 +28,7 @@ type RecommendedPart = {
 type RecordWorkForm = ReturnType<typeof createInitialFormData>
 
 const OPTICAL_FIELDS = ['reflector', 'uvFilter', 'integratorRod', 'coldMirror', 'foldMirror'] as const
-const ELECTRONIC_FIELDS = ['touchPanel', 'evbImcbBoard', 'pibIcpBoard', 'imbSBoard'] as const
+const ELECTRONIC_FIELDS = ['touchPanel', 'evbBoard', 'ImcbBoard', 'pibBoard', 'IcpBoard', 'imbSBoard'] as const
 const MECHANICAL_FIELDS = ['acBlowerVane', 'extractorVane', 'lightEngineFans', 'cardCageFans', 'radiatorFanPump'] as const
 const COLOR_ACCURACY = [
   { name: 'White', fields: ['white2Kx', 'white2Ky', 'white2Kfl', 'white4Kx', 'white4Ky', 'white4Kfl'] },
@@ -62,8 +62,10 @@ const createInitialFormData = () => ({
   coldMirror: 'OK',
   foldMirror: 'OK',
   touchPanel: 'OK',
-  evbImcbBoard: 'OK',
-  pibIcpBoard: 'OK',
+  evbBoard: 'OK',
+  ImcbBoard: 'OK',
+  pibBoard: 'OK',
+  IcpBoard: 'OK',
   imbSBoard: 'OK',
   reflectorNote: '',
   uvFilterNote: '',
@@ -71,26 +73,40 @@ const createInitialFormData = () => ({
   coldMirrorNote: '',
   foldMirrorNote: '',
   touchPanelNote: '',
-  evbImcbBoardNote: '',
-  pibIcpBoardNote: '',
+  evbBoardNote: '',
+  ImcbBoardNote: '',
+  pibBoardNote: '',
+  IcpBoardNote: '',
   imbSBoardNote: '',
+  serialNumberVerified: '',
+  serialNumberVerifiedNote: '',
+  AirIntakeLadRad: '',
+  AirIntakeLadRadNote: '',
   coolantLevelColor: '',
+  coolantLevelColorNote: '',
   lightEngineWhite: '',
   lightEngineRed: '',
   lightEngineGreen: '',
   lightEngineBlue: '',
   lightEngineBlack: '',
+  lightEngineWhiteNote: '',
+  lightEngineRedNote: '',
+  lightEngineGreenNote: '',
+  lightEngineBlueNote: '',
+  lightEngineBlackNote: '',
   acBlowerVane: 'OK',
   extractorVane: 'OK',
-  exhaustCfm: '',
+  exhaustCfm: 'OK',
   lightEngineFans: 'OK',
   cardCageFans: 'OK',
   radiatorFanPump: 'OK',
   pumpConnectorHose: 'OK',
   securityLampHouseLock: '',
+  securityLampHouseLockNote: '',
   lampLocMechanism: 'OK',
   acBlowerVaneNote: '',
   extractorVaneNote: '',
+  exhaustCfmNote: '',
   lightEngineFansNote: '',
   cardCageFansNote: '',
   radiatorFanPumpNote: '',
@@ -170,6 +186,7 @@ const createInitialFormData = () => ({
   signatures: '',
   reportGenerated: false,
   reportUrl: '',
+  photosDriveLink: '',
   issueNotes: {} as IssueNotes,
   recommendedParts: [] as RecommendedPart[],
 })
@@ -661,16 +678,47 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               />
             ))}
           </FormRow>
+        </FormSection>
+
+        <FormSection title="Serial Number Verified">
           <FormRow>
-            <FormField label="Coolant Level & Color">
-              <select {...register('coolantLevelColor')} className="w-full border-2 border-black p-2 text-sm">
-                <option value="">Select</option>
-                <option value="OK">OK</option>
-                <option value="Low">Low</option>
-                <option value="Discolored">Discolored</option>
-                <option value="Leakage">Leakage</option>
-              </select>
-            </FormField>
+            <StatusSelectWithNote
+              field="serialNumberVerified"
+              label="Chassis label vs Touch Panel"
+              options={[
+                { value: 'OK', label: 'OK', description: 'Part is OK' },
+                { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                { value: 'NO', label: 'NO', description: 'Not available' },
+              ]}
+            />
+          </FormRow>
+        </FormSection>
+
+        <FormSection title="Disposable Consumables">
+          <FormRow>
+            <StatusSelectWithNote
+              field="AirIntakeLadRad"
+              label="Air Intake, LAD and RAD"
+              options={[
+                { value: 'OK', label: 'OK', description: 'Part is OK' },
+                { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                { value: 'NO', label: 'NO', description: 'Not available' },
+              ]}
+            />
+          </FormRow>
+        </FormSection>
+
+        <FormSection title="Coolant">
+          <FormRow>
+            <StatusSelectWithNote
+              field="coolantLevelColor"
+              label="Level and Color"
+              options={[
+                { value: 'OK', label: 'OK', description: 'Part is OK' },
+                { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                { value: 'NO', label: 'NO', description: 'Not available' },
+              ]}
+            />
           </FormRow>
         </FormSection>
 
@@ -709,15 +757,15 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
             ))}
           </FormRow>
           <FormRow>
-            <FormField label="Exhaust CFM">
-              <Input
-                type="number"
-                step="any"
-                {...register('exhaustCfm')}
-                placeholder="CFM value"
-                className="border-2 border-black text-black text-sm"
-              />
-            </FormField>
+            <StatusSelectWithNote
+              field="exhaustCfm"
+              label="Exhaust CFM"
+              options={[
+                { value: 'OK', label: 'OK', description: 'Part is OK' },
+                { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                { value: 'NO', label: 'NO', description: 'Not available' },
+              ]}
+            />
             <StatusSelectWithNote
               field="pumpConnectorHose"
               label="Pump Connector & Hose"

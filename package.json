@@ -15,7 +15,9 @@
     "add-field-workers": "bun run excel/add-field-workers.ts",
     "add-sites": "bun run excel/add-sites.ts",
     "add-projectors": "bun run excel/add-projectors.ts",
-    "add-service-records": "bun run excel/add-service-records.ts"
+    "add-service-records": "bun run excel/add-service-records.ts",
+    "add-missing-projectors": "bun run excel/add_missing_projectors.tsx",
+    "create-test-service": "bun run scripts/create-test-service-record.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

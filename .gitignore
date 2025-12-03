@@ -110,3 +110,8 @@ coverage
 .cache
 tmp
 temp
+FORM_DATA_COMPARISON_UPDATED.md
+FORM_DATA_COMPARISON.md
+.gitignore
+VERIFICATION_REPORT.md
+/excel

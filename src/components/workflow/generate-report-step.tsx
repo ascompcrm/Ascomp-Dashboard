@@ -23,8 +23,10 @@ export default function GenerateReportStep({ data, onBack }: any) {
       { key: 'coldMirror', label: 'Cold Mirror' },
       { key: 'foldMirror', label: 'Fold Mirror' },
       { key: 'touchPanel', label: 'Touch Panel' },
-      { key: 'evbImcbBoard', label: 'EVB/IMCB Board' },
-      { key: 'pibIcpBoard', label: 'PIB/ICP Board' },
+      { key: 'evbBoard', label: 'EVB Board' },
+      { key: 'ImcbBoard', label: 'IMCB Board' },
+      { key: 'pibBoard', label: 'PIB Board' },
+      { key: 'IcpBoard', label: 'ICP Board' },
       { key: 'imbSBoard', label: 'IMB-S Board' },
       { key: 'coolantLevelColor', label: 'Coolant Level & Color' },
       { key: 'acBlowerVane', label: 'AC Blower Vane' },
@@ -37,7 +39,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
       { key: 'lampLocMechanism', label: 'Lamp LOC Mechanism' },
       { key: 'acStatus', label: 'AC Status' },
       { key: 'leStatus', label: 'LE Status' },
-      { key: 'disposableConsumables', label: 'Disposable Consumables' },
+      { key: 'AirIntakeLadRad', label: 'Disposable Consumables' },
       { key: 'pixelDefects', label: 'Pixel Defects' },
       { key: 'imageVibration', label: 'Image Vibration' },
       { key: 'liteloc', label: 'LiteLOC Status' },
@@ -110,7 +112,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
     const toStatus = (value: unknown, noteField?: string) => {
       const rawValue = safe(value).trim()
       const note = noteField ? safe(workDetails[noteField]) : ''
-      return {
+      return { 
         status: note,
         yesNo: rawValue,
       }
@@ -132,7 +134,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
     const recommendedParts =
       Array.isArray(workDetails.recommendedParts) && workDetails.recommendedParts.length > 0
         ? workDetails.recommendedParts.map((part: any) => ({
-            description: safe(part.description),
+            name: safe(part.name ?? part.description ?? ''),
             partNumber: safe(part.part_number ?? part.partNumber),
           }))
         : []
@@ -165,28 +167,31 @@ export default function GenerateReportStep({ data, onBack }: any) {
       },
       electronics: {
         touchPanel: toStatus(workDetails.touchPanel, 'touchPanelNote'),
-        evbImcb: toStatus(workDetails.evbImcbBoard, 'evbImcbBoardNote'),
-        pibIcp: toStatus(workDetails.pibIcpBoard, 'pibIcpBoardNote'),
-        imbS: toStatus(workDetails.imbSBoard, 'imbSBoardNote'),
+        evbBoard: toStatus(workDetails.evbBoard, 'evbBoardNote'),
+        ImcbBoard: toStatus(workDetails.ImcbBoard, 'ImcbBoardNote'),
+        pibBoard: toStatus(workDetails.pibBoard, 'pibBoardNote'),
+        IcpBoard: toStatus(workDetails.IcpBoard, 'IcpBoardNote'),
+        imbSBoard: toStatus(workDetails.imbSBoard, 'imbSBoardNote'),
       },
-      serialVerified: toStatus(workDetails.serialNumberVerified),
-      coolant: toStatus(workDetails.coolantLevelColor),
+      serialVerified: toStatus(workDetails.serialNumberVerified, 'serialNumberVerifiedNote'),
+      AirIntakeLadRad: toStatus(workDetails.AirIntakeLadRad, 'AirIntakeLadRadNote'),
+      coolant: toStatus(workDetails.coolantLevelColor, 'coolantLevelColorNote'),
       lightEngineTest: {
-        white: toStatus(workDetails.lightEngineWhite),
-        red: toStatus(workDetails.lightEngineRed),
-        green: toStatus(workDetails.lightEngineGreen),
-        blue: toStatus(workDetails.lightEngineBlue),
-        black: toStatus(workDetails.lightEngineBlack),
+        white: toStatus(workDetails.lightEngineWhite, 'lightEngineWhiteNote'),
+        red: toStatus(workDetails.lightEngineRed, 'lightEngineRedNote'),
+        green: toStatus(workDetails.lightEngineGreen, 'lightEngineGreenNote'),
+        blue: toStatus(workDetails.lightEngineBlue, 'lightEngineBlueNote'),
+        black: toStatus(workDetails.lightEngineBlack, 'lightEngineBlackNote'),
       },
       mechanical: {
         acBlower: toStatus(workDetails.acBlowerVane, 'acBlowerVaneNote'),
         extractor: toStatus(workDetails.extractorVane, 'extractorVaneNote'),
-        exhaustCFM: toStatus(workDetails.exhaustCfm),
+        exhaustCFM: toStatus(workDetails.exhaustCfm, 'exhaustCfmNote'),
         lightEngine4Fans: toStatus(workDetails.lightEngineFans, 'lightEngineFansNote'),
         cardCageFans: toStatus(workDetails.cardCageFans, 'cardCageFansNote'),
         radiatorFan: toStatus(workDetails.radiatorFanPump, 'radiatorFanPumpNote'),
         connectorHose: toStatus(workDetails.pumpConnectorHose, 'pumpConnectorHoseNote'),
-        securityLock: toStatus(workDetails.securityLampHouseLock),
+        securityLock: toStatus(workDetails.securityLampHouseLock, 'securityLampHouseLockNote'),
       },
       lampLOC: toStatus(workDetails.lampLocMechanism, 'lampLocMechanismNote'),
       lampMake: safe(workDetails.lampMakeModel),
@@ -307,34 +312,34 @@ export default function GenerateReportStep({ data, onBack }: any) {
 
       electronics: {
         touchPanel: mapStatus(service.workDetails?.touchPanel, service.workDetails?.touchPanelNote),
-        evbImcb: mapStatus(service.workDetails?.evbImcbBoard, service.workDetails?.evbImcbBoardNote),
-        pibIcp: mapStatus(service.workDetails?.pibIcpBoard, service.workDetails?.pibIcpBoardNote),
-        imbS: mapStatus(service.workDetails?.imbSBoard, service.workDetails?.imbSBoardNote),
+        evbBoard: mapStatus(service.workDetails?.evbBoard, service.workDetails?.evbBoardNote),
+        ImcbBoard: mapStatus(service.workDetails?.ImcbBoard, service.workDetails?.ImcbBoardNote),
+        pibBoard: mapStatus(service.workDetails?.pibBoard, service.workDetails?.pibBoardNote),
+        IcpBoard: mapStatus(service.workDetails?.IcpBoard, service.workDetails?.IcpBoardNote),
+        imbSBoard: mapStatus(service.workDetails?.imbSBoard, service.workDetails?.imbSBoardNote),
       },
 
-      serialVerified: {
-        status: service.workDetails?.serialNumberVerified ? 'MATCHED' : 'NOT MATCHED',
-        yesNo: service.workDetails?.serialNumberVerified ? 'YES' : 'NO',
-      },
-      coolant: mapStatus(service.workDetails?.coolantLevelColor),
+      serialVerified: mapStatus(service.workDetails?.serialNumberVerified, service.workDetails?.serialNumberVerifiedNote),
+      AirIntakeLadRad: mapStatus(service.workDetails?.AirIntakeLadRad, service.workDetails?.AirIntakeLadRadNote),
+      coolant: mapStatus(service.workDetails?.coolantLevelColor, service.workDetails?.coolantLevelColorNote),
 
       lightEngineTest: {
-        white: mapStatus(service.workDetails?.lightEngineWhite),
-        red: mapStatus(service.workDetails?.lightEngineRed),
-        green: mapStatus(service.workDetails?.lightEngineGreen),
-        blue: mapStatus(service.workDetails?.lightEngineBlue),
-        black: mapStatus(service.workDetails?.lightEngineBlack),
+        white: mapStatus(service.workDetails?.lightEngineWhite, service.workDetails?.lightEngineWhiteNote),
+        red: mapStatus(service.workDetails?.lightEngineRed, service.workDetails?.lightEngineRedNote),
+        green: mapStatus(service.workDetails?.lightEngineGreen, service.workDetails?.lightEngineGreenNote),
+        blue: mapStatus(service.workDetails?.lightEngineBlue, service.workDetails?.lightEngineBlueNote),
+        black: mapStatus(service.workDetails?.lightEngineBlack, service.workDetails?.lightEngineBlackNote),
       },
 
       mechanical: {
         acBlower: mapStatus(service.workDetails?.acBlowerVane, service.workDetails?.acBlowerVaneNote),
         extractor: mapStatus(service.workDetails?.extractorVane, service.workDetails?.extractorVaneNote),
-        exhaustCFM: mapStatus(service.workDetails?.exhaustCfm),
+        exhaustCFM: mapStatus(service.workDetails?.exhaustCfm, service.workDetails?.exhaustCfmNote),
         lightEngine4Fans: mapStatus(service.workDetails?.lightEngineFans, service.workDetails?.lightEngineFansNote),
         cardCageFans: mapStatus(service.workDetails?.cardCageFans, service.workDetails?.cardCageFansNote),
         radiatorFan: mapStatus(service.workDetails?.radiatorFanPump, service.workDetails?.radiatorFanPumpNote),
         connectorHose: mapStatus(service.workDetails?.pumpConnectorHose, service.workDetails?.pumpConnectorHoseNote),
-        securityLock: mapStatus(service.workDetails?.securityLampHouseLock),
+        securityLock: mapStatus(service.workDetails?.securityLampHouseLock, service.workDetails?.securityLampHouseLockNote),
       },
 
       lampLOC: mapStatus(service.workDetails?.lampLocMechanism, service.workDetails?.lampLocMechanismNote),
@@ -556,7 +561,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
     setIsSubmitting(true)
     try {
       const issues = getIssueEntries()
-
+      
       // Refetch the completed service from the database to ensure we use persisted data
       let serviceFromDb: any | null = null
       try {

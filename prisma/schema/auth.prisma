@@ -139,10 +139,13 @@ model ServiceRecord {
   coldMirror                    String?
   foldMirror                    String?
   touchPanel                    String?
-  evbImcbBoard                  String?
-  pibIcpBoard                   String?
+  evbBoard                      String?
+  ImcbBoard                     String?
+  pibBoard                      String?
+  IcpBoard                      String?
   imbSBoard                     String?
-  serialNumberVerified          Boolean       @default(false)
+  serialNumberVerified          String?
+  AirIntakeLadRad               String?
   coolantLevelColor             String?
   lightEngineWhite              String?
   lightEngineRed                String?
@@ -164,8 +167,20 @@ model ServiceRecord {
   coldMirrorNote                String?
   foldMirrorNote                String?
   touchPanelNote                String?
-  evbImcbBoardNote              String?
-  pibIcpBoardNote               String?
+  exhaustCfmNote                String?
+  securityLampHouseLockNote     String?
+  serialNumberVerifiedNote      String?
+  AirIntakeLadRadNote           String?
+  coolantLevelColorNote         String?
+  lightEngineWhiteNote          String?
+  lightEngineRedNote            String?
+  lightEngineGreenNote          String?
+  lightEngineBlueNote           String?
+  lightEngineBlackNote          String?
+  evbBoardNote                  String?
+  ImcbBoardNote                 String?
+  pibBoardNote                  String?
+  IcpBoardNote                  String?
   imbSBoardNote                 String?
   acBlowerVaneNote              String?
   extractorVaneNote             String?

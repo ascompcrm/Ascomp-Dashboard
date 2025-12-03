@@ -27,12 +27,15 @@ const mockData: MaintenanceReportData = {
   },
   electronics: {
     touchPanel: { status: 'OK', yesNo: 'YES' },
-    evbImcb: { status: 'OK', yesNo: 'YES' },
-    pibIcp: { status: 'OK', yesNo: 'YES' },
-    imbS: { status: 'OK', yesNo: 'YES' },
+    evbBoard: { status: 'OK', yesNo: 'YES' },
+    ImcbBoard: { status: 'OK', yesNo: 'YES' },
+    pibBoard: { status: 'OK', yesNo: 'YES' },
+    IcpBoard: { status: 'OK', yesNo: 'YES' },
+    imbSBoard: { status: 'OK', yesNo: 'YES' },
   },
   serialVerified: { status: 'MATCHED', yesNo: 'YES' },
   coolant: { status: 'OK', yesNo: 'YES' },
+  AirIntakeLadRad: { status: 'OK', yesNo: 'YES' },
   lightEngineTest: {
     white: { status: 'OK', yesNo: 'YES' },
     red: { status: 'OK', yesNo: 'YES' },
