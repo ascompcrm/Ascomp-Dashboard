@@ -107,8 +107,8 @@ cieXyz4K: { x: '0.3', y: '0.39', fl: '4' },
     humidity: '45',
   },
   recommendedParts: [
-    { partNumber: 'AS-001', description: 'Integrator rod cleaning kit' },
-    { partNumber: 'AS-014', description: 'Spare filter set' },
+    { partNumber: 'AS-001', name: 'Integrator rod cleaning kit' },
+    { partNumber: 'AS-014', name: 'Spare filter set' },
   ],
   issueNotes: [
     { label: 'Observation', note: 'Minor dust build-up on intake grille' },
