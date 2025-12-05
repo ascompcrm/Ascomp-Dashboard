@@ -22,9 +22,6 @@ export default function ProjectorDetails({ site: _site, projector, onSchedule, o
   const formattedLastService =
     projector.lastServiceDate ? new Date(projector.lastServiceDate).toLocaleDateString() : "—"
 
-  const formattedNextDue =
-    projector.nextServiceDue ? new Date(projector.nextServiceDue).toLocaleDateString() : "—"
-
   const serviceHistoryCount = Array.isArray(projector.serviceHistory) ? projector.serviceHistory.length : 0
 
   return (
