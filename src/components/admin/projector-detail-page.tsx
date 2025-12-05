@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import ScheduleServiceModal from "./modals/schedule-service-modal"
+import PdfPreviewDialog from "./pdf-preview-dialog"
+import { FileText } from "lucide-react"
 
 interface ProjectorDetailPageProps {
   siteId?: string
@@ -50,6 +52,7 @@ export default function ProjectorDetailPage({ siteId: siteIdProp, projectorId: p
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showSchedule, setShowSchedule] = useState(false)
+  const [previewServiceId, setPreviewServiceId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchProjector = async () => {
@@ -138,21 +141,9 @@ export default function ProjectorDetailPage({ siteId: siteIdProp, projectorId: p
               <p className="text-foreground">{projector.model}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Install Date</p>
-              <p className="text-foreground">
-                {projector.installDate ? new Date(projector.installDate).toLocaleDateString() : "—"}
-              </p>
-            </div>
-            <div>
               <p className="text-sm font-medium text-muted-foreground mb-1">Last Service</p>
               <p className="text-foreground">
                 {projector.lastServiceDate ? new Date(projector.lastServiceDate).toLocaleDateString() : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Next Service Due</p>
-              <p className="text-foreground">
-                {projector.nextServiceDue ? new Date(projector.nextServiceDue).toLocaleDateString() : "—"}
               </p>
             </div>
             <div>
@@ -182,7 +173,7 @@ export default function ProjectorDetailPage({ siteId: siteIdProp, projectorId: p
           {projector.serviceHistory.length === 0 ? (
             <p className="text-sm text-muted-foreground">No service records available yet.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {projector.serviceHistory.map((service, index) => {
                 const statusLabel = service.status
                   ? service.status.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())
@@ -195,52 +186,81 @@ export default function ProjectorDetailPage({ siteId: siteIdProp, projectorId: p
                       : "bg-green-100 text-green-700"
 
                 return (
-                  <Card key={service.id} className="border border-border bg-muted/30">
-                    <CardContent className="pt-4 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
+                  <Card key={service.id} className="border border-border">
+                    <CardContent className="pt-6">
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-4 mb-4">
                         <div>
-                          <p className="text-sm font-medium text-foreground mb-1">
+                          <h4 className="text-base font-semibold text-foreground mb-1">
                             Service #{projector.serviceHistory.length - index}
-                          </p>
+                          </h4>
                           <p className="text-xs text-muted-foreground">
-                            {service.date ? new Date(service.date).toLocaleString() : "—"}
+                            {service.date ? new Date(service.date).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            }) : "—"}
                           </p>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${statusStyles}`}>{statusLabel}</span>
+                        <Badge className={`${statusStyles} text-xs`}>{statusLabel}</Badge>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-0.5">Technician</p>
-                          <p className="text-foreground">{service.technician || "Unassigned"}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-0.5">Notes</p>
-                          <p className="text-foreground">{service.notes || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-0.5">Next Service Due</p>
-                          <p className="text-foreground">
-                            {service.nextDue ? new Date(service.nextDue).toLocaleDateString() : "—"}
-                          </p>
-                        </div>
+
+                      {/* Report Details Table */}
+                      <div className="mb-4 overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                Field
+                              </th>
+                              <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                Value
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-sm">
+                            <tr className="border-b border-border/50">
+                              <td className="py-2 px-3 font-medium text-muted-foreground">Service Date</td>
+                              <td className="py-2 px-3 text-foreground">
+                                {service.date
+                                  ? new Date(service.date).toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "long",
+                                      day: "numeric",
+                                    })
+                                  : "—"}
+                              </td>
+                            </tr>
+                            <tr className="border-b border-border/50">
+                              <td className="py-2 px-3 font-medium text-muted-foreground">Technician</td>
+                              <td className="py-2 px-3 text-foreground">{service.technician || "Unassigned"}</td>
+                            </tr>
+                            <tr className="border-b border-border/50">
+                              <td className="py-2 px-3 font-medium text-muted-foreground">Status</td>
+                              <td className="py-2 px-3">
+                                <Badge className={`${statusStyles} text-xs`}>{statusLabel}</Badge>
+                              </td>
+                            </tr>
+                            {service.notes && (
+                              <tr className="border-b border-border/50">
+                                <td className="py-2 px-3 font-medium text-muted-foreground">Notes</td>
+                                <td className="py-2 px-3 text-foreground">{service.notes}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {service.reportUrl ? (
-                          <>
-                            <Button size="sm" variant="secondary" asChild>
-                              <a href={service.reportUrl} target="_blank" rel="noopener noreferrer">
-                                View Report
-                              </a>
-                            </Button>
-                            <Button size="sm" variant="outline" asChild>
-                              <a href={service.reportUrl} target="_blank" rel="noopener noreferrer" download>
-                                Download PDF
-                              </a>
-                            </Button>
-                          </>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">Report not generated for this service.</p>
-                        )}
+
+                      {/* Preview & Download Button */}
+                      <div className="flex justify-end pt-2 border-t border-border">
+                        <Button
+                          size="sm"
+                          onClick={() => setPreviewServiceId(service.id)}
+                          className="gap-2"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Preview & Download Report
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -253,6 +273,16 @@ export default function ProjectorDetailPage({ siteId: siteIdProp, projectorId: p
 
       {showSchedule && (
         <ScheduleServiceModal siteId={siteId} projectorId={projectorId} onClose={() => setShowSchedule(false)} />
+      )}
+
+      {previewServiceId && (
+        <PdfPreviewDialog
+          open={!!previewServiceId}
+          onOpenChange={(open) => {
+            if (!open) setPreviewServiceId(null)
+          }}
+          serviceRecordId={previewServiceId}
+        />
       )}
     </div>
   )

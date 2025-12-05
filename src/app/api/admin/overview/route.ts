@@ -44,20 +44,10 @@ export async function GET() {
         },
       }),
 
-      // Count scheduled services (service records that exist but haven't been fully completed)
-      // Those with a date in the future or no endTime/reportGenerated
-      prisma.serviceRecord.count({
+      // Count scheduled services as projectors whose status is SCHEDULED
+      prisma.projector.count({
         where: {
-          AND: [
-            { endTime: null },
-            { reportGenerated: false },
-            {
-              OR: [
-                { date: { gte: now } },
-                { date: null },
-              ],
-            },
-          ],
+          status: "SCHEDULED",
         },
       }),
 

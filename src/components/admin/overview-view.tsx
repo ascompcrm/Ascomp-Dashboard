@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import ScheduleServiceModal from "@/components/admin/modals/schedule-service-modal"
 import { DatePicker } from "@/components/date-range-picker"
+import { generateMaintenanceReport, type MaintenanceReportData } from "@/components/PDFGenerator"
 
 interface OverviewStats {
   totalSites: number
@@ -33,13 +34,14 @@ interface RecentTask {
   siteId: string
   fieldWorkerId: string
   scheduledDate: string
-  status: "pending" | "completed" | "scheduled"
+  status: "pending" | "completed" | "scheduled" | "in_progress"
   projectorName: string
   workerName: string
   siteName: string
   siteAddress?: string
   siteCode?: string
   screenNumber?: string
+  lastServiceDate?: string
   rawStatus?: string
 }
 
@@ -164,6 +166,12 @@ export default function OverviewView() {
           reportUrl: service.reportUrl,
           serviceNumber: service.serviceNumber,
         }))
+        // Ensure strict latest→oldest ordering based on the service's scheduled date
+        .sort((a: CompletedService, b: CompletedService) => {
+          const aTime = a.scheduledDate ? new Date(a.scheduledDate).getTime() : 0
+          const bTime = b.scheduledDate ? new Date(b.scheduledDate).getTime() : 0
+          return bTime - aTime
+        })
       setCompletedServices(services)
       setCompletedTotalCount(result.totalCount || 0)
     } catch (err) {
@@ -243,6 +251,209 @@ export default function OverviewView() {
     return `/admin/dashboard/sites/${siteId}/projectors/${projectorId}` as Route
   }
 
+  const buildReportDataFromService = (service: any): MaintenanceReportData => {
+    const mapStatus = (value?: string | null, note?: string | null): { status: string; yesNo: string } => ({
+      status: note ? String(note) : "",
+      yesNo: value ? String(value) : "",
+    })
+
+    return {
+      cinemaName: service.cinemaName || service.site.name || "",
+      date: service.date ? new Date(service.date).toLocaleDateString() : "",
+      address: service.address || service.site.address || "",
+      contactDetails: service.contactDetails || service.site.contactDetails || "",
+      location: service.location || "",
+      screenNo: service.screenNumber || service.site.screenNo || "",
+      serviceVisit: service.serviceNumber?.toString() || "",
+      projectorModel: service.projector.model,
+      serialNo: service.projector.serialNo,
+      runningHours: service.projectorRunningHours?.toString() || "",
+      projectorEnvironment: service.workDetails?.projectorPlacementEnvironment || "",
+      startTime: service.workDetails?.startTime,
+      endTime: service.workDetails?.endTime,
+      opticals: {
+        reflector: mapStatus(service.workDetails?.reflector, service.workDetails?.reflectorNote),
+        uvFilter: mapStatus(service.workDetails?.uvFilter, service.workDetails?.uvFilterNote),
+        integratorRod: mapStatus(service.workDetails?.integratorRod, service.workDetails?.integratorRodNote),
+        coldMirror: mapStatus(service.workDetails?.coldMirror, service.workDetails?.coldMirrorNote),
+        foldMirror: mapStatus(service.workDetails?.foldMirror, service.workDetails?.foldMirrorNote),
+      },
+      electronics: {
+        touchPanel: mapStatus(service.workDetails?.touchPanel, service.workDetails?.touchPanelNote),
+        evbBoard: mapStatus(service.workDetails?.evbBoard, service.workDetails?.evbBoardNote),
+        ImcbBoard: mapStatus(service.workDetails?.ImcbBoard, service.workDetails?.ImcbBoardNote),
+        pibBoard: mapStatus(service.workDetails?.pibBoard, service.workDetails?.pibBoardNote),
+        IcpBoard: mapStatus(service.workDetails?.IcpBoard, service.workDetails?.IcpBoardNote),
+        imbSBoard: mapStatus(service.workDetails?.imbSBoard, service.workDetails?.imbSBoardNote),
+      },
+      serialVerified: mapStatus(
+        service.workDetails?.serialNumberVerified,
+        service.workDetails?.serialNumberVerifiedNote,
+      ),
+      AirIntakeLadRad: mapStatus(service.workDetails?.AirIntakeLadRad, service.workDetails?.AirIntakeLadRadNote),
+      coolant: mapStatus(service.workDetails?.coolantLevelColor, service.workDetails?.coolantLevelColorNote),
+      lightEngineTest: {
+        white: mapStatus(service.workDetails?.lightEngineWhite),
+        red: mapStatus(service.workDetails?.lightEngineRed),
+        green: mapStatus(service.workDetails?.lightEngineGreen),
+        blue: mapStatus(service.workDetails?.lightEngineBlue),
+        black: mapStatus(service.workDetails?.lightEngineBlack),
+      },
+      mechanical: {
+        acBlower: mapStatus(service.workDetails?.acBlowerVane, service.workDetails?.acBlowerVaneNote),
+        extractor: mapStatus(service.workDetails?.extractorVane, service.workDetails?.extractorVaneNote),
+        exhaustCFM: mapStatus(service.workDetails?.exhaustCfm, service.workDetails?.exhaustCfmNote),
+        lightEngine4Fans: mapStatus(service.workDetails?.lightEngineFans, service.workDetails?.lightEngineFansNote),
+        cardCageFans: mapStatus(service.workDetails?.cardCageFans, service.workDetails?.cardCageFansNote),
+        radiatorFan: mapStatus(service.workDetails?.radiatorFanPump, service.workDetails?.radiatorFanPumpNote),
+        connectorHose: mapStatus(service.workDetails?.pumpConnectorHose, service.workDetails?.pumpConnectorHoseNote),
+        securityLock: mapStatus(service.workDetails?.securityLampHouseLock),
+      },
+      lampLOC: mapStatus(service.workDetails?.lampLocMechanism, service.workDetails?.lampLocMechanismNote),
+      lampMake: service.workDetails?.lampMakeModel || "",
+      lampHours: service.workDetails?.lampTotalRunningHours?.toString() || "",
+      currentLampHours: service.workDetails?.lampCurrentRunningHours?.toString() || "",
+      voltageParams: {
+        pvn: service.workDetails?.pvVsN || "",
+        pve: service.workDetails?.pvVsE || "",
+        nve: service.workDetails?.nvVsE || "",
+      },
+      flBefore: service.workDetails?.flLeft?.toString() || "",
+      flAfter: service.workDetails?.flRight?.toString() || "",
+      contentPlayer: service.workDetails?.contentPlayerModel || "",
+      acStatus: service.workDetails?.acStatus || "",
+      leStatus: service.workDetails?.leStatus || "",
+      remarks: service.remarks || "",
+      leSerialNo: service.workDetails?.lightEngineSerialNumber || "",
+      mcgdData: {
+        white2K: {
+          fl: service.workDetails?.white2Kfl?.toString() || "",
+          x: service.workDetails?.white2Kx?.toString() || "",
+          y: service.workDetails?.white2Ky?.toString() || "",
+        },
+        white4K: {
+          fl: service.workDetails?.white4Kfl?.toString() || "",
+          x: service.workDetails?.white4Kx?.toString() || "",
+          y: service.workDetails?.white4Ky?.toString() || "",
+        },
+        red2K: {
+          fl: service.workDetails?.red2Kfl?.toString() || "",
+          x: service.workDetails?.red2Kx?.toString() || "",
+          y: service.workDetails?.red2Ky?.toString() || "",
+        },
+        red4K: {
+          fl: service.workDetails?.red4Kfl?.toString() || "",
+          x: service.workDetails?.red4Kx?.toString() || "",
+          y: service.workDetails?.red4Ky?.toString() || "",
+        },
+        green2K: {
+          fl: service.workDetails?.green2Kfl?.toString() || "",
+          x: service.workDetails?.green2Kx?.toString() || "",
+          y: service.workDetails?.green2Ky?.toString() || "",
+        },
+        green4K: {
+          fl: service.workDetails?.green4Kfl?.toString() || "",
+          x: service.workDetails?.green4Kx?.toString() || "",
+          y: service.workDetails?.green4Ky?.toString() || "",
+        },
+        blue2K: {
+          fl: service.workDetails?.blue2Kfl?.toString() || "",
+          x: service.workDetails?.blue2Kx?.toString() || "",
+          y: service.workDetails?.blue2Ky?.toString() || "",
+        },
+        blue4K: {
+          fl: service.workDetails?.blue4Kfl?.toString() || "",
+          x: service.workDetails?.blue4Kx?.toString() || "",
+          y: service.workDetails?.blue4Ky?.toString() || "",
+        },
+      },
+      cieXyz2K: {
+        x: service.workDetails?.BW_Step_10_2Kx?.toString() || "",
+        y: service.workDetails?.BW_Step_10_2Ky?.toString() || "",
+        fl: service.workDetails?.BW_Step_10_2Kfl?.toString() || "",
+      },
+      cieXyz4K: {
+        x: service.workDetails?.BW_Step_10_4Kx?.toString() || "",
+        y: service.workDetails?.BW_Step_10_4Ky?.toString() || "",
+        fl: service.workDetails?.BW_Step_10_4Kfl?.toString() || "",
+      },
+      softwareVersion: service.workDetails?.softwareVersion || "",
+      screenInfo: {
+        scope: {
+          height: service.workDetails?.screenHeight?.toString() || "",
+          width: service.workDetails?.screenWidth?.toString() || "",
+          gain: service.workDetails?.screenGain?.toString() || "",
+        },
+        flat: {
+          height: service.workDetails?.flatHeight?.toString() || "",
+          width: service.workDetails?.flatWidth?.toString() || "",
+          gain: service.workDetails?.screenGain?.toString() || "",
+        },
+        make: service.workDetails?.screenMake || "",
+      },
+      throwDistance: service.workDetails?.throwDistance?.toString() || "",
+      imageEvaluation: {
+        focusBoresite: service.workDetails?.focusBoresight ? "Yes" : "No",
+        integratorPosition: service.workDetails?.integratorPosition ? "Yes" : "No",
+        spotOnScreen: service.workDetails?.spotsOnScreen ? "Yes" : "No",
+        screenCropping: service.workDetails?.screenCroppingOk ? "Yes" : "No",
+        convergence: service.workDetails?.convergenceOk ? "Yes" : "No",
+        channelsChecked: service.workDetails?.channelsCheckedOk ? "Yes" : "No",
+        pixelDefects: service.workDetails?.pixelDefects || "",
+        imageVibration: service.workDetails?.imageVibration || "",
+        liteLOC: service.workDetails?.liteloc || "",
+      },
+      airPollution: {
+        airPollutionLevel: service.workDetails?.airPollutionLevel || "",
+        hcho: service.workDetails?.hcho?.toString() || "",
+        tvoc: service.workDetails?.tvoc?.toString() || "",
+        pm10: service.workDetails?.pm10?.toString() || "",
+        pm25: service.workDetails?.pm2_5?.toString() || "",
+        pm100: service.workDetails?.pm1?.toString() || "",
+        temperature: service.workDetails?.temperature?.toString() || "",
+        humidity: service.workDetails?.humidity?.toString() || "",
+      },
+      recommendedParts: Array.isArray(service.workDetails?.recommendedParts)
+        ? service.workDetails.recommendedParts.map((part: any) => ({
+            name: String(part.name ?? part.description ?? ""),
+            partNumber: String(part.partNumber ?? part.part_number ?? ""),
+          }))
+        : [],
+      issueNotes: [],
+      detectedIssues: [],
+      reportGenerated: true,
+      reportUrl: "",
+      engineerSignatureUrl:
+        service.signatures?.engineer || (service.signatures as any)?.engineerSignatureUrl || "",
+      siteSignatureUrl: service.signatures?.site || (service.signatures as any)?.siteSignatureUrl || "",
+    }
+  }
+
+  const handleAdminDownloadPdf = async (service: CompletedService) => {
+    try {
+      const res = await fetch(`/api/admin/service-records/${service.id}`, {
+        credentials: "include",
+      })
+      if (!res.ok) {
+        throw new Error("Failed to fetch full service record for PDF")
+      }
+      const json = await res.json()
+      const fullService = json.service
+      const reportData = buildReportDataFromService(fullService)
+      const pdfBytes = await generateMaintenanceReport(reportData)
+      const blob = new Blob([pdfBytes as any], { type: "application/pdf" })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `Service_Report_${service.serviceNumber ?? ""}.pdf`
+      link.click()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Failed to generate PDF from admin overview:", error)
+      alert("Failed to generate PDF. Please try again.")
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -307,9 +518,19 @@ export default function OverviewView() {
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
               {tasks.map((task) => {
                 const scheduledDate = task.scheduledDate ? new Date(task.scheduledDate) : null
-                const hasValidDate = scheduledDate && !Number.isNaN(scheduledDate.getTime())
-                const formattedDate = hasValidDate
+                const hasValidScheduledDate = scheduledDate && !Number.isNaN(scheduledDate.getTime())
+                const formattedScheduledDate = hasValidScheduledDate
                   ? scheduledDate.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : null
+
+                const lastServiceDate = task.lastServiceDate ? new Date(task.lastServiceDate) : null
+                const hasValidLastServiceDate = lastServiceDate && !Number.isNaN(lastServiceDate.getTime())
+                const formattedLastServiceDate = hasValidLastServiceDate
+                  ? lastServiceDate.toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
@@ -370,8 +591,14 @@ export default function OverviewView() {
                         <>
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-muted-foreground">Scheduled for</span>
-                            <span className={hasValidDate ? "font-semibold text-foreground" : "font-semibold text-amber-600"}>
-                              {hasValidDate ? formattedDate : "Not scheduled"}
+                            <span
+                              className={
+                                hasValidScheduledDate
+                                  ? "font-semibold text-foreground"
+                                  : "font-semibold text-amber-600"
+                              }
+                            >
+                              {hasValidScheduledDate ? formattedScheduledDate : "Not scheduled"}
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-3">
@@ -381,7 +608,21 @@ export default function OverviewView() {
                             </span>
                           </div>
                         </>
-                      )}
+                          )}
+                          {task.status === "pending" && (
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-muted-foreground">Last serviced</span>
+                              <span
+                                className={
+                                  hasValidLastServiceDate
+                                    ? "font-semibold text-foreground"
+                                    : "font-semibold text-muted-foreground"
+                                }
+                              >
+                                {hasValidLastServiceDate ? formattedLastServiceDate : "—"}
+                              </span>
+                            </div>
+                          )}
                     </div>
                     <div className="flex flex-col items-start">
                       <span className="text-muted-foreground text-xs">Address:</span>
@@ -462,67 +703,92 @@ export default function OverviewView() {
                 ))}
               </div>
             ) : completedServices.length > 0 ? (
-              <div className="space-y-3">
-                {completedServices.map((service) => {
-                  const completedDate = service.completedAt || service.scheduledDate
-                  const formattedCompletedDate = completedDate
-                    ? new Date(completedDate).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "Not available"
-                  const projectorRoute = buildProjectorRoute(service.siteId, service.projectorId)
+              <div className="space-y-4">
+                <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 md:gap-4">
+                  {completedServices.map((service) => {
+                    // Use the service record's scheduled date (schema: ServiceRecord.date)
+                    const completedDate = service.scheduledDate || service.completedAt
+                    const formattedCompletedDate = completedDate
+                      ? new Date(completedDate).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "Not available"
+                    const projectorRoute = buildProjectorRoute(service.siteId, service.projectorId)
 
-                  return (
-                    <div
-                      key={service.id}
-                      className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{service.projectorName}</p>
-                          <p className="text-xs text-muted-foreground">{service.siteName}</p>
+                    const viewDetailsButton = projectorRoute ? (
+                      <Button size="sm" variant="secondary" asChild>
+                        <Link href={projectorRoute}>View details</Link>
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="secondary" disabled>
+                        View details
+                      </Button>
+                    )
+
+                    const downloadReportButton = (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAdminDownloadPdf(service)}
+                      >
+                        Download report
+                      </Button>
+                    )
+
+                    return (
+                      <div
+                        key={service.id}
+                        className="flex h-full flex-col gap-4 rounded-2xl border border-border bg-card/70 p-5 shadow-sm"
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <p className="text-base font-semibold text-foreground">{service.projectorName}</p>
+                            <p className="text-sm text-muted-foreground">{service.siteName}</p>
+                          </div>
+                          <span className="inline-flex w-fit items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase text-green-700">
+                            Completed
+                          </span>
                         </div>
-                        <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-green-100 text-green-700">
-                          Completed
-                        </span>
+                        <div className="grid gap-3 text-sm md:grid-cols-3">
+                          <div>
+                            <p className="text-muted-foreground">Completed on</p>
+                            <p className="font-semibold text-foreground">{formattedCompletedDate}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Assigned engineer</p>
+                            <p className="font-semibold text-foreground">{service.workerName || "—"}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Service #</p>
+                            <p className="font-semibold text-foreground">
+                              {service.serviceNumber ? service.serviceNumber : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-3 border-t pt-3 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
+                          <div>
+                            {service.completedAt ? (
+                              <span>
+                                Completed at{" "}
+                                <span className="font-semibold text-foreground">{service.siteName}</span>
+                              </span>
+                            ) : (
+                              <span className="text-amber-600">Completion time unavailable</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                            <div className="flex flex-row gap-2">
+                              {viewDetailsButton}
+                              {downloadReportButton}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                        <div>
-                          <p className="text-muted-foreground mb-0.5">Completed</p>
-                          <p className="font-semibold text-foreground">{formattedCompletedDate}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground mb-0.5">Assigned To</p>
-                          <p className="font-semibold text-foreground">{service.workerName}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground mb-0.5">Service #</p>
-                          <p className="font-semibold text-foreground">
-                            {service.serviceNumber ? service.serviceNumber : "—"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {projectorRoute && (
-                          <Button size="sm" variant="secondary" asChild>
-                            <Link href={projectorRoute}>View report</Link>
-                          </Button>
-                        )}
-                        {service.reportUrl && (
-                          <Button size="sm" variant="outline" asChild>
-                            <a href={service.reportUrl} target="_blank" rel="noopener noreferrer">
-                              Download PDF
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
             ) : (
               <div className="py-8 text-center text-sm text-muted-foreground">

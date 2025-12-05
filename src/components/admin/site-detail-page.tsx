@@ -139,7 +139,7 @@ export default function SiteDetailPage({ siteId: siteIdProp }: SiteDetailPagePro
             Add Projector
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {site.projectors.length === 0 ? (
             <p className="text-sm text-muted-foreground">No projectors added to this site yet.</p>
           ) : (

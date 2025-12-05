@@ -67,12 +67,8 @@ export async function GET(request: NextRequest) {
         },
       })
     } else if (statusFilter === "pending") {
-      // Filter by projector status PENDING
-      andConditions.push({
-        projector: {
-          status: ServiceStatus.PENDING,
-        },
-      })
+      // For pending, we no longer rely solely on projector.status.
+      // We'll determine \"pending\" based on last service date (> 6 months ago) later in code.
     } else if (statusFilter === "in_progress") {
       // Filter by projector status IN_PROGRESS
       andConditions.push({
@@ -193,7 +189,7 @@ export async function GET(request: NextRequest) {
       take: limit,
     })
 
-    // Get last service record's screenNumber (Audi Number) and address for each projector
+    // Get last service record's screenNumber (Audi Number), address and date for each projector
     const projectorIds = [...new Set(tasks.map(task => task.projectorId))]
     const lastServiceRecords = await prisma.serviceRecord.findMany({
       where: {
@@ -219,6 +215,7 @@ export async function GET(request: NextRequest) {
     // Create maps of projectorId -> last screenNumber and address (most recent by createdAt)
     const projectorScreenNumberMap = new Map<string, string>()
     const projectorAddressMap = new Map<string, string>()
+    const projectorLastServiceDateMap = new Map<string, string>()
     for (const record of lastServiceRecords) {
       if (!projectorScreenNumberMap.has(record.projectorId) && record.screenNumber) {
         projectorScreenNumberMap.set(record.projectorId, record.screenNumber)
@@ -226,10 +223,22 @@ export async function GET(request: NextRequest) {
       if (!projectorAddressMap.has(record.projectorId) && record.address) {
         projectorAddressMap.set(record.projectorId, record.address)
       }
+      if (!projectorLastServiceDateMap.has(record.projectorId)) {
+        const baseDate = record.date || record.endTime || record.createdAt
+        if (baseDate) {
+          projectorLastServiceDateMap.set(record.projectorId, baseDate.toISOString())
+        }
+      }
     }
 
     // Format tasks
     // Determine status based on projector.status from the Projector model
+    const sixMonthsAgo = (() => {
+      const d = new Date()
+      d.setMonth(d.getMonth() - 6)
+      return d
+    })()
+
     const formattedTasks = tasks.map((task) => {
       // Map projector.status enum to frontend status string
       let status: "pending" | "scheduled" | "in_progress" | "completed" = "pending"
@@ -254,6 +263,19 @@ export async function GET(request: NextRequest) {
 
       const isCompleted = status === "completed"
 
+      // Determine last service date for this projector (ServiceRecord.date)
+      const lastServiceIso = projectorLastServiceDateMap.get(task.projectorId) || ""
+      const lastServiceDate = lastServiceIso ? new Date(lastServiceIso) : null
+      const isOverdue =
+        lastServiceDate && !Number.isNaN(lastServiceDate.getTime())
+          ? lastServiceDate < sixMonthsAgo
+          : false
+
+      // For \"pending\" filter, only keep projectors whose last service was more than 6 months ago
+      if (statusFilter === "pending" && !isOverdue) {
+        return null
+      }
+
       return {
         id: task.id,
         projectorId: task.projectorId,
@@ -270,15 +292,37 @@ export async function GET(request: NextRequest) {
         siteAddress: projectorAddressMap.get(task.projectorId) || task.projector.site.address || "", // Address from last service record, fallback to site address
         siteCode: task.projector.site.siteCode || "",
         screenNumber: projectorScreenNumberMap.get(task.projectorId) || "", // Audi Number from last service record
+        lastServiceDate: lastServiceIso, // Last serviced date (ServiceRecord.date)
         reportGenerated: task.reportGenerated,
         reportUrl: task.reportUrl || null,
         serviceNumber: task.serviceNumber,
       }
-    })
+    }).filter((t) => t !== null)
+
+    // For scheduled view we only want the latest scheduled service per projector,
+    // not every historical record. Deduplicate by projectorId, keeping the newest date.
+    let finalTasks = formattedTasks
+    if (statusFilter === "scheduled") {
+      const byProjector = new Map<string, (typeof formattedTasks)[number]>()
+      for (const t of formattedTasks) {
+        if (!t) continue
+        const existing = byProjector.get(t.projectorId)
+        if (!existing) {
+          byProjector.set(t.projectorId, t)
+        } else {
+          const tTime = t.scheduledDate ? new Date(t.scheduledDate).getTime() : 0
+          const eTime = existing.scheduledDate ? new Date(existing.scheduledDate).getTime() : 0
+          if (tTime > eTime) {
+            byProjector.set(t.projectorId, t)
+          }
+        }
+      }
+      finalTasks = Array.from(byProjector.values())
+    }
 
     return NextResponse.json({
-      tasks: formattedTasks,
-      count: formattedTasks.length,
+      tasks: finalTasks,
+      count: finalTasks.length,
       totalCount: totalCount,
       page: page,
       limit: limit,

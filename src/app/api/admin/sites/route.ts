@@ -8,6 +8,9 @@ function generateObjectId(): string {
 
 export async function GET() {
   try {
+    const now = new Date()
+    const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
+
     const sites = await prisma.site.findMany({
       include: {
         projector: {
@@ -18,6 +21,7 @@ export async function GET() {
                 id: true,
                 endTime: true,
                 reportGenerated: true,
+                date: true,
               },
             },
           },
@@ -52,36 +56,47 @@ export async function GET() {
         createdDate: new Date().toISOString().split("T")[0], // Sites don't have createdAt in schema, using current date
         totalCompletedServices,
         projectors: site.projector.map((proj) => {
-          // Map projector.status enum to frontend status string
-          let status: "completed" | "pending" | "scheduled" = "pending"
-          const projectorStatus = proj.status
+          // Derive status based on lastServiceAt and projector status
+          const lastServiceAt = proj.lastServiceAt
+          let status: "completed" | "pending" | "scheduled"
 
-          switch (projectorStatus) {
-            case ServiceStatus.COMPLETED:
-              status = "completed"
-              break
-            case ServiceStatus.SCHEDULED:
-              status = "scheduled"
-              break
-            case ServiceStatus.IN_PROGRESS:
-              status = "scheduled" // In progress is treated as scheduled for display
-              break
-            case ServiceStatus.PENDING:
-              status = "pending"
-              break
-            default:
-              status = "pending"
+          if (
+            proj.status === ServiceStatus.SCHEDULED ||
+            proj.status === ServiceStatus.IN_PROGRESS
+          ) {
+            // Any scheduled / in-progress work is treated as scheduled
+            status = "scheduled"
+          } else if (lastServiceAt && lastServiceAt >= sixMonthsAgo) {
+            // Serviced within last ~6 months → completed
+            status = "completed"
+          } else {
+            // Never serviced or serviced more than 6 months ago → pending
+            status = "pending"
           }
+
+          const nextServiceDue =
+            lastServiceAt != null
+              ? (() => {
+                  const d = new Date(lastServiceAt)
+                  d.setMonth(d.getMonth() + 6)
+                  return d.toISOString().split("T")[0]
+                })()
+              : null
+
+          const completedServiceHistory = proj.serviceRecords.filter(
+            (record) => record.endTime !== null || record.reportGenerated === true,
+          )
 
           return {
             id: proj.id,
             name: `${proj.modelNo} (${proj.serialNo})`,
             model: proj.modelNo,
             serialNumber: proj.serialNo,
-            installDate: proj.lastServiceAt?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
-            lastServiceDate: proj.lastServiceAt?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
+            installDate: proj.lastServiceAt?.toISOString().split("T")[0] || null,
+            lastServiceDate: proj.lastServiceAt?.toISOString().split("T")[0] || null,
             status,
-            serviceHistory: [],
+            nextServiceDue,
+            serviceHistory: completedServiceHistory,
           }
         }),
       }

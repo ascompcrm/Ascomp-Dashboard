@@ -19,30 +19,67 @@ export default function ProjectorDetails({ site: _site, projector, onSchedule, o
         ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
         : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"
 
+  const formattedLastService =
+    projector.lastServiceDate ? new Date(projector.lastServiceDate).toLocaleDateString() : "—"
+
+  const formattedNextDue =
+    projector.nextServiceDue ? new Date(projector.nextServiceDue).toLocaleDateString() : "—"
+
+  const serviceHistoryCount = Array.isArray(projector.serviceHistory) ? projector.serviceHistory.length : 0
+
   return (
     <div
-      className="flex items-start justify-between gap-3 p-3 bg-background rounded-md border border-border hover:bg-muted/30 transition-colors cursor-pointer"
+      className="flex h-full flex-col rounded-2xl border border-border bg-background/80 shadow-sm hover:shadow-md hover:bg-muted/40 transition-colors cursor-pointer"
       onClick={onViewDetails}
     >
-      <div className="flex-1">
-        <div className="flex items-center gap-2 mb-2">
-          <h4 className="font-medium text-foreground">{projector.name}</h4>
-          <Badge className={statusColor}>{projector.status.charAt(0).toUpperCase() + projector.status.slice(1)}</Badge>
+      {/* Header + body */}
+      <div className="flex flex-col px-6 pt-6 pb-5 gap-5">
+        {/* Header: Name and Status Badge */}
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-lg font-semibold text-foreground truncate mb-1">{projector.name}</h4>
+            {/* Serial and Model aligned in a neat row */}
+            <div className="flex flex-row gap-6 mt-1">
+              <div className="flex items-center min-w-0">
+                <span className="text-base text-muted-foreground font-medium">Serial:</span>
+                <span className="ml-2 text-base font-semibold text-foreground truncate">{projector.serialNumber}</span>
+              </div>
+              <div className="flex items-center min-w-0">
+                <span className="text-base text-muted-foreground font-medium">Model:</span>
+                <span className="ml-2 text-base font-semibold text-foreground truncate">{projector.model}</span>
+              </div>
+            </div>
+          </div>
+          <Badge
+            className={`${statusColor} text-[13px] px-4 py-1.5 rounded-full shrink-0 whitespace-nowrap`}
+          >
+            {projector.status.charAt(0).toUpperCase() + projector.status.slice(1)}
+          </Badge>
         </div>
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p>Model: {projector.model}</p>
-          <p>Serial: {projector.serialNumber}</p>
-          {projector.lastServiceDate && (
-            <p>Last Service: {new Date(projector.lastServiceDate).toLocaleDateString()}</p>
-          )}
-          {projector.nextServiceDue && (
-            <p>Next Due: {new Date(projector.nextServiceDue).toLocaleDateString()}</p>
-          )}
+        {/* Metrics Row: only Last Service and Completed Services */}
+        <div className="grid grid-cols-2 gap-x-10 gap-y-3 text-base">
+          <div className="flex flex-col items-start">
+            <span className="text-[13px] uppercase tracking-wide text-muted-foreground/90 font-medium mb-0.5">Last Service</span>
+            <span className="text-lg font-semibold text-foreground">{formattedLastService}</span>
+          </div>
+          <div className="flex flex-col items-start">
+            <span className="text-[13px] uppercase tracking-wide text-muted-foreground/90 font-medium mb-0.5">Completed Services</span>
+            <span className="text-lg font-semibold text-foreground">{serviceHistoryCount}</span>
+          </div>
         </div>
       </div>
-      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+
+      {/* Footer actions */}
+      <div
+        className="flex items-center justify-between gap-3 border-t border-border px-4 py-3"
+        onClick={(e) => e.stopPropagation()}
+      >
         {projector.status === "pending" && (
-          <Button size="sm" onClick={onSchedule} className="bg-black text-white hover:bg-gray-800">
+          <Button
+            size="sm"
+            onClick={onSchedule}
+            className="bg-black text-white hover:bg-gray-800 px-4"
+          >
             Schedule
           </Button>
         )}
