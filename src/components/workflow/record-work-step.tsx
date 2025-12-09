@@ -96,12 +96,12 @@ const createInitialFormData = () => ({
   lightEngineBlackNote: '',
   acBlowerVane: 'OK',
   extractorVane: 'OK',
-  exhaustCfm: 'OK',
+  exhaustCfm: '',
   lightEngineFans: 'OK',
   cardCageFans: 'OK',
   radiatorFanPump: 'OK',
   pumpConnectorHose: 'OK',
-  securityLampHouseLock: '',
+  securityLampHouseLock: 'OK',
   securityLampHouseLockNote: '',
   lampLocMechanism: 'OK',
   acBlowerVaneNote: '',
@@ -227,6 +227,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const [partsData, setPartsData] = useState<ProjectorPart[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedPartIds, setSelectedPartIds] = useState<Set<string>>(new Set())
+  const [lampModels, setLampModels] = useState<string[]>([])
+  const [softwareVersions, setSoftwareVersions] = useState<string[]>([])
+  const [contentPlayers, setContentPlayers] = useState<string[]>([])
   const brokenImagesRef = useRef<UploadedImage[]>([])
   const referenceImagesRef = useRef<UploadedImage[]>([])
 
@@ -348,6 +351,60 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     loadPartsData()
   }, [])
 
+  // Load lamp models for dropdown
+  useEffect(() => {
+    const loadLampModels = async () => {
+      try {
+        const response = await fetch('/data/Lamp_Models.json')
+        if (!response.ok) return
+        const text = await response.text()
+        const matches = [...text.matchAll(/"Lamp Model"\s*:\s*"([^"]+)"/g)].map((m) => m[1])
+        const cleaned = matches.filter((m): m is string => typeof m === 'string' && m.toUpperCase() !== 'NA')
+        const unique = Array.from(new Set(cleaned))
+        setLampModels(unique)
+      } catch (error) {
+        console.error('Failed to load lamp models:', error)
+      }
+    }
+    loadLampModels()
+  }, [])
+
+  // Load software versions for dropdown
+  useEffect(() => {
+    const loadSoftwareVersions = async () => {
+      try {
+        const response = await fetch('/data/Software.json')
+        if (!response.ok) return
+        const text = await response.text()
+        const matches = [...text.matchAll(/"Software Version"\s*:\s*"([^"]+)"/g)].map((m) => m[1])
+        const cleaned = matches.filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+        const unique = Array.from(new Set(cleaned))
+        setSoftwareVersions(unique)
+      } catch (error) {
+        console.error('Failed to load software versions:', error)
+      }
+    }
+    loadSoftwareVersions()
+  }, [])
+
+  // Load content players for dropdown
+  useEffect(() => {
+    const loadContentPlayers = async () => {
+      try {
+        const response = await fetch('/data/Content_Player.json')
+        if (!response.ok) return
+        const text = await response.text()
+        const matches = [...text.matchAll(/"Content Player"\s*:\s*"([^"]+)"/g)].map((m) => m[1])
+        const cleaned = matches.filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+        const unique = Array.from(new Set(cleaned))
+        setContentPlayers(unique)
+      } catch (error) {
+        console.error('Failed to load content players:', error)
+      }
+    }
+    loadContentPlayers()
+  }, [])
+
   // Sync selected parts when dialog opens
   useEffect(() => {
     if (isDialogOpen) {
@@ -441,21 +498,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     }
   }
 
-  const wrapStatusChange = (
-    name: keyof RecordWorkForm & string
-  ) => {
-    const statusRegister = register(name as keyof RecordWorkForm)
-    return {
-      ...statusRegister,
-      onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
-        statusRegister.onChange(event)
-        if (event.target.value !== 'Not OK') {
-          clearIssueNote(name)
-        }
-      },
-    }
-  }
-
   const hasRequiredImages = brokenImages.length > 0 && referenceImages.length > 0
 
   // Filter parts by projector model
@@ -463,6 +505,17 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const filteredParts = partsData.filter(
     (part) => part.projector_model.toLowerCase() === projectorModel?.toLowerCase()
   )
+
+  const projectorRunningHours = watch('projectorRunningHours')
+  const lampTotalRunningHours = watch('lampTotalRunningHours')
+  const lampCurrentRunningHours = watch('lampCurrentRunningHours')
+
+  const isOutOfRange = (value: unknown, min: number, max: number) => {
+    if (value === undefined || value === null || value === '') return false
+    const num = Number(value)
+    if (!Number.isFinite(num)) return false
+    return num < min || num > max
+  }
 
   // Handle part selection
   const handlePartToggle = (part: ProjectorPart) => {
@@ -493,31 +546,135 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     field,
     label,
     options,
+    noteOptions,
+    noteDefault,
   }: {
     field: keyof RecordWorkForm & string
     label: string
-    options: Array<{ value: string; label: string; description?: string }>
+    options?: Array<{ value: string; label: string; description?: string }>
+    noteOptions?: string[]
+    noteDefault?: string
   }) => {
-    const status = watch(field as keyof RecordWorkForm) || 'OK'
+    const status = (watch(field as keyof RecordWorkForm) as string) || 'OK'
     const noteField = `${field}Note` as keyof RecordWorkForm
-    
+    const initialChoice = noteDefault || noteOptions?.[0] || ''
+    const [noteChoice, setNoteChoice] = useState<string>(initialChoice)
+    const [noteText, setNoteText] = useState<string>('')
+    const statusRegister = register(field as keyof RecordWorkForm)
+
+    const selectOptions =
+      options && options.length
+        ? options
+        : [
+            { value: 'OK', label: 'OK', description: 'Part is OK' },
+            { value: 'YES', label: 'YES', description: 'Needs replacement' },
+          ]
+
+    const formatNote = (choice: string, text: string) => {
+      const c = choice?.trim()
+      const t = text?.trim()
+      if (c && t) return `${c} - ${t}`
+      if (c) return c
+      if (t) return t
+      return ''
+    }
+
+    const handleReasonChange = (val: string) => {
+      setNoteChoice(val)
+      if (status === 'YES') {
+        setValue(noteField, formatNote(val, noteText), { shouldDirty: true })
+      }
+    }
+
+    const handleNoteTextChange = (text: string) => {
+      setNoteText(text)
+      if (status === 'YES') {
+        setValue(noteField, formatNote(noteChoice, text), { shouldDirty: true })
+      }
+    }
+
+    // Clear on status change away from YES
+    useEffect(() => {
+      if (status !== 'YES') {
+        const currentNote = getValues(noteField)
+        const shouldResetChoice = noteChoice !== initialChoice
+        const shouldClearValue = Boolean(currentNote)
+
+        if (shouldResetChoice) setNoteChoice(initialChoice)
+        if (noteText) setNoteText('')
+        if (shouldClearValue) setValue(noteField, '', { shouldDirty: true })
+      }
+    }, [status, initialChoice, noteField, noteChoice, noteText, getValues, setValue])
+
+    // Keep note field in sync when status is YES
+    useEffect(() => {
+      if (status === 'YES') {
+        setValue(noteField, formatNote(noteChoice, noteText), { shouldDirty: true })
+      }
+    }, [status, noteChoice, noteText, noteField, setValue])
+
+    // Initialize choice on first render if missing
+    useEffect(() => {
+      if (!noteChoice && initialChoice) {
+        setNoteChoice(initialChoice)
+      }
+    }, [noteChoice, initialChoice])
+
     return (
       <FormField label={label}>
-        <select 
-          {...wrapStatusChange(field)} 
+        <select
+          name={statusRegister.name}
+          ref={statusRegister.ref}
+          onBlur={statusRegister.onBlur}
+          value={status}
+          onChange={(event) => {
+            const value = event.target.value
+            setValue(field, value, { shouldDirty: true })
+            statusRegister.onChange(event)
+            if (value !== 'Not OK') {
+              clearIssueNote(field)
+            }
+          }}
           className="w-full border-2 border-black p-2 text-black text-sm"
-          defaultValue="OK"
         >
-          {options.map((option) => (
+          {selectOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label} {option.description && `(${option.description})`}
             </option>
           ))}
         </select>
-        {status === 'YES' && (
+
+        {status === 'YES' && noteOptions?.length ? (
+          <>
+            <select
+              className="w-full border-2 border-black p-2 text-black text-sm mt-2"
+              value={noteChoice}
+              onChange={(e) => handleReasonChange(e.target.value)}
+            >
+              <option value="" disabled>
+                Select reason
+              </option>
+              {noteOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+            <Input
+              type="text"
+              value={noteText}
+              onChange={(e) => handleNoteTextChange(e.target.value)}
+              placeholder="Add details"
+              className="border-2 border-black text-sm mt-2"
+            />
+          </>
+        ) : null}
+
+        {status === 'YES' && !noteOptions?.length && (
           <Input
             {...register(noteField)}
-            placeholder="Enter replacement details..."
+            defaultValue={noteDefault}
+            placeholder="Enter details..."
             className="border-2 border-black text-sm mt-2"
           />
         )}
@@ -531,8 +688,13 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
       return
     }
 
+    const formattedValues = {
+      ...values,
+      exhaustCfm: values.exhaustCfm ? `${values.exhaustCfm} M/s` : '',
+    }
+
     onNext({
-      workDetails: values,
+      workDetails: formattedValues,
       workImages: {
         broken: brokenImages,
         other: referenceImages,
@@ -635,14 +797,19 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               />
             </FormField>
           </div>
-          <FormField label="Running Hours" required>
+            <FormField label="Running Hours" required>
             <Input
               type="number"
               step="any"
               {...register('projectorRunningHours')}
-              placeholder="Hours"
+                placeholder="1000 - 120000"
+                min={1000}
+                max={120000}
               className="border-2 border-black text-black text-sm"
             />
+              {isOutOfRange(projectorRunningHours, 1000, 120000) && (
+                <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 120,000.</p>
+              )}
           </FormField>
         </FormSection>
 
@@ -656,8 +823,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 options={[
                   { value: 'OK', label: 'OK', description: 'Part is OK' },
                   { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                  { value: 'NO', label: 'NO', description: 'Not available' },
                 ]}
+                noteOptions={['Solarized', 'Chipped', 'Cracked', 'Not Present']}
               />
             ))}
           </FormRow>
@@ -673,7 +840,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 options={[
                   { value: 'OK', label: 'OK', description: 'Part is OK' },
                   { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                  { value: 'NO', label: 'NO', description: 'Not available' },
                 ]}
               />
             ))}
@@ -688,8 +854,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               options={[
                 { value: 'OK', label: 'OK', description: 'Part is OK' },
                 { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                { value: 'NO', label: 'NO', description: 'Not available' },
               ]}
+              noteDefault="Package File Required"
             />
           </FormRow>
         </FormSection>
@@ -702,7 +868,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               options={[
                 { value: 'OK', label: 'OK', description: 'Part is OK' },
                 { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                { value: 'NO', label: 'NO', description: 'Not available' },
               ]}
             />
           </FormRow>
@@ -716,7 +881,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               options={[
                 { value: 'OK', label: 'OK', description: 'Part is OK' },
                 { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                { value: 'NO', label: 'NO', description: 'Not available' },
               ]}
             />
           </FormRow>
@@ -733,7 +897,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                   options={[
                     { value: 'OK', label: 'OK', description: 'Part is OK' },
                     { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                    { value: 'NO', label: 'NO', description: 'Not available' },
                   ]}
                 />
               ),
@@ -751,46 +914,50 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 options={[
                   { value: 'OK', label: 'OK', description: 'Part is OK' },
                   { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                  { value: 'NO', label: 'NO', description: 'Not available' },
                 ]}
+                noteOptions={
+                  field === 'acBlowerVane' || field === 'extractorVane'
+                    ? ['Bypassed', 'Switch Faulty']
+                    : undefined
+                }
               />
             ))}
           </FormRow>
           <FormRow>
-            <StatusSelectWithNote
-              field="exhaustCfm"
-              label="Exhaust CFM"
-              options={[
-                { value: 'OK', label: 'OK', description: 'Part is OK' },
-                { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                { value: 'NO', label: 'NO', description: 'Not available' },
-              ]}
-            />
+            <FormField label="Exhaust CFM (M/s)">
+              <Input
+                type="number"
+                step="0.1"
+                {...register('exhaustCfm')}
+                placeholder="Enter value"
+                className="border-2 border-black text-sm"
+              />
+            </FormField>
             <StatusSelectWithNote
               field="pumpConnectorHose"
               label="Pump Connector & Hose"
               options={[
                 { value: 'OK', label: 'OK', description: 'Part is OK' },
                 { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                { value: 'NO', label: 'NO', description: 'Not available' },
               ]}
             />
           </FormRow>
           <FormRow>
-            <FormField label="Security & Lamp Lock">
-              <select {...register('securityLampHouseLock')} className="w-full border-2 border-black p-2 text-sm">
-                <option value="">Select</option>
-                <option value="Working">Working</option>
-                <option value="Not Working">Not Working</option>
-              </select>
-            </FormField>
+            <StatusSelectWithNote
+              field="securityLampHouseLock"
+              label="Security & Lamp Lock"
+              options={[
+                { value: 'OK', label: 'OK', description: 'Working' },
+                { value: 'YES', label: 'YES', description: 'Not working / needs attention' },
+              ]}
+              noteOptions={['Bypassed', 'Switch Faulty']}
+            />
             <StatusSelectWithNote
               field="lampLocMechanism"
               label="Lamp LOC Mechanism"
               options={[
                 { value: 'OK', label: 'OK', description: 'Part is OK' },
                 { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                { value: 'NO', label: 'NO', description: 'Not available' },
               ]}
             />
           </FormRow>
@@ -806,7 +973,20 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
         <FormSection title="Software & Screen Information">
           <FormField label="Software Version">
-            <Input {...register('softwareVersion')} placeholder="Version" className="border-2 border-black text-sm" />
+            <select
+              {...register('softwareVersion')}
+              className="w-full border-2 border-black p-2 text-sm bg-white"
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Select software version
+              </option>
+              {softwareVersions.map((version) => (
+                <option key={version} value={version}>
+                  {version}
+                </option>
+              ))}
+            </select>
           </FormField>
           <div className="mb-3">
             <p className="text-xs font-semibold text-gray-700 mb-1">Scope Dimensions</p>
@@ -842,7 +1022,20 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
         <FormSection title="Lamp Information">
           <FormField label="Lamp Make & Model">
-            <Input {...register('lampMakeModel')} placeholder="Make and model" className="border-2 border-black text-sm" />
+            <select
+              {...register('lampMakeModel')}
+              className="w-full border-2 border-black p-2 text-sm bg-white"
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Select lamp model
+              </option>
+              {lampModels.map((model) => (
+                <option key={model} value={model}>
+                  {model}
+                </option>
+              ))}
+            </select>
           </FormField>
           <FormRow>
             <FormField label="Total Running Hours">
@@ -850,18 +1043,28 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 type="number"
                 step="any"
                 {...register('lampTotalRunningHours')}
-                placeholder="Hours"
+                placeholder="1000 - 100000"
+                min={1000}
+                max={100000}
                 className="border-2 border-black text-sm"
               />
+              {isOutOfRange(lampTotalRunningHours, 1000, 100000) && (
+                <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 100,000.</p>
+              )}
             </FormField>
             <FormField label="Current Running Hours">
               <Input
                 type="number"
                 step="any"
                 {...register('lampCurrentRunningHours')}
-                placeholder="Current hours"
+                placeholder="1000 - 100000"
+                min={1000}
+                max={100000}
                 className="border-2 border-black text-sm"
               />
+              {isOutOfRange(lampCurrentRunningHours, 1000, 100000) && (
+                <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 100,000.</p>
+              )}
             </FormField>
           </FormRow>
         </FormSection>
@@ -923,7 +1126,20 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
         <FormSection title="Content Player & AC Status">
           <FormField label="Content Player Model">
-            <Input {...register('contentPlayerModel')} placeholder="Model" className="border-2 border-black text-sm" />
+            <select
+              {...register('contentPlayerModel')}
+              className="w-full border-2 border-black p-2 text-sm bg-white"
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Select content player
+              </option>
+              {contentPlayers.map((player) => (
+                <option key={player} value={player}>
+                  {player}
+                </option>
+              ))}
+            </select>
           </FormField>
           <FormRow>
             <FormField label="AC Status">
@@ -1093,8 +1309,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               <FormField key={field} label={label}>
                 <select {...register(field as keyof RecordWorkForm)} className="w-full border-2 border-black p-2 text-sm">
                   <option value="">Select</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
+                  <option value="OK">OK</option>
+                  <option value="YES">Yes</option>
                 </select>
               </FormField>
             ))}
@@ -1102,23 +1318,23 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           <FormRow>
             <FormField label="Pixel Defects">
               <select {...register('pixelDefects')} className="w-full border-2 border-black p-2 text-sm">
-              <option value="">Select</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
+                <option value="">Select</option>
+                <option value="OK">OK</option>
+                <option value="YES">Yes</option>
               </select>
             </FormField>
             <FormField label="Image Vibration">
               <select {...register('imageVibration')} className="w-full border-2 border-black p-2 text-sm">
-              <option value="">Select</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
+                <option value="">Select</option>
+                <option value="OK">OK</option>
+                <option value="YES">Yes</option>
               </select>
             </FormField>
             <FormField label="LiteLOC Status">
               <select {...register('liteloc')} className="w-full border-2 border-black p-2 text-sm">
-              <option value="">Select</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
+                <option value="">Select</option>
+                <option value="OK">OK</option>
+                <option value="YES">Yes</option>
               </select>
             </FormField>
           </FormRow>

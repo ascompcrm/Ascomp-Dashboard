@@ -48,7 +48,7 @@ export default function DashboardPageShell({ breadcrumbs, children }: DashboardP
         </div>
       </header>
       <main className="flex-1 overflow-y-auto">
-        <div className="px-6 lg:px-8 py-8">{children}</div>
+        <div className="">{children}</div>
       </main>
     </div>
   )
