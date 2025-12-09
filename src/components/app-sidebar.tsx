@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Command, Home, Projector, User } from "lucide-react"
+import { Command, Home, Projector, User, FileEdit } from "lucide-react"
 import type { Route } from "next"
 
 import { NavMain, type NavMainItem } from "@/components/nav-main"
@@ -30,6 +30,11 @@ const navMainData: NavMainItem[] = [
     title: "Field Workers",
     url: "/admin/dashboard/field-workers" as Route,
     icon: User,
+  },
+  {
+    title: "Update Form",
+    url: "/admin/dashboard/form" as Route,
+    icon: FileEdit,
   },
 ]
 

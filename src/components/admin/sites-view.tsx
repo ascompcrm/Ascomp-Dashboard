@@ -121,7 +121,7 @@ export default function SitesView() {
   }, [sites, searchQuery, projectorFilter])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-foreground">Sites & Projectors</h2>
         <Button onClick={() => setShowAddSite(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">

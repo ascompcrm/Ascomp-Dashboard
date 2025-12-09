@@ -16,6 +16,7 @@ interface FieldWorker {
   joinDate: string
   lastActiveDate: string
   sitesCompleted: number
+  createdServicesCount: number
   pendingTasks: number
   totalTasks: number
 }
@@ -66,7 +67,7 @@ export default function FieldWorkersView() {
   }, [workers, searchQuery, workerFilter])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-foreground">Field Workers</h2>
         <Button
@@ -83,10 +84,10 @@ export default function FieldWorkersView() {
         onChange={setSearchQuery}
       />
 
-      <div className="space-y-3">
+      {/* <div className="space-y-3">
         <p className="text-sm font-medium text-foreground">Worker Status</p>
         <FilterTabs tabs={["all", "active", "idle"]} activeTab={workerFilter} onTabChange={setWorkerFilter} />
-      </div>
+      </div> */}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -96,11 +97,8 @@ export default function FieldWorkersView() {
                 <Skeleton className="h-6 w-32 mb-2" />
                 <Skeleton className="h-4 w-48" />
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <Skeleton className="h-16" />
-                  <Skeleton className="h-16" />
-                </div>
+                <CardContent className="space-y-3">
+                <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-20" />
               </CardContent>
             </Card>
@@ -126,16 +124,10 @@ export default function FieldWorkersView() {
                   <p className="text-sm text-muted-foreground">{worker.email}</p>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                      <p className="text-xs text-muted-foreground mb-1">Completed</p>
-                      <p className="text-2xl font-bold text-foreground">{worker.sitesCompleted}</p>
-                    </div>
-                    <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                      <p className="text-xs text-muted-foreground mb-1">Pending</p>
-                      <p className="text-2xl font-bold text-foreground">{worker.pendingTasks}</p>
-                    </div>
+                  {/* Completed Services Stat */}
+                  <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                    <p className="text-xs text-muted-foreground mb-1">Completed Services</p>
+                    <p className="text-2xl font-bold text-foreground">{worker.createdServicesCount}</p>
                   </div>
 
                   {/* Additional Info */}

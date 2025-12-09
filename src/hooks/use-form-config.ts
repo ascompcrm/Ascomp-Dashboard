@@ -1,0 +1,72 @@
+import { useState, useEffect } from "react"
+
+export type FieldType = "text" | "number" | "date" | "textarea" | "select" | "checkbox"
+
+export type FieldConfig = {
+  key: string
+  label: string
+  type: FieldType
+  required?: boolean
+  placeholder?: string
+  options?: string[]
+  section?: string
+  defaultValue?: string
+}
+
+const DEFAULT_CONFIG: FieldConfig[] = [
+  { key: "cinemaName", label: "Cinema Name", type: "text", required: true, section: "Cinema Details" },
+  { key: "date", label: "Date", type: "date", required: true, section: "Cinema Details" },
+  { key: "address", label: "Address", type: "textarea", required: true, section: "Cinema Details" },
+  { key: "contactDetails", label: "Contact Details", type: "text", section: "Cinema Details" },
+  { key: "screenNumber", label: "Screen No", type: "number", section: "Cinema Details" },
+  {
+    key: "serviceVisitType",
+    label: "Service Visit Type",
+    type: "select",
+    section: "Cinema Details",
+    options: ["1", "2", "3", "4", "5", "6", "special"],
+  },
+  { key: "projectorModel", label: "Projector Model", type: "text", required: true, section: "Projector Information" },
+  { key: "projectorSerialNumber", label: "Serial Number", type: "text", required: true, section: "Projector Information" },
+  { key: "projectorRunningHours", label: "Running Hours", type: "number", required: true, section: "Projector Information" },
+]
+
+export function useFormConfig() {
+  const [config, setConfig] = useState<FieldConfig[]>(DEFAULT_CONFIG)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        // Add cache-busting timestamp to ensure fresh data
+        const res = await fetch(`/api/admin/form-config?t=${Date.now()}`, { 
+          credentials: "include",
+          cache: "no-store",
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.config && Array.isArray(data.config) && data.config.length > 0) {
+            setConfig(data.config)
+          }
+        } else {
+          console.error("Failed to fetch form config:", res.status, res.statusText)
+        }
+      } catch (error) {
+        console.error("Failed to load form config:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadConfig()
+    
+    // Poll for changes every 10 seconds (in case user updates config)
+    // This ensures the form stays in sync with admin updates
+    const interval = setInterval(loadConfig, 10000)
+    
+    return () => {
+      clearInterval(interval)
+    }
+  }, [])
+
+  return { config, loading }
+}

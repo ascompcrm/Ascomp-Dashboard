@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { useFormConfig } from '@/hooks/use-form-config'
+import { DynamicFormField } from './dynamic-form-field'
 
 type IssueNotes = Record<string, string>
 type UploadedImage = { name: string; url: string; size?: number }
@@ -232,6 +234,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const [contentPlayers, setContentPlayers] = useState<string[]>([])
   const brokenImagesRef = useRef<UploadedImage[]>([])
   const referenceImagesRef = useRef<UploadedImage[]>([])
+  const { config: formConfig, loading: configLoading } = useFormConfig()
 
   const {
     register,
@@ -542,6 +545,153 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
   const recommendedParts = watch('recommendedParts') || []
 
+  // Helper function to render fields dynamically based on config
+  const renderFieldsBySection = (sectionTitle: string) => {
+    if (!formConfig || formConfig.length === 0) {
+      return null
+    }
+    
+    const sectionFields = formConfig.filter((f) => f.section === sectionTitle)
+    if (sectionFields.length === 0) {
+      return null
+    }
+
+    // Group fields into rows (2 columns on larger screens)
+    const rows: typeof sectionFields[] = []
+    let currentRow: typeof sectionFields = []
+    
+    sectionFields.forEach((field, idx) => {
+      currentRow.push(field)
+      // Create a new row every 2 fields, or if it's a textarea/select that should be full width
+      if (currentRow.length >= 2 || field.type === 'textarea' || idx === sectionFields.length - 1) {
+        rows.push([...currentRow])
+        currentRow = []
+      }
+    })
+
+    return (
+      <>
+        {rows.map((row, rowIdx) => (
+          <div key={rowIdx} className={row.length > 1 && row[0]?.type !== 'textarea' ? "grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3" : ""}>
+            {row.map((field) => {
+              if (!field) return null
+              
+              // Special handling for fields that need StatusSelectWithNote or other custom components
+              const isStatusField = OPTICAL_FIELDS.includes(field.key as any) || 
+                                   ELECTRONIC_FIELDS.includes(field.key as any) ||
+                                   MECHANICAL_FIELDS.includes(field.key as any) ||
+                                   ['serialNumberVerified', 'AirIntakeLadRad', 'coolantLevelColor', 
+                                    'securityLampHouseLock', 'lampLocMechanism', 'pumpConnectorHose',
+                                    'lightEngineWhite', 'lightEngineRed', 'lightEngineGreen', 
+                                    'lightEngineBlue', 'lightEngineBlack'].includes(field.key)
+              
+              if (isStatusField) {
+                // Keep existing StatusSelectWithNote for these fields
+                return null // Will be handled by existing code
+              }
+
+              // Special handling for dropdowns that load from external data
+              if (field.key === 'softwareVersion' && softwareVersions.length > 0) {
+                return (
+                  <FormField key={field.key} label={field.label} required={field.required}>
+                    <select
+                      {...register(field.key as keyof RecordWorkForm)}
+                      className="w-full border-2 border-black p-2 text-sm bg-white"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>Select software version</option>
+                      {softwareVersions.map((version) => (
+                        <option key={version} value={version}>{version}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                )
+              }
+
+              if (field.key === 'lampMakeModel' && lampModels.length > 0) {
+                return (
+                  <FormField key={field.key} label={field.label} required={field.required}>
+                    <select
+                      {...register(field.key as keyof RecordWorkForm)}
+                      className="w-full border-2 border-black p-2 text-sm bg-white"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>Select lamp model</option>
+                      {lampModels.map((model) => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                )
+              }
+
+              if (field.key === 'contentPlayerModel' && contentPlayers.length > 0) {
+                return (
+                  <FormField key={field.key} label={field.label} required={field.required}>
+                    <select
+                      {...register(field.key as keyof RecordWorkForm)}
+                      className="w-full border-2 border-black p-2 text-sm bg-white"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>Select content player</option>
+                      {contentPlayers.map((player) => (
+                        <option key={player} value={player}>{player}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                )
+              }
+
+              // Special validation for running hours
+              if (field.key === 'projectorRunningHours') {
+                const runningHours = watch('projectorRunningHours')
+                return (
+                  <FormField key={field.key} label={field.label} required={field.required}>
+                    <DynamicFormField
+                      field={field}
+                      register={register}
+                      className="border-2 border-black text-black text-sm"
+                    />
+                    {isOutOfRange(runningHours, 1000, 120000) && (
+                      <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 120,000.</p>
+                    )}
+                  </FormField>
+                )
+              }
+
+              if (field.key === 'lampTotalRunningHours' || field.key === 'lampCurrentRunningHours') {
+                const hours = watch(field.key as keyof RecordWorkForm)
+                return (
+                  <FormField key={field.key} label={field.label} required={field.required}>
+                    <DynamicFormField
+                      field={field}
+                      register={register}
+                      className="border-2 border-black text-sm"
+                    />
+                    {isOutOfRange(hours, 1000, 100000) && (
+                      <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 100,000.</p>
+                    )}
+                  </FormField>
+                )
+              }
+
+              // Default rendering for other fields
+              return (
+                <FormField key={field.key} label={field.label} required={field.required}>
+                  <DynamicFormField
+                    field={field}
+                    register={register}
+                    className="border-2 border-black text-sm"
+                  />
+                </FormField>
+              )
+            })}
+          </div>
+        ))}
+      </>
+    )
+  }
+
   const StatusSelectWithNote = ({
     field,
     label,
@@ -702,6 +852,20 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     })
   }
 
+  // Force re-render when config changes
+  useEffect(() => {
+    // Config change triggers re-render via key prop on form div
+  }, [configLoading, formConfig])
+
+  // Don't render form until config is loaded (unless it's taking too long)
+  if (configLoading && formConfig.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <p className="text-gray-600">Loading form configuration...</p>
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <h2 className="text-lg sm:text-xl font-bold text-black mb-2">Record Work Details</h2>
@@ -718,99 +882,13 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         </Button>
       </div>
 
-      <div className="border-2 border-black p-3 sm:p-4 mb-4 space-y-6">
+      <div className="border-2 border-black p-3 sm:p-4 mb-4 space-y-6" key={`form-${formConfig.length}`}>
         <FormSection title="Cinema Details">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-            <FormField label="Cinema Name" required>
-              <Input
-                {...register('cinemaName')}
-                placeholder="Cinema name"
-                className="border-2 border-black text-black text-sm"
-              />
-            </FormField>
-            <FormField label="Date" required>
-              <Input
-                type="date"
-                {...register('date')}
-                className="border-2 border-black text-black text-sm"
-              />
-            </FormField>
-          </div>
-          <FormField label="Address" required>
-            <textarea
-              {...register('address')}
-              placeholder="Full address"
-              className="w-full border-2 border-black p-2 text-black text-sm"
-              rows={2}
-            />
-          </FormField>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-            <FormField label="Contact Details">
-              <Input {...register('contactDetails')} placeholder="Phone/Email" className="border-2 border-black text-sm" />
-            </FormField>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-            <FormField label="Screen No">
-              <Input
-                type="number"
-                step="any"
-                {...register('screenNumber')}
-                placeholder="Screen number"
-                className="border-2 border-black text-sm"
-              />
-            </FormField>
-            <FormField label="Service Visit Type">
-              <select
-                {...register('serviceVisitType')}
-                className="w-full border-2 border-black p-2 text-sm bg-white"
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Select service visit type
-                </option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="special">Special service</option>
-              </select>
-            </FormField>
-          </div>
+          {renderFieldsBySection("Cinema Details")}
         </FormSection>
 
         <FormSection title="Projector Information">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-            <FormField label="Projector Model" required>
-              <Input
-                {...register('projectorModel')}
-                placeholder="e.g., CP2220"
-                className="border-2 border-black text-black text-sm"
-              />
-            </FormField>
-            <FormField label="Serial Number" required>
-              <Input
-                {...register('projectorSerialNumber')}
-                placeholder="Serial number"
-                className="border-2 border-black text-black text-sm"
-              />
-            </FormField>
-          </div>
-            <FormField label="Running Hours" required>
-            <Input
-              type="number"
-              step="any"
-              {...register('projectorRunningHours')}
-                placeholder="1000 - 120000"
-                min={1000}
-                max={120000}
-              className="border-2 border-black text-black text-sm"
-            />
-              {isOutOfRange(projectorRunningHours, 1000, 120000) && (
-                <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 120,000.</p>
-              )}
-          </FormField>
+          {renderFieldsBySection("Projector Information")}
         </FormSection>
 
         <FormSection title="Opticals">
@@ -972,22 +1050,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         </FormSection>
 
         <FormSection title="Software & Screen Information">
-          <FormField label="Software Version">
-            <select
-              {...register('softwareVersion')}
-              className="w-full border-2 border-black p-2 text-sm bg-white"
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Select software version
-              </option>
-              {softwareVersions.map((version) => (
-                <option key={version} value={version}>
-                  {version}
-                </option>
-              ))}
-            </select>
-          </FormField>
+          {renderFieldsBySection("Software & Screen Information")}
           <div className="mb-3">
             <p className="text-xs font-semibold text-gray-700 mb-1">Scope Dimensions</p>
             <FormRow>
@@ -1010,155 +1073,22 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               </FormField>
             </FormRow>
           </div>
-          <FormRow>
-            <FormField label="Screen Gain">
-              <Input type="number" step="0.1" {...register('screenGain')} placeholder="Gain" className="border-2 border-black text-sm" />
-            </FormField>
-            <FormField label="Throw Distance (m)">
-              <Input type="number" step="0.1" {...register('throwDistance')} placeholder="Distance" className="border-2 border-black text-sm" />
-            </FormField>
-          </FormRow>
         </FormSection>
 
         <FormSection title="Lamp Information">
-          <FormField label="Lamp Make & Model">
-            <select
-              {...register('lampMakeModel')}
-              className="w-full border-2 border-black p-2 text-sm bg-white"
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Select lamp model
-              </option>
-              {lampModels.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </select>
-          </FormField>
-          <FormRow>
-            <FormField label="Total Running Hours">
-              <Input
-                type="number"
-                step="any"
-                {...register('lampTotalRunningHours')}
-                placeholder="1000 - 100000"
-                min={1000}
-                max={100000}
-                className="border-2 border-black text-sm"
-              />
-              {isOutOfRange(lampTotalRunningHours, 1000, 100000) && (
-                <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 100,000.</p>
-              )}
-            </FormField>
-            <FormField label="Current Running Hours">
-              <Input
-                type="number"
-                step="any"
-                {...register('lampCurrentRunningHours')}
-                placeholder="1000 - 100000"
-                min={1000}
-                max={100000}
-                className="border-2 border-black text-sm"
-              />
-              {isOutOfRange(lampCurrentRunningHours, 1000, 100000) && (
-                <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 100,000.</p>
-              )}
-            </FormField>
-          </FormRow>
+          {renderFieldsBySection("Lamp Information")}
         </FormSection>
 
         <FormSection title="Voltage Parameters">
-          <FormRow>
-            <FormField label="P vs N">
-              <Input
-                type="number"
-                step="any"
-                {...register('pvVsN')}
-                placeholder="Voltage"
-                className="border-2 border-black text-sm"
-              />
-            </FormField>
-            <FormField label="P vs E">
-              <Input
-                type="number"
-                step="any"
-                {...register('pvVsE')}
-                placeholder="Voltage"
-                className="border-2 border-black text-sm"
-              />
-            </FormField>
-            <FormField label="N vs E">
-              <Input
-                type="number"
-                step="any"
-                {...register('nvVsE')}
-                placeholder="Voltage"
-                className="border-2 border-black text-sm"
-              />
-            </FormField>
-          </FormRow>
+          {renderFieldsBySection("Voltage Parameters")}
         </FormSection>
 
         <FormSection title="fL Measurements">
-          <FormRow>
-            <FormField label="Before">
-              <Input
-                type="number"
-                step="any"
-                {...register('flLeft')}
-                placeholder="Before fL"
-                className="border-2 border-black text-sm"
-              />
-            </FormField>
-            <FormField label="After">
-              <Input
-                type="number"
-                step="any"
-                {...register('flRight')}
-                placeholder="After fL"
-                className="border-2 border-black text_sm"
-              />
-            </FormField>
-          </FormRow>
+          {renderFieldsBySection("fL Measurements")}
         </FormSection>
 
         <FormSection title="Content Player & AC Status">
-          <FormField label="Content Player Model">
-            <select
-              {...register('contentPlayerModel')}
-              className="w-full border-2 border-black p-2 text-sm bg-white"
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Select content player
-              </option>
-              {contentPlayers.map((player) => (
-                <option key={player} value={player}>
-                  {player}
-                </option>
-              ))}
-            </select>
-          </FormField>
-          <FormRow>
-            <FormField label="AC Status">
-              <select {...register('acStatus')} className="w-full border-2 border-black p-2 text-sm">
-                <option value="">Select</option>
-                <option value="Working">Working</option>
-                <option value="Not Working">Not Working</option>
-                <option value="Not Available">Not Available</option>
-              </select>
-            </FormField>
-            <FormField label="LE Status">
-              <select {...register('leStatus')} className="w-full border-2 border-black p-2 text-sm">
-                <option value="">Select</option>
-                <option value="Removed">Removed</option>
-                <option value="Not removed – Good fL">Not removed – Good fL</option>
-                <option value="Not removed – De-bonded">Not removed – De-bonded</option>
-              </select>
-            </FormField>
-          </FormRow>
+          {renderFieldsBySection("Content Player & AC Status")}
         </FormSection>
 
         <FormSection title="Color Accuracy - MCGD">
@@ -1341,27 +1271,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         </FormSection>
 
         <FormSection title="Air Pollution Data">
-          <FormRow>
-            {['hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10'].map((field) => (
-              <FormField key={field} label={field.toUpperCase()}>
-                <Input
-                  type="number"
-                  step="any"
-                  {...register(field as keyof RecordWorkForm)}
-                  className="border-2 border-black text-sm"
-                />
-              </FormField>
-            ))}
-            <FormField label="Temperature (°C)">
-              <Input type="number" step="0.1" {...register('temperature')} className="border-2 border-black text-sm" />
-            </FormField>
-            <FormField label="Humidity (%)">
-              <Input type="number" step="0.1" {...register('humidity')} className="border-2 border-black text-sm" />
-            </FormField>
-            <FormField label="Air Pollution Level">
-              <Input {...register('airPollutionLevel')} placeholder="Level" className="border-2 border-black text-sm" />
-            </FormField>
-          </FormRow>
+          {renderFieldsBySection("Air Pollution Data")}
         </FormSection>
 
 
@@ -1481,21 +1391,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         </FormSection>
 
         <FormSection title="Remarks">
-          <FormField label="Remarks">
-            <textarea
-              {...register('remarks')}
-              placeholder="Additional remarks"
-              className="w-full border-2 border-black p-2 text-black text-sm"
-              rows={3}
-            />
-          </FormField>
-          <FormField label="Light Engine Serial Number">
-            <Input
-              {...register('lightEngineSerialNumber')}
-              placeholder="LE Serial No."
-              className="border-2 border-black text-black text-sm"
-            />
-          </FormField>
+          {renderFieldsBySection("Remarks")}
         </FormSection>
 
         <FormSection title="Service Images">

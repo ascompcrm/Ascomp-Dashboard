@@ -7,6 +7,17 @@ export async function GET() {
     // Fetch all field workers with their service statistics
     const fieldWorkers = await prisma.user.findMany({
       include: {
+        createdServices: {
+          select: {
+            id: true,
+            endTime: true,
+            reportGenerated: true,
+            date: true,
+          },
+          orderBy: {
+            date: "desc",
+          },
+        },
         assignedServices: {
           select: {
             id: true,
@@ -26,15 +37,21 @@ export async function GET() {
 
     // Format field workers with statistics
     const formattedWorkers = fieldWorkers.map((worker) => {
-      // All service records are completed, but filter by completion indicators
-      const completedCount = worker.assignedServices.filter(
+      // Get the length of createdServices for this user
+      const createdServicesCount = worker.createdServices.length
+      
+      // Calculate completed count from createdServices (not assignedServices)
+      const completedCount = worker.createdServices.filter(
         (s) => s.endTime !== null || s.reportGenerated === true,
       ).length
-      // Pending are those without endTime and reportGenerated
+      
+      // Pending are those without endTime and reportGenerated (from assignedServices)
       const pendingCount = worker.assignedServices.filter(
         (s) => s.endTime === null && s.reportGenerated === false,
       ).length
-      const lastService = worker.assignedServices[0]
+      
+      // Get last service from createdServices for lastActiveDate
+      const lastService = worker.createdServices[0]
 
       return {
         id: worker.id,
@@ -45,6 +62,7 @@ export async function GET() {
         sitesCompleted: completedCount,
         pendingTasks: pendingCount,
         totalTasks: worker.assignedServices.length,
+        createdServicesCount: createdServicesCount,
       }
     })
 

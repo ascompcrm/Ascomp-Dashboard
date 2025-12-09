@@ -1,3 +1,6 @@
 — icon change for as comp
 — fix fields
 — fix submission first save in db or draft if values not submitted to db. Then generate pdf
+
+
+fix download report function in admin table
