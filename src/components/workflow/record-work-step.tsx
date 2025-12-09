@@ -509,10 +509,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     (part) => part.projector_model.toLowerCase() === projectorModel?.toLowerCase()
   )
 
-  const projectorRunningHours = watch('projectorRunningHours')
-  const lampTotalRunningHours = watch('lampTotalRunningHours')
-  const lampCurrentRunningHours = watch('lampCurrentRunningHours')
-
   const isOutOfRange = (value: unknown, min: number, max: number) => {
     if (value === undefined || value === null || value === '') return false
     const num = Number(value)

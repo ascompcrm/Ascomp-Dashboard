@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import SearchBar from "../search-bar"
-import FilterTabs from "../filter-tabs"
 import AddFieldWorkerModal from "./modals/add-field-worker-modal"
 
 interface FieldWorker {
@@ -27,7 +26,6 @@ export default function FieldWorkersView() {
   const [loading, setLoading] = useState(true)
   const [showAddWorker, setShowAddWorker] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [workerFilter, setWorkerFilter] = useState("all")
 
   const fetchWorkers = async () => {
     try {
@@ -56,15 +54,9 @@ export default function FieldWorkersView() {
         worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         worker.email.toLowerCase().includes(searchQuery.toLowerCase())
 
-      if (!matchesSearch) return false
-
-      if (workerFilter === "all") return true
-      if (workerFilter === "active") return worker.pendingTasks > 0
-      if (workerFilter === "idle") return worker.pendingTasks === 0
-
-      return true
+      return matchesSearch
     })
-  }, [workers, searchQuery, workerFilter])
+  }, [workers, searchQuery])
 
   return (
     <div className="space-y-6 p-6">

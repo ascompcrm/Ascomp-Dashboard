@@ -145,7 +145,6 @@ const getInitialFieldConfigs = (): FieldConfig[] => {
 
 export default function FormBuilderPage() {
   const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>(getInitialFieldConfigs())
-  const [editingField, setEditingField] = useState<string | null>(null)
   const [newOption, setNewOption] = useState<Record<string, string>>({})
 
   useEffect(() => {
