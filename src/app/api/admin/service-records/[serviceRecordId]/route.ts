@@ -211,4 +211,239 @@ export async function GET(
   }
 }
 
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ serviceRecordId: string }> }
+) {
+  try {
+    const session = await auth.api.getSession({ headers: request.headers })
+
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { serviceRecordId } = await context.params
+    const body = await request.json()
+    const { workDetails, signatures, images, brokenImages } = body
+
+    // Verify the service record exists
+    const serviceRecord = await prisma.serviceRecord.findUnique({
+      where: { id: serviceRecordId },
+    })
+
+    if (!serviceRecord) {
+      return NextResponse.json({ error: "Service record not found" }, { status: 404 })
+    }
+
+    // Helper to convert value to proper type (same as in complete route)
+    const convertValue = (key: string, value: any): any => {
+      if (value === undefined || value === null || value === "") {
+        return undefined
+      }
+
+      const floatFields = [
+        'screenHeight', 'screenWidth', 'flatHeight', 'flatWidth', 'screenGain', 'throwDistance',
+        'flLeft', 'flRight',
+        'white2Kx', 'white2Ky', 'white2Kfl', 'white4Kx', 'white4Ky', 'white4Kfl',
+        'red2Kx', 'red2Ky', 'red2Kfl', 'red4Kx', 'red4Ky', 'red4Kfl',
+        'green2Kx', 'green2Ky', 'green2Kfl', 'green4Kx', 'green4Ky', 'green4Kfl',
+        'blue2Kx', 'blue2Ky', 'blue2Kfl', 'blue4Kx', 'blue4Ky', 'blue4Kfl',
+        'hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10',
+        'temperature', 'humidity'
+      ]
+      if (floatFields.includes(key)) {
+        if (value === null || value === '' || value === undefined) return undefined
+        const num = parseFloat(value)
+        return isNaN(num) || !isFinite(num) ? undefined : num
+      }
+
+      const intFields = [
+        'projectorRunningHours', 'lampTotalRunningHours', 'lampCurrentRunningHours'
+      ]
+      if (intFields.includes(key)) {
+        if (value === null || value === '' || value === undefined) return undefined
+        const num = parseInt(value, 10)
+        return isNaN(num) || !isFinite(num) ? undefined : num
+      }
+
+      const boolFields = [
+        'reportGenerated', 'replacementRequired', 'focusBoresight',
+        'integratorPosition', 'spotsOnScreen', 'screenCroppingOk',
+        'convergenceOk', 'channelsCheckedOk'
+      ]
+      if (boolFields.includes(key)) {
+        if (typeof value === 'boolean') return value
+        if (typeof value === 'string') {
+          const lower = value.toLowerCase()
+          return lower === 'true' || lower === 'yes' || lower === '1'
+        }
+        return Boolean(value)
+      }
+
+      if (key === 'date' && value) {
+        const date = new Date(value)
+        return isNaN(date.getTime()) ? undefined : date
+      }
+
+      if ((key === 'startTime' || key === 'endTime') && value) {
+        const date = new Date(value)
+        return isNaN(date.getTime()) ? undefined : date
+      }
+
+      const strValue = String(value)
+      return strValue.trim() === '' ? null : strValue
+    }
+
+    const validSchemaFields = new Set([
+      'reportGenerated', 'endTime', 'startTime',
+      'cinemaName', 'address', 'contactDetails', 'location', 'screenNumber',
+      'projectorRunningHours', 'replacementRequired',
+      'reflector', 'uvFilter', 'integratorRod', 'coldMirror', 'foldMirror',
+      'touchPanel', 'evbBoard', 'ImcbBoard', 'pibBoard', 'IcpBoard', 'imbSBoard',
+      'serialNumberVerified', 'AirIntakeLadRad', 'coolantLevelColor',
+      'lightEngineWhite', 'lightEngineRed', 'lightEngineGreen', 'lightEngineBlue', 'lightEngineBlack',
+      'acBlowerVane', 'extractorVane', 'exhaustCfm', 'lightEngineFans', 'cardCageFans',
+      'radiatorFanPump', 'pumpConnectorHose', 'securityLampHouseLock', 'lampLocMechanism',
+      'projectorPlacementEnvironment', 'softwareVersion',
+      'screenHeight', 'screenWidth', 'flatHeight', 'flatWidth', 'screenGain', 'screenMake', 'throwDistance',
+      'lampMakeModel', 'lampTotalRunningHours', 'lampCurrentRunningHours',
+      'pvVsN', 'pvVsE', 'nvVsE', 'flLeft', 'flRight',
+      'contentPlayerModel', 'acStatus', 'leStatus',
+      'white2Kx', 'white2Ky', 'white2Kfl', 'white4Kx', 'white4Ky', 'white4Kfl',
+      'red2Kx', 'red2Ky', 'red2Kfl', 'red4Kx', 'red4Ky', 'red4Kfl',
+      'green2Kx', 'green2Ky', 'green2Kfl', 'green4Kx', 'green4Ky', 'green4Kfl',
+      'blue2Kx', 'blue2Ky', 'blue2Kfl', 'blue4Kx', 'blue4Ky', 'blue4Kfl',
+      'BW_Step_10_2Kx', 'BW_Step_10_2Ky', 'BW_Step_10_2Kfl',
+      'BW_Step_10_4Kx', 'BW_Step_10_4Ky', 'BW_Step_10_4Kfl',
+      'focusBoresight', 'integratorPosition', 'spotsOnScreen', 'screenCroppingOk', 'airPollutionLevel',
+      'convergenceOk', 'channelsCheckedOk', 'pixelDefects', 'imageVibration', 'liteloc',
+      'hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10', 'temperature', 'humidity',
+      'remarks', 'lightEngineSerialNumber', 'signatures', 'recommendedParts',
+      'images', 'brokenImages', 'reportUrl', 'photosDriveLink',
+      'reflectorNote', 'uvFilterNote', 'integratorRodNote', 'coldMirrorNote', 'foldMirrorNote',
+      'touchPanelNote', 'evbBoardNote', 'ImcbBoardNote', 'pibBoardNote', 'IcpBoardNote', 'imbSBoardNote',
+      'serialNumberVerifiedNote', 'AirIntakeLadRadNote', 'coolantLevelColorNote',
+      'lightEngineWhiteNote', 'lightEngineRedNote', 'lightEngineGreenNote', 'lightEngineBlueNote', 'lightEngineBlackNote',
+      'acBlowerVaneNote', 'extractorVaneNote', 'exhaustCfmNote',
+      'lightEngineFansNote', 'cardCageFansNote', 'radiatorFanPumpNote', 'pumpConnectorHoseNote', 'lampLocMechanismNote',
+      'securityLampHouseLockNote'
+    ])
+
+    const readonlyFields = new Set([
+      'id', 'createdAt', 'updatedAt', 'userId', 'projectorId', 'siteId', 'serviceNumber', 'assignedToId', 'date'
+    ])
+
+    const updateData: any = {}
+
+    // Handle recommendedParts as JSON
+    if (workDetails?.recommendedParts) {
+      const recommendedParts = workDetails.recommendedParts
+      if (Array.isArray(recommendedParts) && recommendedParts.length > 0) {
+        updateData.recommendedParts = recommendedParts
+      } else if (!Array.isArray(recommendedParts) && recommendedParts && typeof recommendedParts === 'object') {
+        updateData.recommendedParts = recommendedParts
+      }
+    }
+
+    // Add work details with proper type conversion
+    if (workDetails) {
+      Object.keys(workDetails).forEach((key) => {
+        if (readonlyFields.has(key) || !validSchemaFields.has(key)) return
+        if (key === 'recommendedParts') return
+
+        const converted = convertValue(key, workDetails[key])
+        if (converted !== undefined) {
+          updateData[key] = converted
+        }
+      })
+    }
+
+    // Add signatures
+    if (signatures) {
+      const engineerSig = signatures.engineer || signatures.engineerSignatureUrl || null
+      const siteSig = signatures.site || signatures.siteSignatureUrl || null
+      if (engineerSig || siteSig) {
+        updateData.signatures = {
+          engineer: engineerSig,
+          site: siteSig,
+        }
+      }
+    }
+
+    // Add images
+    if (images !== undefined) {
+      if (Array.isArray(images) && images.length > 0) {
+        updateData.images = images.map((img: any) => {
+          if (typeof img === 'string') return img
+          if (img && typeof img === 'object') return img.url || img
+          return null
+        }).filter((url): url is string => Boolean(url) && typeof url === 'string')
+      } else {
+        updateData.images = []
+      }
+    }
+
+    if (brokenImages !== undefined) {
+      if (Array.isArray(brokenImages) && brokenImages.length > 0) {
+        updateData.brokenImages = brokenImages.map((img: any) => {
+          if (typeof img === 'string') return img
+          if (img && typeof img === 'object') return img.url || img
+          return null
+        }).filter((url): url is string => Boolean(url) && typeof url === 'string')
+      } else {
+        updateData.brokenImages = []
+      }
+    }
+
+    // Clean up undefined values
+    const cleanedData: any = {}
+    Object.keys(updateData).forEach((key) => {
+      if (updateData[key] !== undefined && validSchemaFields.has(key)) {
+        const value = updateData[key]
+
+        if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) {
+          return
+        }
+
+        const boolFields = [
+          'reportGenerated', 'replacementRequired', 'focusBoresight',
+          'integratorPosition', 'spotsOnScreen', 'screenCroppingOk',
+          'convergenceOk', 'channelsCheckedOk'
+        ]
+        if (boolFields.includes(key)) {
+          if (typeof value === 'string') {
+            const lower = value.toLowerCase()
+            cleanedData[key] = lower === 'true' || lower === 'yes' || lower === '1'
+          } else {
+            cleanedData[key] = Boolean(value)
+          }
+          return
+        }
+
+        if (value === '' && key !== 'images' && key !== 'brokenImages') {
+          cleanedData[key] = null
+        } else {
+          cleanedData[key] = value
+        }
+      }
+    })
+
+    // Update the service record
+    const updatedRecord = await prisma.serviceRecord.update({
+      where: { id: serviceRecordId },
+      data: cleanedData,
+    })
+
+    return NextResponse.json({
+      success: true,
+      serviceRecord: {
+        id: updatedRecord.id,
+      },
+    })
+  } catch (error) {
+    console.error("Error updating service record:", error)
+    return NextResponse.json({ error: "Failed to update service record" }, { status: 500 })
+  }
+}
+
 
