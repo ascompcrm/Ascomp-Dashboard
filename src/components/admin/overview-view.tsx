@@ -1473,7 +1473,12 @@ function PreviewDownloadDialog({
   )
 }
 
-export default function OverviewView() {
+type OverviewViewProps = {
+  hideHeader?: boolean
+  limit?: number
+}
+
+export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
   const [records, setRecords] = useState<ServiceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1483,7 +1488,7 @@ export default function OverviewView() {
   const [columnKeys, setColumnKeys] = useState<string[]>([])
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({})
   const [page, setPage] = useState(1)
-  const pageSize = 20
+  const pageSize = limit ?? 20
   const [columnMenuOpen, setColumnMenuOpen] = useState(false)
   const [columnSearch, setColumnSearch] = useState("")
   const [imagePreviewOpen, setImagePreviewOpen] = useState(false)
@@ -1656,8 +1661,8 @@ export default function OverviewView() {
     setPage(1)
   }, [search, workerFilter, startDate])
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const pageData = filtered.slice((page - 1) * pageSize, page * pageSize)
+  const totalPages = limit ? 1 : Math.max(1, Math.ceil(filtered.length / pageSize))
+  const pageData = limit ? filtered.slice(0, limit) : filtered.slice((page - 1) * pageSize, page * pageSize)
 
   const toggleColumn = (key: string) => {
     setVisibleColumns((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -1842,11 +1847,12 @@ export default function OverviewView() {
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="rounded-none border-none">
-        <CardHeader className="flex flex-col gap-3">
-          <CardTitle className="text-lg font-semibold text-black">Service Records</CardTitle>
-          <div className="flex flex-col w-full gap-3 border-b-2 pb-4">
+    <div className="space-y-4 ">
+      <Card className={`rounded-none  border-none ${hideHeader && "p-0"}`}>
+        {!hideHeader && (
+          <CardHeader className="flex flex-col gap-3">
+            <CardTitle className="text-lg font-semibold text-black">Service Records</CardTitle>
+            <div className="flex flex-col w-full gap-3 border-b-2 pb-4">
             <div className="flex flex-wrap gap-3">
               <Input
                 placeholder="Search site, projector, model, worker..."
@@ -1944,9 +1950,10 @@ export default function OverviewView() {
               </Button>
             </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
+            </div>
+          </CardHeader>
+        )}
+        <CardContent className={`overflow-x-auto ${hideHeader && "px-0"}`}>
           {loading ? (
             <div className="py-12 text-center text-sm text-gray-600">Loading records...</div>
           ) : error ? (
@@ -1978,7 +1985,7 @@ export default function OverviewView() {
             </table>
           )}
         </CardContent>
-        {!loading && filtered.length > 0 && (
+        {!loading && filtered.length > 0 && !limit && (
           <div className="flex items-center justify-between px-6 pb-4 text-sm text-black">
             <span>
               Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}

@@ -23,9 +23,9 @@ export function NavMain({ items }: { items: NavMainItem[] }) {
   const pathname = usePathname()
 
   const isActive = (url: string) => {
-    if (url === "/admin/dashboard/overview") {
-      return pathname === url
-    }
+    // if (url === "/admin/dashboard/overview") {
+    //   return pathname === url
+    // }
     return pathname.startsWith(url)
   }
 

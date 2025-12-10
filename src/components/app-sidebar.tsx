@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Command, Home, Projector, User, FileEdit } from "lucide-react"
+import { Command, Home, Projector, User, FileEdit, Table, Database } from "lucide-react"
 import type { Route } from "next"
 
 import { NavMain, type NavMainItem } from "@/components/nav-main"
@@ -17,9 +17,14 @@ import {
 
 const navMainData: NavMainItem[] = [
   {
-    title: "Overview",
+    title: "Home",
+    url: "/admin/dashboard" as Route,
+    icon: Home
+  },
+  {
+    title: "Database",
     url: "/admin/dashboard/overview" as Route,
-    icon: Home,
+    icon: Database,
   },
   {
     title: "Sites & Projectors",
