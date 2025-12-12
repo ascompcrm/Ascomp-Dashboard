@@ -7,3 +7,31 @@ fix download report function in admin table
 
 
 show bar chart, area chart, pie chart, tool tip charts. see whatever you can do
+
+// complete it tonight
+User Side
+
+- pre fill screen number in form -- Done
+- in form also show text in service type
+- LE Status Note
+- screen height, screen width - duplicate  
+- Flat Height (m), Flat Width - duplicate
+- lamp make and model ( list based on projector )
+- Current Running Hours lamp ( 0 - 3000 )
+- P vs N & P vs E ( 180 - 240 ) vs N vs E ( 0 - 7 )
+- Yes -> Concern (Light Engine Test Pattern)
+- ac blower vane  and other option ( select others add text in remarks )
+- image evaluation remarks notes, yes -> concern
+- image evaluation heading text + ok ( remove ok ) -- Done
+- Security & Lamp Lock ( needs attention remove )
+- ac blower vane  and other option ( select others add text in remarks )
+- range option required
+
+/service
+- Coolant box seperate in /services
+
+
+PDF
+- engineer name - service visit in text ( first, second, third )
+- part name not showing in recommended part
+- replacement required on top of yes/no - ok

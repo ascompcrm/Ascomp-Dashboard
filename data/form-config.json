@@ -29,7 +29,7 @@
   {
     "key": "screenNumber",
     "label": "Screen No",
-    "type": "number",
+    "type": "text",
     "section": "Cinema Details"
   },
   {

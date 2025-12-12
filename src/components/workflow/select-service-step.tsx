@@ -101,6 +101,7 @@ export default function SelectServiceStep({ onNext }: any) {
 
   const handleProceed = () => {
     const service = services.find((s) => s.id === selected)
+    console.log("service", service);
     if (service) {
       onNext({ selectedService: service })
     }

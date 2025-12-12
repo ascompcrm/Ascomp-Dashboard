@@ -39,12 +39,12 @@ const COLOR_ACCURACY = [
   { name: 'Blue', fields: ['blue2Kx', 'blue2Ky', 'blue2Kfl', 'blue4Kx', 'blue4Ky', 'blue4Kfl'] },
 ] as const
 const IMAGE_EVAL_FIELDS = [
-  { field: 'focusBoresight', label: 'Focus/Boresight OK' },
-  { field: 'integratorPosition', label: 'Integrator Position OK' },
-  { field: 'spotsOnScreen', label: 'Spots on Screen OK' },
-  { field: 'screenCroppingOk', label: 'Screen Cropping OK' },
-  { field: 'convergenceOk', label: 'Convergence OK' },
-  { field: 'channelsCheckedOk', label: 'Channels Checked OK' },
+  { field: 'focusBoresight', label: 'Focus/Boresight' },
+  { field: 'integratorPosition', label: 'Integrator Position' },
+  { field: 'spotsOnScreen', label: 'Spots on Screen' },
+  { field: 'screenCroppingOk', label: 'Screen Cropping' },
+  { field: 'convergenceOk', label: 'Convergence' },
+  { field: 'channelsCheckedOk', label: 'Channels Checked' },
 ] as const
 
 const createInitialFormData = () => ({
@@ -258,14 +258,15 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     if (data?.workDetails) {
       reset({
         ...initial,
-        cinemaName: data.selectedService?.site || initial.cinemaName,
-        date: safeDate(data.selectedService?.date, initial.date),
-        address: data.selectedService?.address || initial.address,
-        contactDetails: data.selectedService?.contactDetails || initial.contactDetails,
-        projectorModel: data.selectedService?.projectorModel || initial.projectorModel,
-        projectorSerialNumber: data.selectedService?.projector || initial.projectorSerialNumber,
-        screenNumber: data.selectedService?.screenNumber || initial.screenNumber,
         ...data.workDetails,
+        // Override with selectedService values to ensure they take precedence
+        cinemaName: data.selectedService?.site || data.workDetails.cinemaName || initial.cinemaName,
+        date: safeDate(data.selectedService?.date, data.workDetails.date || initial.date),
+        address: data.selectedService?.address || data.workDetails.address || initial.address,
+        contactDetails: data.selectedService?.contactDetails || data.workDetails.contactDetails || initial.contactDetails,
+        projectorModel: data.selectedService?.projectorModel || data.workDetails.projectorModel || initial.projectorModel,
+        projectorSerialNumber: data.selectedService?.projector || data.workDetails.projectorSerialNumber || initial.projectorSerialNumber,
+        screenNumber: data.selectedService?.screenNumber || data.workDetails.screenNumber || initial.screenNumber,
         issueNotes: data.workDetails.issueNotes || {},
         recommendedParts: data.workDetails.recommendedParts || [],
       })
@@ -276,14 +277,15 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         const parsed = JSON.parse(savedFormData)
         reset({
           ...initial,
-          cinemaName: data.selectedService?.site || initial.cinemaName,
-          date: safeDate(data.selectedService?.date, initial.date),
-          address: data.selectedService?.address || initial.address,
-          contactDetails: data.selectedService?.contactDetails || initial.contactDetails,
-          projectorModel: data.selectedService?.projectorModel || initial.projectorModel,
-          projectorSerialNumber: data.selectedService?.projector || initial.projectorSerialNumber,
-          screenNumber: data.selectedService?.screenNumber || initial.screenNumber,
           ...parsed,
+          // Override with selectedService values to ensure they take precedence
+          cinemaName: data.selectedService?.site || parsed.cinemaName || initial.cinemaName,
+          date: safeDate(data.selectedService?.date, parsed.date || initial.date),
+          address: data.selectedService?.address || parsed.address || initial.address,
+          contactDetails: data.selectedService?.contactDetails || parsed.contactDetails || initial.contactDetails,
+          projectorModel: data.selectedService?.projectorModel || parsed.projectorModel || initial.projectorModel,
+          projectorSerialNumber: data.selectedService?.projector || parsed.projectorSerialNumber || initial.projectorSerialNumber,
+          screenNumber: data.selectedService?.screenNumber || parsed.screenNumber || initial.screenNumber,
           issueNotes: parsed.issueNotes || {},
           recommendedParts: parsed.recommendedParts || [],
         })
