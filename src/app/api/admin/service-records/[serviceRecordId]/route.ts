@@ -18,6 +18,11 @@ export async function GET(
     const service = await prisma.serviceRecord.findUnique({
       where: { id: serviceRecordId },
       include: {
+        assignedTo: {
+          select: {
+            name: true,
+          },
+        },
         site: {
           select: {
             id: true,
@@ -43,6 +48,7 @@ export async function GET(
     // Build the same shape as /api/user/services/completed for reuse on the frontend
     const formattedService = {
       id: service.id,
+      engineerName: service.assignedTo?.name,
       serviceNumber: service.serviceNumber,
       site: {
         id: service.site.id,

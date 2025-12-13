@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, Image as ImageIcon, Folder, ExternalLink, Download, Edit } from "lucide-react"
 import Image from "next/image"
-import { generateMaintenanceReport, type MaintenanceReportData } from "@/components/PDFGenerator"
+import { generateMaintenanceReport, convertServiceVisitToText, type MaintenanceReportData } from "@/components/PDFGenerator"
 
 type ServiceRecord = {
   id: string
@@ -1225,7 +1225,7 @@ function PreviewDownloadDialog({
         contactDetails: fullService.contactDetails || fullService.site?.contactDetails || "",
         location: fullService.location || "",
         screenNo: fullService.screenNumber || fullService.site?.screenNo || "",
-        serviceVisit: fullService.serviceNumber?.toString() || "",
+        serviceVisit: fullService.engineerName ? `${fullService.engineerName} - ${convertServiceVisitToText(fullService.serviceNumber)}` : fullService.serviceNumber?.toString() || "",
         projectorModel: fullService.projector?.model || "",
         serialNo: fullService.projector?.serialNo || "",
         runningHours: fullService.projectorRunningHours?.toString() || "",

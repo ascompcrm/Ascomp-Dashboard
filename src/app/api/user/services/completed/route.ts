@@ -24,6 +24,11 @@ export async function GET(request: NextRequest) {
         ],
       },
       include: {
+        assignedTo: {
+          select: {
+            name: true,
+          },
+        },
         site: {
           select: {
             id: true,
@@ -48,6 +53,7 @@ export async function GET(request: NextRequest) {
     // Format services for the frontend
     const formattedServices = services.map((service) => ({
       id: service.id,
+      engineerName: service.assignedTo?.name,
       serviceNumber: service.serviceNumber,
       site: {
         id: service.site.id,

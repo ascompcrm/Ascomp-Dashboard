@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
-import { generateMaintenanceReport, type MaintenanceReportData } from "@/components/PDFGenerator"
+import { generateMaintenanceReport, convertServiceVisitToText, type MaintenanceReportData } from "@/components/PDFGenerator"
 
 interface PdfPreviewDialogProps {
   open: boolean
@@ -33,7 +33,7 @@ export default function PdfPreviewDialog({ open, onOpenChange, serviceRecordId }
       contactDetails: service.contactDetails || service.site.contactDetails || "",
       location: service.location || "",
       screenNo: service.screenNumber || service.site.screenNo || "",
-      serviceVisit: service.serviceNumber.toString(),
+      serviceVisit: service.engineerName ? `${service.engineerName} - ${convertServiceVisitToText(service.serviceNumber)}` : service.serviceNumber.toString(),
       projectorModel: service.projector.model,
       serialNo: service.projector.serialNo,
       runningHours: service.projectorRunningHours?.toString() || "",

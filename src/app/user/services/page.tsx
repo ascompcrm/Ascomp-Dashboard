@@ -17,10 +17,11 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { ArrowLeft, Download, ChevronRight, Search, CalendarIcon } from "lucide-react"
 
-import { generateMaintenanceReport, type MaintenanceReportData } from "@/components/PDFGenerator"
+import { generateMaintenanceReport, convertServiceVisitToText, type MaintenanceReportData } from "@/components/PDFGenerator"
 
 interface Service {
   id: string
+  engineerName?: string
   serviceNumber: number
   site: {
     id: string
@@ -336,7 +337,7 @@ function ServiceDetailView({
         contactDetails: service.contactDetails || service.site.contactDetails || '',
         location: service.location || '',
         screenNo: service.screenNumber || service.site.screenNo || '',
-        serviceVisit: service.serviceNumber.toString(),
+        serviceVisit: service.engineerName ? `${service.engineerName} - ${convertServiceVisitToText(service.serviceNumber)}` : service.serviceNumber.toString(),
         projectorModel: service.projector.model,
         serialNo: service.projector.serialNo,
         runningHours: service.projectorRunningHours?.toString() || '',
@@ -473,7 +474,7 @@ function ServiceDetailView({
         siteSignatureUrl: service.signatures?.site || (service.signatures as any)?.siteSignatureUrl,
       }
 
-      console.log("reportData", reportData);
+      // console.log("reportData", reportData);
       
       const pdfBytes = await generateMaintenanceReport(reportData)
       const blob = new Blob([pdfBytes as any], { type: "application/pdf" })

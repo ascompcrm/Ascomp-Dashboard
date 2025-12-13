@@ -119,7 +119,7 @@ export interface MaintenanceReportData {
     humidity: string
   }
 
-  recommendedParts?: Array<{ partNumber: string; name?: string }>
+  recommendedParts?: Array<{ partNumber: string; description?: string }>
   issueNotes?: Array<{ label: string; note: string }>
   detectedIssues?: Array<{ label: string; value: string }>
   reportGenerated?: boolean
@@ -139,7 +139,7 @@ const normalizeYesNo = (value?: string) => {
 
 // Convert number to ordinal text (1 -> "First", 2 -> "Second", etc.)
 // If already text format, capitalize and return. If other text, keep as-is.
-const convertServiceVisitToText = (value: string | number | null | undefined): string => {
+export const convertServiceVisitToText = (value: string | number | null | undefined): string => {
   if (!value) return '';
   const str = String(value).trim();
   const lowerStr = str.toLowerCase();
@@ -172,11 +172,10 @@ const convertServiceVisitToText = (value: string | number | null | undefined): s
   }
   
   // If not a number and not a known ordinal, return as-is (capitalize first letter)
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
 export async function generateMaintenanceReport(data: MaintenanceReportData): Promise<Uint8Array> {
-  console.log(data);
   const pdfDoc = await PDFDocument.create();
   const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const timesRomanBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
@@ -415,7 +414,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   yPos -= 20;
 
   drawTableRow(page1, timesRomanBold, timesRoman, 40, yPos, width - 80,
-    ['Projector Model:', data.projectorModel, 'Serial No.:', data.serialNo, 'Running Hours:', data.runningHours], [80, 80, 80, 80, 80, 135], 20);
+    ['Projector Model:', data.projectorModel, 'Serial No.:', data.serialNo, 'Running Hours:', data.runningHours, 'Replacement Required'], [80, 80, 70, 70, 60, 90, 85], 20);
   yPos -= 20;
 
   drawTableRow(page1, timesRomanBold, timesRomanBold, 40, yPos, width - 80,
@@ -734,9 +733,8 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   rightY -= 20;
   if (data.recommendedParts && data.recommendedParts.length > 0) {
     data.recommendedParts.forEach((part) => {
-      console.log("part what is it", part);
       // Support both 'name' and 'description' fields (name takes priority)
-      const partName = (part as any).name || ''
+      const partName = (part as any).description || ''
       // Support both { partNumber } and { part_number } shapes
       const rawPartNumber = (part as any).partNumber ?? (part as any).part_number ?? ''
       const partNumber = String(rawPartNumber || '')

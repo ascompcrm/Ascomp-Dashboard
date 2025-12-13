@@ -328,7 +328,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
       contactDetails: service.contactDetails || service.site.contactDetails || '',
       location: service.location || '',
       screenNo: service.screenNumber || service.site.screenNo || '',
-      serviceVisit: service.serviceNumber.toString(),
+      serviceVisit: service.engineerName ? `${service.engineerName} - ${numberToOrdinal(service.serviceNumber)}` : service.serviceNumber.toString(),
       projectorModel: service.projector.model,
       serialNo: service.projector.serialNo,
       runningHours: service.projectorRunningHours?.toString() || '',

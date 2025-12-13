@@ -32,6 +32,6 @@ User Side
 
 
 PDF
-- engineer name - service visit in text ( first, second, third )
-- part name not showing in recommended part
-- replacement required on top of yes/no - ok
+- engineer name - service visit in text ( first, second, third ) -- Done
+- part name not showing in recommended part -- Done
+- replacement required on top of yes/no - ok -- Done
