@@ -11,6 +11,12 @@ export type FieldConfig = {
   options?: string[]
   section?: string
   defaultValue?: string
+  min?: number
+  max?: number
+  componentType?: "statusSelectWithNote" // Special component type
+  noteOptions?: string[] // Options for the note dropdown (when status is YES)
+  noteDefault?: string // Default value for note field
+  optionDescriptions?: Record<string, string> // Map option values to descriptions
 }
 
 const DEFAULT_CONFIG: FieldConfig[] = [

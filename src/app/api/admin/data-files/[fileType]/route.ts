@@ -51,8 +51,21 @@ export async function GET(
     const { fileType } = await params
     const data = await readDataFile(fileType)
     
+    // For lamp-models, return the structured data
+    if (fileType === "lamp-models") {
+      // Extract the Lamp_Model array from the structure
+      const lampModelData = Array.isArray(data) && data[0]?.Lamp_Model 
+        ? data[0].Lamp_Model 
+        : []
+      return NextResponse.json({ data: lampModelData }, {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      })
+    }
+    
     // For simple arrays, extract just the values
-    if (fileType === "content-player" || fileType === "lamp-models" || fileType === "software") {
+    if (fileType === "content-player" || fileType === "software") {
       const fileInfo = FILE_MAP[fileType]
       if (!fileInfo) {
         return NextResponse.json({ error: "Invalid file type" }, { status: 400 })
@@ -92,7 +105,22 @@ export async function POST(
     const { fileType } = await params
     const body = await request.json()
     
-    if (fileType === "content-player" || fileType === "lamp-models" || fileType === "software") {
+    // Handle lamp-models with structured data
+    if (fileType === "lamp-models") {
+      const { data } = body
+      
+      if (!Array.isArray(data)) {
+        return NextResponse.json({ error: "Data must be an array" }, { status: 400 })
+      }
+      
+      // Wrap in the expected structure: [{ Lamp_Model: [...] }]
+      const wrappedData = [{ Lamp_Model: data }]
+      await writeDataFile(fileType, wrappedData)
+      
+      return NextResponse.json({ success: true, saved: data.length })
+    }
+    
+    if (fileType === "content-player" || fileType === "software") {
       const fileInfo = FILE_MAP[fileType]
       const { values } = body
       

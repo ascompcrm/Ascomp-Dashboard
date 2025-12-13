@@ -29,22 +29,12 @@ type RecommendedPart = {
 }
 type RecordWorkForm = ReturnType<typeof createInitialFormData>
 
-const OPTICAL_FIELDS = ['reflector', 'uvFilter', 'integratorRod', 'coldMirror', 'foldMirror'] as const
-const ELECTRONIC_FIELDS = ['touchPanel', 'evbBoard', 'ImcbBoard', 'pibBoard', 'IcpBoard', 'imbSBoard'] as const
-const MECHANICAL_FIELDS = ['acBlowerVane', 'extractorVane', 'lightEngineFans', 'cardCageFans', 'radiatorFanPump'] as const
+// Color Accuracy structure - kept for complex nested rendering
 const COLOR_ACCURACY = [
   { name: 'White', fields: ['white2Kx', 'white2Ky', 'white2Kfl', 'white4Kx', 'white4Ky', 'white4Kfl'] },
   { name: 'Red', fields: ['red2Kx', 'red2Ky', 'red2Kfl', 'red4Kx', 'red4Ky', 'red4Kfl'] },
   { name: 'Green', fields: ['green2Kx', 'green2Ky', 'green2Kfl', 'green4Kx', 'green4Ky', 'green4Kfl'] },
   { name: 'Blue', fields: ['blue2Kx', 'blue2Ky', 'blue2Kfl', 'blue4Kx', 'blue4Ky', 'blue4Kfl'] },
-] as const
-const IMAGE_EVAL_FIELDS = [
-  { field: 'focusBoresight', label: 'Focus/Boresight' },
-  { field: 'integratorPosition', label: 'Integrator Position' },
-  { field: 'spotsOnScreen', label: 'Spots on Screen' },
-  { field: 'screenCroppingOk', label: 'Screen Cropping' },
-  { field: 'convergenceOk', label: 'Convergence' },
-  { field: 'channelsCheckedOk', label: 'Channels Checked' },
 ] as const
 
 const createInitialFormData = () => ({
@@ -229,6 +219,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const [partsData, setPartsData] = useState<ProjectorPart[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedPartIds, setSelectedPartIds] = useState<Set<string>>(new Set())
+  const [lampModelsData, setLampModelsData] = useState<Array<{ projector_model: string; Models: string[] }>>([])
   const [lampModels, setLampModels] = useState<string[]>([])
   const [softwareVersions, setSoftwareVersions] = useState<string[]>([])
   const [contentPlayers, setContentPlayers] = useState<string[]>([])
@@ -356,23 +347,47 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     loadPartsData()
   }, [])
 
-  // Load lamp models for dropdown
+  // Load lamp models data structure
   useEffect(() => {
-    const loadLampModels = async () => {
+    const loadLampModelsData = async () => {
       try {
         const response = await fetch('/data/Lamp_Models.json')
         if (!response.ok) return
-        const text = await response.text()
-        const matches = [...text.matchAll(/"Lamp Model"\s*:\s*"([^"]+)"/g)].map((m) => m[1])
-        const cleaned = matches.filter((m): m is string => typeof m === 'string' && m.toUpperCase() !== 'NA')
-        const unique = Array.from(new Set(cleaned))
-        setLampModels(unique)
+        const data = await response.json()
+        // Extract the Lamp_Model array from the JSON structure
+        if (Array.isArray(data) && data[0]?.Lamp_Model) {
+          setLampModelsData(data[0].Lamp_Model)
+        }
       } catch (error) {
-        console.error('Failed to load lamp models:', error)
+        console.error('Failed to load lamp models data:', error)
       }
     }
-    loadLampModels()
+    loadLampModelsData()
   }, [])
+
+  // Filter lamp models based on selected projector model
+  useEffect(() => {
+    const projectorModel = watch('projectorModel')
+    if (!projectorModel || lampModelsData.length === 0) {
+      setLampModels([])
+      return
+    }
+
+    // Find matching projector model (case-insensitive)
+    const matchingProjector = lampModelsData.find(
+      (item) => item.projector_model?.toLowerCase() === projectorModel.toLowerCase()
+    )
+
+    if (matchingProjector && Array.isArray(matchingProjector.Models)) {
+      // Filter out invalid values and get unique models
+      const cleaned = matchingProjector.Models.filter(
+        (model): model is string => typeof model === 'string' && model.trim().length > 0 && model.toUpperCase() !== 'NA'
+      )
+      setLampModels(cleaned)
+    } else {
+      setLampModels([])
+    }
+  }, [watch('projectorModel'), lampModelsData])
 
   // Load software versions for dropdown
   useEffect(() => {
@@ -549,7 +564,19 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
       return null
     }
     
-    const sectionFields = formConfig.filter((f) => f.section === sectionTitle)
+    // Filter section fields and exclude duplicate dimension fields for "Software & Screen Information"
+    // These are handled separately with "Scope Dimensions" and "Flat Dimensions" headings
+    const excludedFields = ['screenHeight', 'screenWidth', 'flatHeight', 'flatWidth']
+    const sectionFields = formConfig.filter((f) => {
+      if (f.section === sectionTitle) {
+        // Exclude dimension fields from "Software & Screen Information" section
+        if (sectionTitle === 'Software & Screen Information' && excludedFields.includes(f.key)) {
+          return false
+        }
+        return true
+      }
+      return false
+    })
     if (sectionFields.length === 0) {
       return null
     }
@@ -574,18 +601,27 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
             {row.map((field) => {
               if (!field) return null
               
-              // Special handling for fields that need StatusSelectWithNote or other custom components
-              const isStatusField = OPTICAL_FIELDS.includes(field.key as any) || 
-                                   ELECTRONIC_FIELDS.includes(field.key as any) ||
-                                   MECHANICAL_FIELDS.includes(field.key as any) ||
-                                   ['serialNumberVerified', 'AirIntakeLadRad', 'coolantLevelColor', 
-                                    'securityLampHouseLock', 'lampLocMechanism', 'pumpConnectorHose',
-                                    'lightEngineWhite', 'lightEngineRed', 'lightEngineGreen', 
-                                    'lightEngineBlue', 'lightEngineBlack'].includes(field.key)
-              
-              if (isStatusField) {
-                // Keep existing StatusSelectWithNote for these fields
-                return null // Will be handled by existing code
+              // Handle StatusSelectWithNote component type
+              if (field.componentType === "statusSelectWithNote") {
+                const selectOptions = field.options?.map(opt => ({
+                  value: opt,
+                  label: opt,
+                  description: field.optionDescriptions?.[opt] || ""
+                })) || [
+                  { value: 'OK', label: 'OK', description: 'Part is OK' },
+                  { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                ]
+                
+                return (
+                  <StatusSelectWithNote
+                    key={field.key}
+                    field={field.key as keyof RecordWorkForm & string}
+                    label={field.label}
+                    options={selectOptions}
+                    noteOptions={field.noteOptions}
+                    noteDefault={field.noteDefault}
+                  />
+                )
               }
 
               // Special handling for dropdowns that load from external data
@@ -668,6 +704,32 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                     />
                     {isOutOfRange(hours, 1000, 100000) && (
                       <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 100,000.</p>
+                    )}
+                  </FormField>
+                )
+              }
+
+              if (field.type === 'number' && (field.min !== undefined || field.max !== undefined)) {
+                const value = watch(field.key as keyof RecordWorkForm)
+                const min = field.min !== undefined ? field.min : -Infinity
+                const max = field.max !== undefined ? field.max : Infinity
+                const isInvalid = isOutOfRange(value, min, max)
+                
+                return (
+                  <FormField key={field.key} label={field.label} required={field.required}>
+                    <DynamicFormField
+                      field={field}
+                      register={register}
+                      className="border-2 border-black text-sm"
+                    />
+                    {isInvalid && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {field.min !== undefined && field.max !== undefined
+                          ? `Enter between ${field.min} and ${field.max}.`
+                          : field.min !== undefined
+                          ? `Enter ${field.min} or greater.`
+                          : `Enter ${field.max} or less.`}
+                      </p>
                     )}
                   </FormField>
                 )
@@ -836,6 +898,31 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
       return
     }
 
+    const validationErrors: string[] = []
+    if (formConfig && Array.isArray(formConfig)) {
+      formConfig.forEach((field) => {
+        if (field.type === 'number' && (field.min !== undefined || field.max !== undefined)) {
+          const fieldValue = values[field.key as keyof RecordWorkForm]
+          const min = field.min !== undefined ? field.min : -Infinity
+          const max = field.max !== undefined ? field.max : Infinity
+          
+          if (isOutOfRange(fieldValue, min, max)) {
+            const rangeText = field.min !== undefined && field.max !== undefined
+              ? `between ${field.min} and ${field.max}`
+              : field.min !== undefined
+              ? `${field.min} or greater`
+              : `${field.max} or less`
+            validationErrors.push(`${field.label} must be ${rangeText}.`)
+          }
+        }
+      })
+    }
+
+    if (validationErrors.length > 0) {
+      setImageError(validationErrors.join(' '))
+      return
+    }
+
     const formattedValues = {
       ...values,
       exhaustCfm: values.exhaustCfm ? `${values.exhaustCfm} M/s` : '',
@@ -890,161 +977,31 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         </FormSection>
 
         <FormSection title="Opticals">
-          <FormRow>
-            {OPTICAL_FIELDS.map((field) => (
-              <StatusSelectWithNote
-                key={field}
-                field={field}
-                label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
-                options={[
-                  { value: 'OK', label: 'OK', description: 'Part is OK' },
-                  { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                ]}
-                noteOptions={['Solarized', 'Chipped', 'Cracked', 'Not Present']}
-              />
-            ))}
-          </FormRow>
+          {renderFieldsBySection("Opticals")}
         </FormSection>
 
         <FormSection title="Electronics">
-          <FormRow>
-            {ELECTRONIC_FIELDS.map((field) => (
-              <StatusSelectWithNote
-                key={field}
-                field={field}
-                label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
-                options={[
-                  { value: 'OK', label: 'OK', description: 'Part is OK' },
-                  { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                ]}
-              />
-            ))}
-          </FormRow>
+          {renderFieldsBySection("Electronics")}
         </FormSection>
 
         <FormSection title="Serial Number Verified">
-          <FormRow>
-            <StatusSelectWithNote
-              field="serialNumberVerified"
-              label="Chassis label vs Touch Panel"
-              options={[
-                { value: 'OK', label: 'OK', description: 'Part is OK' },
-                { value: 'YES', label: 'YES', description: 'Needs replacement' },
-              ]}
-              noteDefault="Package File Required"
-            />
-          </FormRow>
+          {renderFieldsBySection("Serial Number Verified")}
         </FormSection>
 
         <FormSection title="Disposable Consumables">
-          <FormRow>
-            <StatusSelectWithNote
-              field="AirIntakeLadRad"
-              label="Air Intake, LAD and RAD"
-              options={[
-                { value: 'OK', label: 'OK', description: 'Part is OK' },
-                { value: 'YES', label: 'YES', description: 'Needs replacement' },
-              ]}
-            />
-          </FormRow>
+          {renderFieldsBySection("Disposable Consumables")}
         </FormSection>
 
         <FormSection title="Coolant">
-          <FormRow>
-            <StatusSelectWithNote
-              field="coolantLevelColor"
-              label="Level and Color"
-              options={[
-                { value: 'OK', label: 'OK', description: 'Part is OK' },
-                { value: 'YES', label: 'YES', description: 'Needs replacement' },
-              ]}
-            />
-          </FormRow>
+          {renderFieldsBySection("Coolant")}
         </FormSection>
 
         <FormSection title="Light Engine Test Pattern">
-          <FormRow>
-            {['lightEngineWhite', 'lightEngineRed', 'lightEngineGreen', 'lightEngineBlue', 'lightEngineBlack'].map(
-              (field) => (
-                <StatusSelectWithNote
-                  key={field}
-                  field={field as keyof RecordWorkForm & string}
-                  label={field.replace('lightEngine', '').toUpperCase()}
-                  options={[
-                    { value: 'OK', label: 'OK', description: 'Part is OK' },
-                    { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                  ]}
-                />
-              ),
-            )}
-          </FormRow>
+          {renderFieldsBySection("Light Engine Test Pattern")}
         </FormSection>
 
         <FormSection title="Mechanical">
-          <FormRow>
-            {MECHANICAL_FIELDS.map((field) => (
-              <StatusSelectWithNote
-                key={field}
-                field={field}
-                label={field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
-                options={[
-                  { value: 'OK', label: 'OK', description: 'Part is OK' },
-                  { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                ]}
-                noteOptions={
-                  field === 'acBlowerVane' || field === 'extractorVane'
-                    ? ['Bypassed', 'Switch Faulty']
-                    : undefined
-                }
-              />
-            ))}
-          </FormRow>
-          <FormRow>
-            <FormField label="Exhaust CFM (M/s)">
-              <Input
-                type="number"
-                step="0.1"
-                {...register('exhaustCfm')}
-                placeholder="Enter value"
-                className="border-2 border-black text-sm"
-              />
-            </FormField>
-            <StatusSelectWithNote
-              field="pumpConnectorHose"
-              label="Pump Connector & Hose"
-              options={[
-                { value: 'OK', label: 'OK', description: 'Part is OK' },
-                { value: 'YES', label: 'YES', description: 'Needs replacement' },
-              ]}
-            />
-          </FormRow>
-          <FormRow>
-            <StatusSelectWithNote
-              field="securityLampHouseLock"
-              label="Security & Lamp Lock"
-              options={[
-                { value: 'OK', label: 'OK', description: 'Working' },
-                { value: 'YES', label: 'YES', description: 'Not working / needs attention' },
-              ]}
-              noteOptions={['Bypassed', 'Switch Faulty']}
-            />
-            <StatusSelectWithNote
-              field="lampLocMechanism"
-              label="Lamp LOC Mechanism"
-              options={[
-                { value: 'OK', label: 'OK', description: 'Part is OK' },
-                { value: 'YES', label: 'YES', description: 'Needs replacement' },
-              ]}
-            />
-          </FormRow>
-          <FormField label="Projector Placement & Environment">
-            <textarea
-              {...register('projectorPlacementEnvironment')}
-              placeholder="Environmental conditions"
-              className="w-full border-2 border-black p-2 text-black text-sm"
-              rows={2}
-            />
-          </FormField>
+          {renderFieldsBySection("Mechanical")}
         </FormSection>
 
         <FormSection title="Software & Screen Information">
@@ -1232,40 +1189,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         </FormSection>
 
         <FormSection title="Image Evaluation">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {IMAGE_EVAL_FIELDS.map(({ field, label }) => (
-              <FormField key={field} label={label}>
-                <select {...register(field as keyof RecordWorkForm)} className="w-full border-2 border-black p-2 text-sm">
-                  <option value="">Select</option>
-                  <option value="OK">OK</option>
-                  <option value="YES">Yes</option>
-                </select>
-              </FormField>
-            ))}
-          </div>
-          <FormRow>
-            <FormField label="Pixel Defects">
-              <select {...register('pixelDefects')} className="w-full border-2 border-black p-2 text-sm">
-                <option value="">Select</option>
-                <option value="OK">OK</option>
-                <option value="YES">Yes</option>
-              </select>
-            </FormField>
-            <FormField label="Image Vibration">
-              <select {...register('imageVibration')} className="w-full border-2 border-black p-2 text-sm">
-                <option value="">Select</option>
-                <option value="OK">OK</option>
-                <option value="YES">Yes</option>
-              </select>
-            </FormField>
-            <FormField label="LiteLOC Status">
-              <select {...register('liteloc')} className="w-full border-2 border-black p-2 text-sm">
-                <option value="">Select</option>
-                <option value="OK">OK</option>
-                <option value="YES">Yes</option>
-              </select>
-            </FormField>
-          </FormRow>
+          {renderFieldsBySection("Image Evaluation")}
         </FormSection>
 
         <FormSection title="Air Pollution Data">

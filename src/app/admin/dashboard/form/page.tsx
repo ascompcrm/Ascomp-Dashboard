@@ -25,6 +25,12 @@ type FieldConfig = {
   options?: string[]
   section?: string
   defaultValue?: string
+  min?: number
+  max?: number
+  componentType?: "statusSelectWithNote"
+  noteOptions?: string[]
+  noteDefault?: string
+  optionDescriptions?: Record<string, string>
 }
 
 const FORM_SECTIONS = [
@@ -149,9 +155,12 @@ export default function FormBuilderPage() {
   
   // Data file management
   const [contentPlayers, setContentPlayers] = useState<string[]>([])
-  const [lampModels, setLampModels] = useState<string[]>([])
+  const [lampModelsData, setLampModelsData] = useState<Array<{ projector_model: string; Models: string[] }>>([])
   const [softwareVersions, setSoftwareVersions] = useState<string[]>([])
   const [newDataValue, setNewDataValue] = useState<Record<string, string>>({})
+  const [newLampModelValue, setNewLampModelValue] = useState<Record<string, string>>({})
+  const [newProjectorModel, setNewProjectorModel] = useState("")
+  const [selectedProjectorIndex, setSelectedProjectorIndex] = useState<number | null>(null)
   const [loadingDataFiles, setLoadingDataFiles] = useState(true)
 
   useEffect(() => {
@@ -201,7 +210,7 @@ export default function FormBuilderPage() {
         
         if (lampRes.ok) {
           const data = await lampRes.json()
-          setLampModels(data.values || [])
+          setLampModelsData(data.data || [])
         } else {
           const errorText = await lampRes.text()
           console.error("Failed to load lamp models:", lampRes.status, errorText)
@@ -222,6 +231,23 @@ export default function FormBuilderPage() {
     }
     loadDataFiles()
   }, [])
+
+  // Set default selected projector and reset if invalid
+  useEffect(() => {
+    if (lampModelsData.length > 0) {
+      // If no projector is selected, select the first one
+      if (selectedProjectorIndex === null) {
+        setSelectedProjectorIndex(0)
+      }
+      // If selected index is invalid, reset to first one
+      else if (selectedProjectorIndex < 0 || selectedProjectorIndex >= lampModelsData.length) {
+        setSelectedProjectorIndex(0)
+      }
+    } else {
+      // No projectors available, reset selection
+      setSelectedProjectorIndex(null)
+    }
+  }, [lampModelsData, selectedProjectorIndex])
 
   const saveConfig = async () => {
     try {
@@ -280,13 +306,13 @@ export default function FormBuilderPage() {
   }
 
   // Data file management functions
-  const saveDataFile = async (fileType: "content-player" | "lamp-models" | "software", values: string[]) => {
+  const saveDataFile = async (fileType: "content-player" | "lamp-models" | "software", values: string[] | Array<{ projector_model: string; Models: string[] }>) => {
     try {
       const res = await fetch(`/api/admin/data-files/${fileType}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ values }),
+        body: JSON.stringify(fileType === "lamp-models" ? { data: values } : { values }),
       })
 
       if (res.ok) {
@@ -294,9 +320,9 @@ export default function FormBuilderPage() {
         alert(`${fileType} saved successfully! ${result.saved} items saved.`)
         
         // Update local state
-        if (fileType === "content-player") setContentPlayers(values)
-        if (fileType === "lamp-models") setLampModels(values)
-        if (fileType === "software") setSoftwareVersions(values)
+        if (fileType === "content-player") setContentPlayers(values as string[])
+        if (fileType === "lamp-models") setLampModelsData(values as Array<{ projector_model: string; Models: string[] }>)
+        if (fileType === "software") setSoftwareVersions(values as string[])
       } else {
         const error = await res.json()
         alert(`Failed to save: ${error.error || "Unknown error"}`)
@@ -314,9 +340,6 @@ export default function FormBuilderPage() {
     if (fileType === "content-player") {
       const updated = [...contentPlayers, value]
       saveDataFile(fileType, updated)
-    } else if (fileType === "lamp-models") {
-      const updated = [...lampModels, value]
-      saveDataFile(fileType, updated)
     } else if (fileType === "software") {
       const updated = [...softwareVersions, value]
       saveDataFile(fileType, updated)
@@ -326,15 +349,11 @@ export default function FormBuilderPage() {
   }
 
   const removeDataValue = (fileType: "content-player" | "lamp-models" | "software", index: number) => {
-    let updated: string[] = []
     if (fileType === "content-player") {
-      updated = contentPlayers.filter((_, i) => i !== index)
-      saveDataFile(fileType, updated)
-    } else if (fileType === "lamp-models") {
-      updated = lampModels.filter((_, i) => i !== index)
+      const updated = contentPlayers.filter((_, i) => i !== index)
       saveDataFile(fileType, updated)
     } else if (fileType === "software") {
-      updated = softwareVersions.filter((_, i) => i !== index)
+      const updated = softwareVersions.filter((_, i) => i !== index)
       saveDataFile(fileType, updated)
     }
   }
@@ -345,10 +364,6 @@ export default function FormBuilderPage() {
       const updated = [...contentPlayers]
       updated[index] = newValue
       setContentPlayers(updated)
-    } else if (fileType === "lamp-models") {
-      const updated = [...lampModels]
-      updated[index] = newValue
-      setLampModels(updated)
     } else if (fileType === "software") {
       const updated = [...softwareVersions]
       updated[index] = newValue
@@ -357,12 +372,81 @@ export default function FormBuilderPage() {
   }
 
   const saveDataValueOnBlur = (fileType: "content-player" | "lamp-models" | "software") => {
-    let values: string[] = []
-    if (fileType === "content-player") values = contentPlayers
-    else if (fileType === "lamp-models") values = lampModels
-    else if (fileType === "software") values = softwareVersions
+    if (fileType === "content-player") {
+      saveDataFile(fileType, contentPlayers)
+    } else if (fileType === "software") {
+      saveDataFile(fileType, softwareVersions)
+    }
+  }
+
+  // Lamp models specific functions
+  const addLampModel = (projectorModelIndex: number) => {
+    const value = newLampModelValue[projectorModelIndex]?.trim()
+    if (!value) return
+
+    const updated = [...lampModelsData]
+    if (updated[projectorModelIndex] && Array.isArray(updated[projectorModelIndex].Models)) {
+      updated[projectorModelIndex] = {
+        ...updated[projectorModelIndex],
+        Models: [...updated[projectorModelIndex].Models, value]
+      }
+      saveDataFile("lamp-models", updated)
+    }
     
-    saveDataFile(fileType, values)
+    setNewLampModelValue((prev) => ({ ...prev, [projectorModelIndex]: "" }))
+  }
+
+  const removeLampModel = (projectorModelIndex: number, modelIndex: number) => {
+    const updated = [...lampModelsData]
+    if (updated[projectorModelIndex] && Array.isArray(updated[projectorModelIndex].Models)) {
+      updated[projectorModelIndex] = {
+        ...updated[projectorModelIndex],
+        Models: updated[projectorModelIndex].Models.filter((_, i) => i !== modelIndex)
+      }
+      saveDataFile("lamp-models", updated)
+    }
+  }
+
+  const updateLampModel = (projectorModelIndex: number, modelIndex: number, newValue: string) => {
+    const updated = [...lampModelsData]
+    if (updated[projectorModelIndex] && Array.isArray(updated[projectorModelIndex].Models)) {
+      updated[projectorModelIndex] = {
+        ...updated[projectorModelIndex],
+        Models: updated[projectorModelIndex].Models.map((model, i) => i === modelIndex ? newValue : model)
+      }
+      setLampModelsData(updated)
+    }
+  }
+
+  const saveLampModelOnBlur = () => {
+    saveDataFile("lamp-models", lampModelsData)
+  }
+
+  const addProjectorModel = () => {
+    const projectorModel = newProjectorModel.trim()
+    if (!projectorModel) return
+
+    const updated = [...lampModelsData, { projector_model: projectorModel, Models: [] }]
+    saveDataFile("lamp-models", updated)
+    setSelectedProjectorIndex(updated.length - 1) // Select the newly added projector
+    setNewProjectorModel("")
+  }
+
+  const removeProjectorModel = (index: number) => {
+    const updated = lampModelsData.filter((_, i) => i !== index)
+    saveDataFile("lamp-models", updated)
+  }
+
+  const updateProjectorModelName = (index: number, newName: string) => {
+    const updated = [...lampModelsData]
+    if (updated[index]) {
+      updated[index] = { 
+        ...updated[index], 
+        projector_model: newName,
+        Models: updated[index].Models || []
+      }
+      setLampModelsData(updated)
+    }
   }
 
   const fieldsBySection = fieldConfigs.reduce((acc, field) => {
@@ -454,6 +538,49 @@ export default function FormBuilderPage() {
                         <Label className="text-sm">Required field</Label>
                       </div>
 
+                      {field.type === "number" && (
+                        <div className="border-t pt-3 space-y-2">
+                          <Label className="text-sm font-semibold">Number Range (Optional)</Label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs text-gray-600">Minimum Value</Label>
+                              <Input
+                                type="number"
+                                value={field.min !== undefined ? String(field.min) : ""}
+                                onChange={(e) => {
+                                  const value = e.target.value.trim()
+                                  updateField(field.key, { 
+                                    min: value === "" ? undefined : parseFloat(value) 
+                                  })
+                                }}
+                                placeholder="No minimum"
+                                className="border-2 border-black text-sm"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-gray-600">Maximum Value</Label>
+                              <Input
+                                type="number"
+                                value={field.max !== undefined ? String(field.max) : ""}
+                                onChange={(e) => {
+                                  const value = e.target.value.trim()
+                                  updateField(field.key, { 
+                                    max: value === "" ? undefined : parseFloat(value) 
+                                  })
+                                }}
+                                placeholder="No maximum"
+                                className="border-2 border-black text-sm"
+                              />
+                            </div>
+                          </div>
+                          {(field.min !== undefined || field.max !== undefined) && (
+                            <p className="text-xs text-gray-500">
+                              Range: {field.min !== undefined ? field.min : "no min"} - {field.max !== undefined ? field.max : "no max"}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
                       {field.type === "select" && (
                         <div className="border-t pt-3 space-y-2">
                           <Label className="text-sm font-semibold">Dropdown Options</Label>
@@ -527,6 +654,102 @@ export default function FormBuilderPage() {
                           </Select>
                         </div>
                       )}
+
+                      {field.type === "select" && (
+                        <div className="border-t pt-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={field.componentType === "statusSelectWithNote"}
+                              onChange={(e) => updateField(field.key, { 
+                                componentType: e.target.checked ? "statusSelectWithNote" : undefined 
+                              })}
+                              className="border-2 border-black"
+                            />
+                            <Label className="text-sm">Use Status Select With Note Component</Label>
+                          </div>
+                          
+                          {field.componentType === "statusSelectWithNote" && (
+                            <div className="space-y-3 pl-4 border-l-2 border-gray-300">
+                              <div>
+                                <Label className="text-xs text-gray-600">Note Options (shown when status is YES)</Label>
+                                <div className="space-y-2 mt-1">
+                                  {field.noteOptions?.map((noteOpt, idx) => (
+                                    <div key={idx} className="flex items-center gap-2">
+                                      <Input
+                                        value={noteOpt}
+                                        onChange={(e) => {
+                                          const newNoteOptions = [...(field.noteOptions || [])]
+                                          newNoteOptions[idx] = e.target.value
+                                          updateField(field.key, { noteOptions: newNoteOptions })
+                                        }}
+                                        className="border-2 border-black text-sm flex-1"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          const newNoteOptions = field.noteOptions?.filter((_, i) => i !== idx) || []
+                                          updateField(field.key, { noteOptions: newNoteOptions })
+                                        }}
+                                        className="border-red-600 text-red-600 hover:bg-red-50"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      placeholder="Add note option"
+                                      className="border-2 border-black text-sm flex-1"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault()
+                                          const value = e.currentTarget.value.trim()
+                                          if (value) {
+                                            updateField(field.key, { 
+                                              noteOptions: [...(field.noteOptions || []), value] 
+                                            })
+                                            e.currentTarget.value = ""
+                                          }
+                                        }
+                                      }}
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                        const value = input.value.trim()
+                                        if (value) {
+                                          updateField(field.key, { 
+                                            noteOptions: [...(field.noteOptions || []), value] 
+                                          })
+                                          input.value = ""
+                                        }
+                                      }}
+                                      className="border-black"
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-gray-600">Note Default Value</Label>
+                                <Input
+                                  value={field.noteDefault || ""}
+                                  onChange={(e) => updateField(field.key, { noteDefault: e.target.value })}
+                                  placeholder="Default note value"
+                                  className="border-2 border-black text-sm"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </CardContent>
@@ -562,7 +785,7 @@ export default function FormBuilderPage() {
                     }
                     if (lampRes.ok) {
                       const data = await lampRes.json()
-                      setLampModels(data.values || [])
+                      setLampModelsData(data.data || [])
                     } else {
                       console.error("Failed to refresh lamp models:", lampRes.status)
                     }
@@ -588,7 +811,7 @@ export default function FormBuilderPage() {
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
             {/* Content Players */}
             <Card className="border-2 border-black">
               <CardHeader>
@@ -650,49 +873,130 @@ export default function FormBuilderPage() {
             </Card>
 
             {/* Lamp Models */}
-            <Card className="border-2 border-black">
+            <Card className="border-2 border-black col-span-2">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-black">Lamp Models</CardTitle>
+                <CardTitle className="text-lg font-semibold text-black">Lamp Models (by Projector Model)</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 {loadingDataFiles ? (
                   <p className="text-sm text-gray-500">Loading lamp models...</p>
-                ) : lampModels.length === 0 ? (
-                  <p className="text-sm text-gray-500 italic">No lamp models found. Add one below.</p>
+                ) : lampModelsData.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">No projector models found. Add one below.</p>
                 ) : (
-                  <p className="text-xs text-gray-500 mb-2">{lampModels.length} items</p>
-                )}
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {lampModels.map((value, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <Input
-                        value={value}
-                        onChange={(e) => updateDataValue("lamp-models", idx, e.target.value)}
-                        onBlur={() => saveDataValueOnBlur("lamp-models")}
-                        className="border-2 border-black text-sm flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeDataValue("lamp-models", idx)}
-                        className="border-red-600 text-red-600 hover:bg-red-50"
+                  <>
+                    {/* Projector Selection Dropdown */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-black">Select Projector Model</Label>
+                      <Select
+                        value={selectedProjectorIndex !== null ? String(selectedProjectorIndex) : ""}
+                        onValueChange={(value) => setSelectedProjectorIndex(value ? parseInt(value, 10) : null)}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        <SelectTrigger className="border-2 border-black">
+                          <SelectValue placeholder="Choose a projector model..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {lampModelsData.map((projectorData, idx) => (
+                            <SelectItem key={idx} value={String(idx)}>
+                              {projectorData.projector_model}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  ))}
-                </div>
+
+                    {/* Selected Projector's Lamp Models */}
+                    {selectedProjectorIndex !== null && lampModelsData[selectedProjectorIndex] && (
+                      <div className="border border-gray-300 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b">
+                          <div className="flex items-center gap-2 flex-1">
+                            <Label className="text-sm font-semibold text-black">Projector: {lampModelsData[selectedProjectorIndex].projector_model}</Label>
+                            <Input
+                              value={lampModelsData[selectedProjectorIndex].projector_model}
+                              onChange={(e) => updateProjectorModelName(selectedProjectorIndex, e.target.value)}
+                              onBlur={() => saveLampModelOnBlur()}
+                              className="border-2 border-black text-sm flex-1 max-w-xs"
+                              placeholder="Projector Model"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              removeProjectorModel(selectedProjectorIndex)
+                              setSelectedProjectorIndex(null)
+                            }}
+                            className="border-red-600 text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold text-gray-700">Lamp Models</Label>
+                          {lampModelsData[selectedProjectorIndex].Models && lampModelsData[selectedProjectorIndex].Models.length > 0 ? (
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {lampModelsData[selectedProjectorIndex].Models.map((model, modelIdx) => (
+                                <div key={modelIdx} className="flex items-center gap-2">
+                                  <Input
+                                    value={model}
+                                    onChange={(e) => updateLampModel(selectedProjectorIndex, modelIdx, e.target.value)}
+                                    onBlur={() => saveLampModelOnBlur()}
+                                    className="border-2 border-black text-sm flex-1"
+                                    placeholder="Lamp Model"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeLampModel(selectedProjectorIndex, modelIdx)}
+                                    className="border-red-600 text-red-600 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400 italic">No lamp models for this projector</p>
+                          )}
+                          <div className="flex items-center gap-2 pt-2 border-t">
+                            <Input
+                              value={newLampModelValue[selectedProjectorIndex] || ""}
+                              onChange={(e) => setNewLampModelValue((prev) => ({ ...prev, [selectedProjectorIndex]: e.target.value }))}
+                              placeholder="Add lamp model"
+                              className="border-2 border-black text-sm flex-1"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault()
+                                  addLampModel(selectedProjectorIndex)
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addLampModel(selectedProjectorIndex)}
+                              className="border-black"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
                 <div className="flex items-center gap-2 pt-2 border-t">
                   <Input
-                    value={newDataValue["lamp-models"] || ""}
-                    onChange={(e) => setNewDataValue((prev) => ({ ...prev, "lamp-models": e.target.value }))}
-                    placeholder="Add new lamp model"
+                    value={newProjectorModel}
+                    onChange={(e) => setNewProjectorModel(e.target.value)}
+                    placeholder="Add new projector model (e.g., CP2220)"
                     className="border-2 border-black text-sm flex-1"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault()
-                        addDataValue("lamp-models")
+                        addProjectorModel()
                       }
                     }}
                   />
@@ -700,7 +1004,7 @@ export default function FormBuilderPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => addDataValue("lamp-models")}
+                    onClick={addProjectorModel}
                     className="border-black"
                   >
                     <Plus className="h-4 w-4" />

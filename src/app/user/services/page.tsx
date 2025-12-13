@@ -663,7 +663,15 @@ function ServiceDetailView({
               { label: "Green", status: service.workDetails?.lightEngineGreen },
               { label: "Blue", status: service.workDetails?.lightEngineBlue },
               { label: "Black", status: service.workDetails?.lightEngineBlack },
-              { label: "Coolant", status: service.workDetails?.coolantLevelColor },
+            ]} />
+          </Section>
+        </div>
+
+        {/* Coolant Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Section title="Coolant">
+            <StatusTable items={[
+              { label: "Level and Color", status: service.workDetails?.coolantLevelColor },
             ]} />
           </Section>
         </div>

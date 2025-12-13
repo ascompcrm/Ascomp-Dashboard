@@ -3,6 +3,40 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { generateMaintenanceReport, type MaintenanceReportData } from '@/components/PDFGenerator'
 
+// Convert number to ordinal text (1 -> "First", 2 -> "Second", etc.)
+const numberToOrdinal = (value: string | number | null | undefined): string => {
+  if (!value) return ''
+  const str = String(value).trim()
+  const lowerStr = str.toLowerCase()
+  
+  // Map of valid ordinals (case-insensitive)
+  const ordinalMap: Record<string, string> = {
+    'first': 'First',
+    'second': 'Second',
+    'third': 'Third',
+    'fourth': 'Fourth',
+    'fifth': 'Fifth',
+    'sixth': 'Sixth',
+    'seventh': 'Seventh',
+    'special': 'Special'
+  }
+  
+  // If already in text format, return capitalized version
+  if (ordinalMap[lowerStr]) {
+    return ordinalMap[lowerStr]
+  }
+  
+  // Convert number to ordinal
+  const num = parseInt(str, 10)
+  if (!isNaN(num)) {
+    const ordinals = ['', 'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth']
+    return ordinals[num] || `${num}th`
+  }
+  
+  // If not a number and not a known ordinal, capitalize first letter and return
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+}
+
 export default function GenerateReportStep({ data, onBack }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -151,7 +185,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
       contactDetails: safe(workDetails.contactDetails || service.contactDetails),
       location: safe(workDetails.location),
       screenNo: safe(workDetails.screenNumber),
-      serviceVisit: safe(workDetails.serviceVisitType || service.type),
+      serviceVisit: numberToOrdinal(workDetails.serviceVisitType || service.type),
       projectorModel: safe(workDetails.projectorModel || service.projector),
       serialNo: safe(workDetails.projectorSerialNumber),
       runningHours: safe(workDetails.projectorRunningHours),

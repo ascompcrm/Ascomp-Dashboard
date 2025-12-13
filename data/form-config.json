@@ -29,7 +29,7 @@
   {
     "key": "screenNumber",
     "label": "Screen No",
-    "type": "text",
+    "type": "number",
     "section": "Cinema Details"
   },
   {
@@ -44,7 +44,6 @@
       "4",
       "5",
       "6",
-      "7",
       "special"
     ]
   },
@@ -53,8 +52,7 @@
     "label": "Projector Model",
     "type": "text",
     "required": true,
-    "section": "Projector Information",
-    "options": []
+    "section": "Projector Information"
   },
   {
     "key": "projectorSerialNumber",
@@ -76,8 +74,8 @@
     "type": "select",
     "section": "Opticals",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -87,8 +85,8 @@
     "type": "select",
     "section": "Opticals",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -98,8 +96,8 @@
     "type": "select",
     "section": "Opticals",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -109,8 +107,8 @@
     "type": "select",
     "section": "Opticals",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -120,8 +118,8 @@
     "type": "select",
     "section": "Opticals",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -131,8 +129,8 @@
     "type": "select",
     "section": "Electronics",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -142,8 +140,8 @@
     "type": "select",
     "section": "Electronics",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -153,8 +151,8 @@
     "type": "select",
     "section": "Electronics",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -164,8 +162,8 @@
     "type": "select",
     "section": "Electronics",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -175,8 +173,8 @@
     "type": "select",
     "section": "Electronics",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -186,8 +184,8 @@
     "type": "select",
     "section": "Electronics",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -197,8 +195,8 @@
     "type": "select",
     "section": "Mechanical",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -208,8 +206,8 @@
     "type": "select",
     "section": "Mechanical",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -219,8 +217,8 @@
     "type": "select",
     "section": "Mechanical",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -230,8 +228,8 @@
     "type": "select",
     "section": "Mechanical",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -241,8 +239,8 @@
     "type": "select",
     "section": "Mechanical",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -252,8 +250,8 @@
     "type": "select",
     "section": "Mechanical",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -263,8 +261,8 @@
     "type": "select",
     "section": "Mechanical",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -274,8 +272,8 @@
     "type": "select",
     "section": "Mechanical",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
   },
@@ -417,62 +415,62 @@
   },
   {
     "key": "focusBoresight",
-    "label": "Focus/Boresight OK",
+    "label": "Focus/Boresight",
     "type": "select",
     "section": "Image Evaluation",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "Concern"
     ]
   },
   {
     "key": "integratorPosition",
-    "label": "Integrator Position OK",
+    "label": "Integrator Position",
     "type": "select",
     "section": "Image Evaluation",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "Concern"
     ]
   },
   {
     "key": "spotsOnScreen",
-    "label": "Spots on Screen OK",
+    "label": "Spots on Screen",
     "type": "select",
     "section": "Image Evaluation",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "Concern"
     ]
   },
   {
     "key": "screenCroppingOk",
-    "label": "Screen Cropping OK",
+    "label": "Screen Cropping",
     "type": "select",
     "section": "Image Evaluation",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "Concern"
     ]
   },
   {
     "key": "convergenceOk",
-    "label": "Convergence OK",
+    "label": "Convergence",
     "type": "select",
     "section": "Image Evaluation",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "Concern"
     ]
   },
   {
     "key": "channelsCheckedOk",
-    "label": "Channels Checked OK",
+    "label": "Channels Checked",
     "type": "select",
     "section": "Image Evaluation",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "Concern"
     ]
   },
   {
@@ -481,8 +479,8 @@
     "type": "select",
     "section": "Image Evaluation",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "Concern"
     ]
   },
   {
@@ -491,8 +489,8 @@
     "type": "select",
     "section": "Image Evaluation",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "Concern"
     ]
   },
   {
@@ -501,8 +499,8 @@
     "type": "select",
     "section": "Image Evaluation",
     "options": [
-      "OK",
-      "YES"
+      "OK (Part is Ok)",
+      "Concern"
     ]
   },
   {

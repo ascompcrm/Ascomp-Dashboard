@@ -137,6 +137,44 @@ const normalizeYesNo = (value?: string) => {
   return value;
 };
 
+// Convert number to ordinal text (1 -> "First", 2 -> "Second", etc.)
+// If already text format, capitalize and return. If other text, keep as-is.
+const convertServiceVisitToText = (value: string | number | null | undefined): string => {
+  if (!value) return '';
+  const str = String(value).trim();
+  const lowerStr = str.toLowerCase();
+  
+  // Map of valid ordinals (case-insensitive)
+  const ordinalMap: Record<string, string> = {
+    'first': 'First',
+    'second': 'Second',
+    'third': 'Third',
+    'fourth': 'Fourth',
+    'fifth': 'Fifth',
+    'sixth': 'Sixth',
+    'seventh': 'Seventh',
+    'eighth': 'Eighth',
+    'ninth': 'Ninth',
+    'tenth': 'Tenth',
+    'special': 'Special'
+  };
+  
+  // If already in text format, return capitalized version
+  if (ordinalMap[lowerStr]) {
+    return ordinalMap[lowerStr];
+  }
+  
+  // Convert number to ordinal
+  const num = parseInt(str, 10);
+  if (!isNaN(num)) {
+    const ordinals = ['', 'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'];
+    return ordinals[num] || `${num}th`;
+  }
+  
+  // If not a number and not a known ordinal, return as-is (capitalize first letter)
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
 export async function generateMaintenanceReport(data: MaintenanceReportData): Promise<Uint8Array> {
   console.log(data);
   const pdfDoc = await PDFDocument.create();
@@ -373,7 +411,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   yPos -= 20;
 
   drawTableRow(page1, timesRomanBold, timesRoman, 40, yPos, width - 80,
-    ['SCREEN No:', data.screenNo, 'Engg and EW Service visit:', data.serviceVisit], [100, 150, 120, 165], 20);
+    ['SCREEN No:', data.screenNo, 'Engg and EW Service visit:', convertServiceVisitToText(data.serviceVisit)], [100, 150, 120, 165], 20);
   yPos -= 20;
 
   drawTableRow(page1, timesRomanBold, timesRoman, 40, yPos, width - 80,

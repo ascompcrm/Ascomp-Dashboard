@@ -1,50 +1,124 @@
-
- [ {
-  "Lamp Model": "CDXL - 20"
- },
- {
-  "Lamp Model": "CDXL - 20SD"
- },
- {
-  "Lamp Model": "CDXL - 21S1"
- },
- {
-  "Lamp Model": "CDXL - 30"
- },
- {
-  "Lamp Model": "CDXL - 30SD"
- },
- {
-  "Lamp Model": "CDXL - 30SP"
- },
- {
-  "Lamp Model": "CDXL - 60"
- },
- {
-  "Lamp Model": "CDXL - 60SP"
- },
- {
-  "Lamp Model": "NA"
- },
- {
-  "Lamp Model": "OSRAM - 2KW"
- },
- {
-  "Lamp Model": "OSRAM - 2KW DTS"
- },
- {
-  "Lamp Model": "OSRAM - 3KW"
- },
- {
-  "Lamp Model": "OSRAM - 3KW DTP"
- },
- {
-  "Lamp Model": "OSRAM - 3KW DTS"
- },
- {
-  "Lamp Model": "OSRAM - 4.5KW"
- },
- {
-  "Lamp Model": "OSRAM - 6KW"
- }
+[
+  {
+    "Lamp_Model": [
+      {
+        "projector_model": "CP2308",
+        "Models": [
+          "CDXL - 14M",
+          "CDXL - 16M",
+          "CDXL - 19SC",
+          "CDXL - 19SU",
+          "CDXL - 21S1",
+          "CDXL - 21SUP",
+          "XBO 1400 W",
+          "XBO 1600 W",
+          "XBO 1800 W",
+          "XBO 2000 W",
+          "XBO 2100 W"
+        ]
+      },
+      {
+        "projector_model": "CP2215",
+        "Models": [
+          "CDXL - 14M",
+          "CDXL - 16M",
+          "CDXL - 18SD",
+          "CDXL - 20SD",
+          "CDXL - 23S",
+          "CDXL - 23SUP",
+          "CDXL - 21SUP",
+          "XBO 1400 W",
+          "XBO 1600 W",
+          "XBO 1800 W",
+          "XBO 2000 W",
+          "XBO 2300 W",
+          "XBO 2100 W"
+        ]
+      },
+      {
+        "projector_model": "CP2220",
+        "Models": [
+          "CDXL - 20",
+          "CDXL - 20LB",
+          "CDXL - 20SP",
+          "CDXL - 30",
+          "CDXL - 30SP",
+          "CDXL - 30SUP",
+          "CDXL - 30SD",
+          "XBO 2000 DTS",
+          "XBO 2000 DTP",
+          "XBO 3000 DTS",
+          "XBO 3000 DTP",
+          "XBO 3000 DTP L"
+        ]
+      },
+      {
+        "projector_model": "CP4220",
+        "Models": [
+          "CDXL - 20",
+          "CDXL - 20LB",
+          "CDXL - 20SP",
+          "CDXL - 30",
+          "CDXL - 30SP",
+          "CDXL - 30SUP",
+          "CDXL - 30SD",
+          "XBO 2000 DTS",
+          "XBO 2000 DTP",
+          "XBO 3000 DTS",
+          "XBO 3000 DTP",
+          "XBO 3000 DTP L"
+        ]
+      },
+      {
+        "projector_model": "CP2230",
+        "Models": [
+          "CDXL - 20",
+          "CDXL - 20LB",
+          "CDXL - 20SP",
+          "CDXL - 30",
+          "CDXL - 30SP",
+          "CDXL - 45",
+          "CDXL - 45SP",
+          "CDXL - 60",
+          "CDXL - 60SP",
+          "CDXL - 60UP",
+          "XBO 2000 DTS",
+          "XBO 2000 DTP",
+          "XBO 3000 DTS",
+          "XBO 3000 DTP",
+          "XBO 3000 DTP L",
+          "XBO 4500 DTP",
+          "XBO 4500 DTP L",
+          "XBO 6000 DTP",
+          "XBO 6000 DTP L",
+          "XBO 6000 DTP XL"
+        ]
+      },
+      {
+        "projector_model": "CP4230",
+        "Models": [
+          "CDXL - 20",
+          "CDXL - 20LB",
+          "CDXL - 20SP",
+          "CDXL - 30",
+          "CDXL - 30SP",
+          "CDXL - 45",
+          "CDXL - 45SP",
+          "CDXL - 60",
+          "CDXL - 60SP",
+          "CDXL - 60UP",
+          "XBO 2000 DTS",
+          "XBO 2000 DTP",
+          "XBO 3000 DTS",
+          "XBO 3000 DTP",
+          "XBO 3000 DTP L",
+          "XBO 4500 DTP",
+          "XBO 4500 DTP L",
+          "XBO 6000 DTP",
+          "XBO 6000 DTP L",
+          "XBO 6000 DTP XL"
+        ]
+      }
+    ]
+  }
 ]

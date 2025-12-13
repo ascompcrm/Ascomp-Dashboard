@@ -12,23 +12,23 @@ show bar chart, area chart, pie chart, tool tip charts. see whatever you can do
 User Side
 
 - pre fill screen number in form -- Done
-- in form also show text in service type
+- in form also show text in service type -- Done
 - LE Status Note
-- screen height, screen width - duplicate  
-- Flat Height (m), Flat Width - duplicate
-- lamp make and model ( list based on projector )
-- Current Running Hours lamp ( 0 - 3000 )
-- P vs N & P vs E ( 180 - 240 ) vs N vs E ( 0 - 7 )
-- Yes -> Concern (Light Engine Test Pattern)
+- screen height, screen width - duplicate  -- Done
+- Flat Height (m), Flat Width - duplicate -- Done
+- lamp make and model ( list based on projector )  -- Done
+- Current Running Hours lamp ( 0 - 3000 ) -- Done
+- P vs N & P vs E ( 180 - 240 ) vs N vs E ( 0 - 7 ) -- Done
+- Yes -> Concern (Light Engine Test Pattern) -- Done
 - ac blower vane  and other option ( select others add text in remarks )
 - image evaluation remarks notes, yes -> concern
 - image evaluation heading text + ok ( remove ok ) -- Done
-- Security & Lamp Lock ( needs attention remove )
+- Security & Lamp Lock ( needs attention remove ) -- Done
 - ac blower vane  and other option ( select others add text in remarks )
-- range option required
+- range option required -- Done
 
 /service
-- Coolant box seperate in /services
+- Coolant box seperate in /services -- Done
 
 
 PDF
