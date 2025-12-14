@@ -188,9 +188,9 @@ export async function GET(
         focusBoresight: service.focusBoresight,
         integratorPosition: service.integratorPosition,
         spotsOnScreen: service.spotsOnScreen,
-        screenCroppingOk: service.screenCroppingOk,
-        convergenceOk: service.convergenceOk,
-        channelsCheckedOk: service.channelsCheckedOk,
+        screenCroppingOk: service.screenCropping,
+        convergenceOk: service.convergence,
+        channelsCheckedOk: service.channelsChecked,
         pixelDefects: service.pixelDefects,
         imageVibration: service.imageVibration,
         liteloc: service.liteloc,
@@ -274,8 +274,8 @@ export async function PUT(
 
       const boolFields = [
         'reportGenerated', 'replacementRequired', 'focusBoresight',
-        'integratorPosition', 'spotsOnScreen', 'screenCroppingOk',
-        'convergenceOk', 'channelsCheckedOk'
+        'integratorPosition', 'spotsOnScreen', 'screenCropping',
+        'convergence', 'channelsChecked'
       ]
       if (boolFields.includes(key)) {
         if (typeof value === 'boolean') return value
@@ -321,8 +321,8 @@ export async function PUT(
       'blue2Kx', 'blue2Ky', 'blue2Kfl', 'blue4Kx', 'blue4Ky', 'blue4Kfl',
       'BW_Step_10_2Kx', 'BW_Step_10_2Ky', 'BW_Step_10_2Kfl',
       'BW_Step_10_4Kx', 'BW_Step_10_4Ky', 'BW_Step_10_4Kfl',
-      'focusBoresight', 'integratorPosition', 'spotsOnScreen', 'screenCroppingOk', 'airPollutionLevel',
-      'convergenceOk', 'channelsCheckedOk', 'pixelDefects', 'imageVibration', 'liteloc',
+      'focusBoresight', 'integratorPosition', 'spotsOnScreen', 'screenCropping', 'airPollutionLevel',
+      'convergence', 'channelsChecked', 'pixelDefects', 'imageVibration', 'liteloc',
       'hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10', 'temperature', 'humidity',
       'remarks', 'lightEngineSerialNumber', 'signatures', 'recommendedParts',
       'images', 'brokenImages', 'reportUrl', 'photosDriveLink',
@@ -413,8 +413,8 @@ export async function PUT(
 
         const boolFields = [
           'reportGenerated', 'replacementRequired', 'focusBoresight',
-          'integratorPosition', 'spotsOnScreen', 'screenCroppingOk',
-          'convergenceOk', 'channelsCheckedOk'
+          'integratorPosition', 'spotsOnScreen', 'screenCropping',
+          'convergence', 'channelsChecked'
         ]
         if (boolFields.includes(key)) {
           if (typeof value === 'string') {
