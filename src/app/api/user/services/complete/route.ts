@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id
     const body = await request.json()
-    const { serviceRecordId, workDetails, signatures, images, brokenImages } = body
+    const { serviceRecordId, workDetails, signatures, images, brokenImages, afterImages } = body
 
     if (!serviceRecordId) {
       return NextResponse.json({ error: "Service record ID is required" }, { status: 400 })
@@ -158,9 +158,7 @@ export async function POST(request: NextRequest) {
       if (workDetails.channelsCheckedOkNote !== undefined) workDetails.channelsCheckedNote = workDetails.channelsCheckedOkNote
     }
 
-    Object.keys(workDetails).forEach((key) => {
-      // ... existing loop ...
-    })
+
 
     // Fields that should not be updated (read-only or set on creation)
     const readonlyFields = new Set([
@@ -238,6 +236,18 @@ export async function POST(request: NextRequest) {
         }).filter((url): url is string => Boolean(url) && typeof url === 'string')
       } else {
         updateData.brokenImages = []
+      }
+    }
+
+    if (afterImages !== undefined) {
+      if (Array.isArray(afterImages) && afterImages.length > 0) {
+        updateData.afterImages = afterImages.map((img: any) => {
+          if (typeof img === 'string') return img
+          if (img && typeof img === 'object') return img.url || img
+          return null
+        }).filter((url): url is string => Boolean(url) && typeof url === 'string')
+      } else {
+        updateData.afterImages = []
       }
     }
 
