@@ -38,12 +38,12 @@
     "type": "select",
     "section": "Cinema Details",
     "options": [
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
+      "First",
+      "Second",
+      "Third",
+      "Fourth",
+      "Fifth",
+      "Sixth",
       "special"
     ]
   },
@@ -77,7 +77,15 @@
       "OK (Part is Ok)",
       "YES (Needs Replacement)"
     ],
-    "defaultValue": "OK"
+    "defaultValue": "OK",
+    "componentType": "statusSelectWithNote",
+    "noteDefault": "",
+    "noteOptions": [
+      "Solarized",
+      "Chipped",
+      "Cracked",
+      "Not Present"
+    ]
   },
   {
     "key": "uvFilter",
@@ -188,6 +196,94 @@
       "YES (Needs Replacement)"
     ],
     "defaultValue": "OK"
+  },
+  {
+    "key": "serialNumberVerified",
+    "label": "Serial Number Verified",
+    "type": "select",
+    "componentType": "statusSelectWithNote",
+    "section": "Serial Number Verified",
+    "options": [
+      "OK (Part is Ok)",
+      "Concern"
+    ]
+  },
+  {
+    "key": "AirIntakeLadRad",
+    "label": "Air Intake / Lad Rad",
+    "type": "select",
+    "componentType": "statusSelectWithNote",
+    "section": "Disposable Consumables",
+    "options": [
+      "OK (Part is Ok)",
+      "Concern"
+    ]
+  },
+  {
+    "key": "coolantLevelColor",
+    "label": "Coolant Level & Color",
+    "type": "select",
+    "componentType": "statusSelectWithNote",
+    "section": "Coolant",
+    "options": [
+      "OK (Part is Ok)",
+      "Concern"
+    ]
+  },
+  {
+    "key": "lightEngineWhite",
+    "label": "White",
+    "type": "select",
+    "componentType": "statusSelectWithNote",
+    "section": "Light Engine Test Pattern",
+    "options": [
+      "OK (Part is Ok)",
+      "Concern"
+    ]
+  },
+  {
+    "key": "lightEngineRed",
+    "label": "Red",
+    "type": "select",
+    "componentType": "statusSelectWithNote",
+    "section": "Light Engine Test Pattern",
+    "options": [
+      "OK (Part is Ok)",
+      "Concern"
+    ]
+  },
+  {
+    "key": "lightEngineGreen",
+    "label": "Green",
+    "type": "select",
+    "componentType": "statusSelectWithNote",
+    "section": "Light Engine Test Pattern",
+    "options": [
+      "OK (Part is Ok)",
+      "Concern"
+    ]
+  },
+  {
+    "key": "lightEngineBlue",
+    "label": "Blue",
+    "type": "select",
+    "componentType": "statusSelectWithNote",
+    "section": "Light Engine Test Pattern",
+    "options": [
+      "OK (Part is Ok)",
+      "Concern"
+    ]
+  },
+  {
+    "key": "lightEngineBlack",
+    "label": "Black",
+    "type": "select",
+    "componentType": "statusSelectWithNote",
+    "section": "Light Engine Test Pattern",
+    "options": [
+      "OK (Part is Ok)",
+      "Concern"
+    ]
   },
   {
     "key": "acBlowerVane",

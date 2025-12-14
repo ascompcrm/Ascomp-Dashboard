@@ -801,9 +801,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
             { value: 'YES', label: 'YES', description: 'Needs replacement' },
           ]
 
-    const isIssue = issueValues 
+    const isIssue = (issueValues && issueValues.length > 0)
       ? issueValues.includes(status) 
-      : (status === 'YES' || status === 'Concern')
+      : (status === 'YES' || status === 'Concern' || status.startsWith('YES') || status.includes('Concern'))
 
     const formatNote = (choice: string, text: string) => {
       const c = choice?.trim()

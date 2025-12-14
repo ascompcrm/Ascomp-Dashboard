@@ -31,6 +31,7 @@ async function writeConfig(config: any[]): Promise<void> {
   try {
     await ensureConfigDir()
     const configString = JSON.stringify(config, null, 2)
+    console.log("Writing form config to:", CONFIG_FILE_PATH)
     await fs.writeFile(CONFIG_FILE_PATH, configString, "utf-8")
   } catch (error) {
     console.error("Error writing form config:", error)

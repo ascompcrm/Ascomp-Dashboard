@@ -194,7 +194,7 @@ export default function FormBuilderPage() {
         } catch {
           errorData = { error: errorText }
         }
-        alert(`Failed to save: ${errorData.error || "Unknown error"}`)
+        alert(`Failed to save: ${errorData.error || "Unknown error"}\nDetails: ${errorData.details || "No details provided"}`)
       }
     } catch (error) {
       console.error("Failed to save form config - Exception:", error)

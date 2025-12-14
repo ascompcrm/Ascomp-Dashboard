@@ -30,6 +30,7 @@ type FieldConfig = {
   componentType?: "statusSelectWithNote"
   noteOptions?: string[]
   noteDefault?: string
+  issueValues?: string[]
   optionDescriptions?: Record<string, string>
 }
 
@@ -272,7 +273,7 @@ export default function FormBuilderPage() {
         } catch {
           errorData = { error: errorText }
         }
-        alert(`Failed to save: ${errorData.error || "Unknown error"}`)
+        alert(`Failed to save: ${errorData.error || "Unknown error"}\nDetails: ${errorData.details || "No details provided"}`)
       }
     } catch (error) {
       console.error("Failed to save form config - Exception:", error)
@@ -672,7 +673,7 @@ export default function FormBuilderPage() {
                           {field.componentType === "statusSelectWithNote" && (
                             <div className="space-y-3 pl-4 border-l-2 border-gray-300">
                               <div>
-                                <Label className="text-xs text-gray-600">Note Options (shown when status is YES)</Label>
+                                <Label className="text-xs text-gray-600">Note Options (shown when status is Issue)</Label>
                                 <div className="space-y-2 mt-1">
                                   {field.noteOptions?.map((noteOpt, idx) => (
                                     <div key={idx} className="flex items-center gap-2">
@@ -737,6 +738,75 @@ export default function FormBuilderPage() {
                                   </div>
                                 </div>
                               </div>
+                              
+                              <div>
+                                <Label className="text-xs text-gray-600">Issue Trigger Values (Status values that show note)</Label>
+                                <div className="space-y-2 mt-1">
+                                  {field.issueValues?.map((val, idx) => (
+                                    <div key={idx} className="flex items-center gap-2">
+                                      <Input
+                                        value={val}
+                                        onChange={(e) => {
+                                          const newIssueValues = [...(field.issueValues || [])]
+                                          newIssueValues[idx] = e.target.value
+                                          updateField(field.key, { issueValues: newIssueValues })
+                                        }}
+                                        className="border-2 border-black text-sm flex-1"
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          const newIssueValues = field.issueValues?.filter((_, i) => i !== idx) || []
+                                          updateField(field.key, { issueValues: newIssueValues })
+                                        }}
+                                        className="border-red-600 text-red-600 hover:bg-red-50"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      placeholder="Add issue value (e.g. YES)"
+                                      className="border-2 border-black text-sm flex-1"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault()
+                                          const value = e.currentTarget.value.trim()
+                                          if (value) {
+                                            updateField(field.key, { 
+                                              issueValues: [...(field.issueValues || []), value] 
+                                            })
+                                            e.currentTarget.value = ""
+                                          }
+                                        }
+                                      }}
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                        const value = input.value.trim()
+                                        if (value) {
+                                          updateField(field.key, { 
+                                            issueValues: [...(field.issueValues || []), value] 
+                                          })
+                                          input.value = ""
+                                        }
+                                      }}
+                                      className="border-black"
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                <p className="text-[10px] text-gray-500 mt-1">If empty, defaults to "YES" and "Concern".</p>
+                              </div>
+
                               <div>
                                 <Label className="text-xs text-gray-600">Note Default Value</Label>
                                 <Input
