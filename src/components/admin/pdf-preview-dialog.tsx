@@ -175,15 +175,15 @@ export default function PdfPreviewDialog({ open, onOpenChange, serviceRecordId }
       throwDistance: service.workDetails?.throwDistance?.toString() || "",
 
       imageEvaluation: {
-        focusBoresite: service.workDetails?.focusBoresight ? "Yes" : "No",
-        integratorPosition: service.workDetails?.integratorPosition ? "Yes" : "No",
-        spotOnScreen: service.workDetails?.spotsOnScreen ? "Yes" : "No",
-        screenCropping: service.workDetails?.screenCroppingOk ? "Yes" : "No",
-        convergence: service.workDetails?.convergenceOk ? "Yes" : "No",
-        channelsChecked: service.workDetails?.channelsCheckedOk ? "Yes" : "No",
-        pixelDefects: service.workDetails?.pixelDefects || "",
-        imageVibration: service.workDetails?.imageVibration || "",
-        liteLOC: service.workDetails?.liteloc || "",
+        focusBoresite: mapStatus(service.workDetails?.focusBoresight, service.workDetails?.focusBoresightNote),
+        integratorPosition: mapStatus(service.workDetails?.integratorPosition, service.workDetails?.integratorPositionNote),
+        spotOnScreen: mapStatus(service.workDetails?.spotsOnScreen, service.workDetails?.spotsOnScreenNote),
+        screenCropping: mapStatus(service.workDetails?.screenCroppingOk, service.workDetails?.screenCroppingNote),
+        convergence: mapStatus(service.workDetails?.convergenceOk, service.workDetails?.convergenceNote),
+        channelsChecked: mapStatus(service.workDetails?.channelsCheckedOk, service.workDetails?.channelsCheckedNote),
+        pixelDefects: mapStatus(service.workDetails?.pixelDefects, service.workDetails?.pixelDefectsNote),
+        imageVibration: mapStatus(service.workDetails?.imageVibration, service.workDetails?.imageVibrationNote),
+        liteLOC: mapStatus(service.workDetails?.liteloc, service.workDetails?.litelocNote),
       },
 
       airPollution: {

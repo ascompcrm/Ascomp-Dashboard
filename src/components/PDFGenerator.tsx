@@ -678,7 +678,6 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   for (const [label, item] of evaluationItems) {
     const itemObj = item as StatusItem; // Type assertion since array elements are inferred as StatusItem
     const statusText = normalizeYesNo(itemObj.yesNo);
-    const displayLabel = itemObj.status ? `${label} (${itemObj.status})` : label;
     
     drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, 240,
       [label || '', statusText], [180, 60], 16)
