@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Maximize2, X } from 'lucide-react'
@@ -251,13 +251,7 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
     }
   }
 
-  const hasImageEvidence = useMemo(() => {
-    if (!data?.workImages) return false
-    if (Array.isArray(data.workImages)) {
-      return data.workImages.length > 0
-    }
-    return Boolean((data.workImages.broken || []).length && (data.workImages.other || []).length)
-  }, [data])
+
 
   return (
     <div>
@@ -405,12 +399,6 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
         </div>
       )}
 
-      {!hasImageEvidence && (
-        <div className="p-3 border-2 border-amber-500 bg-amber-50 text-amber-800 text-sm mb-4">
-          Please attach required images in the Record Work step before submitting signatures.
-        </div>
-      )}
-
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         <Button
           onClick={onBack}
@@ -421,7 +409,7 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
         </Button>
         <Button
           onClick={handleNext}
-          disabled={!siteSignatureUrl || !engineerSignatureUrl || !hasImageEvidence || uploading}
+          disabled={!siteSignatureUrl || !engineerSignatureUrl || uploading}
           className="bg-black text-white hover:bg-gray-800 border-2 border-black font-bold disabled:opacity-50 flex-1"
         >
           Continue to Report

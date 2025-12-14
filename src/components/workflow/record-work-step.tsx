@@ -1327,9 +1327,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         </FormSection>
 
         <FormSection title="Service Images">
-          <p className="text-xs sm:text-sm text-gray-600 mb-2">
-            Please upload at least one image for Before, After, and Broken Parts categories.
-          </p>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Before Images */}
             <div>
