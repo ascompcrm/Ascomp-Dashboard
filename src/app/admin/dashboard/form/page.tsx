@@ -34,6 +34,12 @@ type FieldConfig = {
   optionDescriptions?: Record<string, string>
 }
 
+type ProjectorPart = {
+  projector_model: string
+  part_number: string
+  description: string
+}
+
 const FORM_SECTIONS = [
   "Cinema Details",
   "Projector Information",
@@ -158,10 +164,19 @@ export default function FormBuilderPage() {
   const [contentPlayers, setContentPlayers] = useState<string[]>([])
   const [lampModelsData, setLampModelsData] = useState<Array<{ projector_model: string; Models: string[] }>>([])
   const [softwareVersions, setSoftwareVersions] = useState<string[]>([])
+  const [projectorPartsData, setProjectorPartsData] = useState<ProjectorPart[]>([])
+  
   const [newDataValue, setNewDataValue] = useState<Record<string, string>>({})
   const [newLampModelValue, setNewLampModelValue] = useState<Record<string, string>>({})
   const [newProjectorModel, setNewProjectorModel] = useState("")
+  
   const [selectedProjectorIndex, setSelectedProjectorIndex] = useState<number | null>(null)
+  
+  // Projector Parts State
+  const [selectedPartsProjector, setSelectedPartsProjector] = useState<string | null>(null)
+  const [newPartValue, setNewPartValue] = useState<{ part_number: string; description: string }>({ part_number: "", description: "" })
+  const [newPartsProjectorModel, setNewPartsProjectorModel] = useState("")
+
   const [loadingDataFiles, setLoadingDataFiles] = useState(true)
 
   useEffect(() => {
@@ -186,20 +201,13 @@ export default function FormBuilderPage() {
     const loadDataFiles = async () => {
       setLoadingDataFiles(true)
       try {
-        const [contentRes, lampRes, softwareRes] = await Promise.all([
-          fetch("/api/admin/data-files/content-player?t=" + Date.now(), { 
-            credentials: "include",
-            cache: "no-store",
-          }),
-          fetch("/api/admin/data-files/lamp-models?t=" + Date.now(), { 
-            credentials: "include",
-            cache: "no-store",
-          }),
-          fetch("/api/admin/data-files/software?t=" + Date.now(), { 
-            credentials: "include",
-            cache: "no-store",
-          }),
+        const results = await Promise.all([
+          fetch("/api/admin/data-files/content-player?t=" + Date.now(), { credentials: "include", cache: "no-store" }),
+          fetch("/api/admin/data-files/lamp-models?t=" + Date.now(), { credentials: "include", cache: "no-store" }),
+          fetch("/api/admin/data-files/software?t=" + Date.now(), { credentials: "include", cache: "no-store" }),
+          fetch("/api/admin/data-files/projector?t=" + Date.now(), { credentials: "include", cache: "no-store" }),
         ])
+        const [contentRes, lampRes, softwareRes, projectorRes] = results
 
         if (contentRes.ok) {
           const data = await contentRes.json()
@@ -224,6 +232,15 @@ export default function FormBuilderPage() {
           const errorText = await softwareRes.text()
           console.error("Failed to load software versions:", softwareRes.status, errorText)
         }
+
+        if (projectorRes.ok) {
+          const data = await projectorRes.json()
+          // Ensure data is ProjectorPart[]
+          setProjectorPartsData(data.data || [])
+        } else {
+           const errorText = await projectorRes.text()
+           console.error("Failed to load projector parts:", projectorRes.status, errorText)
+        }
       } catch (error) {
         console.error("Failed to load data files:", error)
       } finally {
@@ -232,6 +249,16 @@ export default function FormBuilderPage() {
     }
     loadDataFiles()
   }, [])
+
+  // Derived unique projector models for parts
+  const uniquePartsModels = Array.from(new Set(projectorPartsData.map(p => p.projector_model))).filter(Boolean).sort()
+  
+  // Set default selected parts projector if available
+  useEffect(() => {
+    if (uniquePartsModels.length > 0 && selectedPartsProjector === null) {
+      setSelectedPartsProjector(uniquePartsModels[0] as string)
+    }
+  }, [uniquePartsModels, selectedPartsProjector])
 
   // Set default selected projector and reset if invalid
   useEffect(() => {
@@ -307,13 +334,22 @@ export default function FormBuilderPage() {
   }
 
   // Data file management functions
-  const saveDataFile = async (fileType: "content-player" | "lamp-models" | "software", values: string[] | Array<{ projector_model: string; Models: string[] }>) => {
+  const saveDataFile = async (fileType: "content-player" | "lamp-models" | "software" | "projector", values: any) => {
     try {
+      let bodyData: any = {}
+      if (fileType === "lamp-models") {
+        bodyData = { data: values }
+      } else if (fileType === "projector") {
+        bodyData = { data: values }
+      } else {
+        bodyData = { values }
+      }
+
       const res = await fetch(`/api/admin/data-files/${fileType}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(fileType === "lamp-models" ? { data: values } : { values }),
+        body: JSON.stringify(bodyData),
       })
 
       if (res.ok) {
@@ -324,6 +360,7 @@ export default function FormBuilderPage() {
         if (fileType === "content-player") setContentPlayers(values as string[])
         if (fileType === "lamp-models") setLampModelsData(values as Array<{ projector_model: string; Models: string[] }>)
         if (fileType === "software") setSoftwareVersions(values as string[])
+        if (fileType === "projector") setProjectorPartsData(values as ProjectorPart[])
       } else {
         const errorText = await res.text()
         console.error(`Failed to save ${fileType} - Response:`, errorText)
@@ -384,6 +421,59 @@ export default function FormBuilderPage() {
       saveDataFile(fileType, contentPlayers)
     } else if (fileType === "software") {
       saveDataFile(fileType, softwareVersions)
+    }
+  }
+
+  // Projector Parts Management
+  const addProjectorPart = () => {
+    if (!selectedPartsProjector || !newPartValue.part_number || !newPartValue.description) return
+    const newPart: ProjectorPart = {
+      projector_model: selectedPartsProjector,
+      part_number: newPartValue.part_number.trim(),
+      description: newPartValue.description.trim()
+    }
+    const updated = [...projectorPartsData, newPart]
+    saveDataFile("projector", updated) // Autosave
+    setNewPartValue({ part_number: "", description: "" })
+  }
+
+  const removeProjectorPart = (partToRemove: ProjectorPart) => {
+    const updated = projectorPartsData.filter(p => 
+      !(p.projector_model === partToRemove.projector_model && 
+        p.part_number === partToRemove.part_number &&
+        p.description === partToRemove.description)
+    )
+    saveDataFile("projector", updated)
+  }
+
+  const updateProjectorPart = (originalPart: ProjectorPart, field: keyof ProjectorPart, value: string) => {
+    const updated = projectorPartsData.map(p => {
+       if (p === originalPart) {
+         return { ...p, [field]: value }
+       }
+       return p
+    })
+    setProjectorPartsData(updated)
+  }
+
+  const saveProjectorPartsOnBlur = () => {
+    saveDataFile("projector", projectorPartsData)
+  }
+
+  const addNewPartsProjectorModel = () => {
+    if (!newPartsProjectorModel.trim()) return
+    // Since parts list is flat, we don't really 'create' a model until we add a part.
+    // Ideally we switch selection to this new model so user can add parts.
+    setSelectedPartsProjector(newPartsProjectorModel.trim())
+    setNewPartsProjectorModel("")
+  }
+
+  const removeProjectorModelFromParts = (model: string) => {
+    if (!confirm(`Are you sure you want to delete all parts for ${model}?`)) return
+    const updated = projectorPartsData.filter(p => p.projector_model !== model)
+    saveDataFile("projector", updated)
+    if (selectedPartsProjector === model) {
+      setSelectedPartsProjector(null)
     }
   }
 
@@ -849,28 +939,29 @@ export default function FormBuilderPage() {
                 setLoadingDataFiles(true)
                 const loadDataFiles = async () => {
                   try {
-                    const [contentRes, lampRes, softwareRes] = await Promise.all([
+                     const results = await Promise.all([
                       fetch("/api/admin/data-files/content-player?t=" + Date.now(), { credentials: "include", cache: "no-store" }),
                       fetch("/api/admin/data-files/lamp-models?t=" + Date.now(), { credentials: "include", cache: "no-store" }),
                       fetch("/api/admin/data-files/software?t=" + Date.now(), { credentials: "include", cache: "no-store" }),
+                      fetch("/api/admin/data-files/projector?t=" + Date.now(), { credentials: "include", cache: "no-store" }),
                     ])
+                    const [contentRes, lampRes, softwareRes, projectorRes] = results
+
                     if (contentRes.ok) {
                       const data = await contentRes.json()
                       setContentPlayers(data.values || [])
-                    } else {
-                      console.error("Failed to refresh content players:", contentRes.status)
                     }
                     if (lampRes.ok) {
                       const data = await lampRes.json()
                       setLampModelsData(data.data || [])
-                    } else {
-                      console.error("Failed to refresh lamp models:", lampRes.status)
                     }
                     if (softwareRes.ok) {
                       const data = await softwareRes.json()
                       setSoftwareVersions(data.values || [])
-                    } else {
-                      console.error("Failed to refresh software versions:", softwareRes.status)
+                    }
+                    if (projectorRes.ok) {
+                      const data = await projectorRes.json()
+                      setProjectorPartsData(data.data || [])
                     }
                   } catch (error) {
                     console.error("Failed to refresh data files:", error)
@@ -1147,6 +1238,147 @@ export default function FormBuilderPage() {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Projector Parts */}
+            <Card className="border-2 border-black col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold text-black">Recommended Parts (by Projector Model)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loadingDataFiles ? (
+                  <p className="text-sm text-gray-500">Loading projector parts...</p>
+                ) : (
+                  <>
+                    {/* Projector Selection Dropdown */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-black">Select Projector Model</Label>
+                      <Select
+                        value={selectedPartsProjector || ""}
+                        onValueChange={(value) => setSelectedPartsProjector(value)}
+                      >
+                        <SelectTrigger className="border-2 border-black">
+                          <SelectValue placeholder="Choose a projector model..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {uniquePartsModels.map((model, idx) => (
+                            <SelectItem key={idx} value={model}>
+                              {model}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Selected Projector's Parts */}
+                    {selectedPartsProjector && (
+                      <div className="border border-gray-300 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b">
+                          <Label className="text-sm font-semibold text-black">Model: {selectedPartsProjector}</Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeProjectorModelFromParts(selectedPartsProjector)}
+                            className="border-red-600 text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" /> Remove All Parts for Model
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-5 gap-2 font-semibold text-xs text-gray-600 mb-1">
+                             <div className="col-span-2">Part Description</div>
+                             <div className="col-span-2">Part Number</div>
+                             <div className="col-span-1">Action</div>
+                          </div>
+                          <div className="space-y-2 max-h-80 overflow-y-auto">
+                            {projectorPartsData
+                              .filter(p => p.projector_model === selectedPartsProjector)
+                              .map((part, pIdx) => (
+                                <div key={pIdx} className="grid grid-cols-5 gap-2 items-center">
+                                  <Input
+                                    value={part.description}
+                                    onChange={(e) => updateProjectorPart(part, "description", e.target.value)}
+                                    onBlur={saveProjectorPartsOnBlur}
+                                    className="col-span-2 border-2 border-black text-sm"
+                                    placeholder="Description"
+                                  />
+                                  <Input
+                                    value={part.part_number}
+                                    onChange={(e) => updateProjectorPart(part, "part_number", e.target.value)}
+                                    onBlur={saveProjectorPartsOnBlur}
+                                    className="col-span-2 border-2 border-black text-sm"
+                                    placeholder="Part Number"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeProjectorPart(part)}
+                                    className="col-span-1 border-red-600 text-red-600 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                          </div>
+                          
+                          {/* Add New Part Row */}
+                          <div className="grid grid-cols-5 gap-2 pt-3 border-t mt-2">
+                             <Input
+                               value={newPartValue.description}
+                               onChange={(e) => setNewPartValue(prev => ({ ...prev, description: e.target.value }))}
+                               className="col-span-2 border-2 border-black text-sm"
+                               placeholder="New Part Description"
+                             />
+                             <Input
+                               value={newPartValue.part_number}
+                               onChange={(e) => setNewPartValue(prev => ({ ...prev, part_number: e.target.value }))}
+                               className="col-span-2 border-2 border-black text-sm"
+                               placeholder="New Part Number"
+                               onKeyDown={(e) => {
+                                 if (e.key === "Enter") addProjectorPart()
+                               }}
+                             />
+                             <Button
+                               type="button"
+                               variant="outline"
+                               size="sm"
+                               onClick={addProjectorPart}
+                               className="col-span-1 border-black"
+                               disabled={!newPartValue.description || !newPartValue.part_number}
+                             >
+                               <Plus className="h-4 w-4" />
+                             </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Add New Model Section */}
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <Input
+                        value={newPartsProjectorModel}
+                        onChange={(e) => setNewPartsProjectorModel(e.target.value)}
+                        placeholder="Add new projector model for parts (e.g. CP4230)"
+                        className="border-2 border-black text-sm flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") addNewPartsProjectorModel()
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addNewPartsProjectorModel}
+                        className="border-black"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

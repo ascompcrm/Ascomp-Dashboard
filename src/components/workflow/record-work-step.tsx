@@ -527,8 +527,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     }
   }
 
-  const hasRequiredImages = beforeImages.length > 0 && afterImages.length > 0 && brokenImages.length > 0
-
   // Filter parts by projector model
   const projectorModel = watch('projectorModel')
   const filteredParts = partsData.filter(
@@ -909,11 +907,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   }
 
   const onSubmit = (values: RecordWorkForm) => {
-    if (!hasRequiredImages) {
-      setImageError('Please upload at least one image for Before, After, and Broken Parts categories.')
-      return
-    }
-
     const validationErrors: string[] = []
     if (formConfig && Array.isArray(formConfig)) {
       formConfig.forEach((field) => {
@@ -1340,7 +1333,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Before Images */}
             <div>
-              <p className="font-semibold text-sm text-black mb-2">Before Images *</p>
+              <p className="font-semibold text-sm text-black mb-2">Before Images (Optional)</p>
               <input
                 type="file"
                 accept="image/*"
@@ -1370,7 +1363,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
             {/* After Images */}
             <div>
-              <p className="font-semibold text-sm text-black mb-2">After Images *</p>
+              <p className="font-semibold text-sm text-black mb-2">After Images (Optional)</p>
               <input
                 type="file"
                 accept="image/*"
@@ -1400,7 +1393,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
             {/* Broken Images */}
             <div>
-              <p className="font-semibold text-sm text-black mb-2">Broken Parts Images *</p>
+              <p className="font-semibold text-sm text-black mb-2">Broken Parts Images (Optional)</p>
               <input
                 type="file"
                 accept="image/*"
@@ -1444,8 +1437,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         </Button>
         <Button
           type="submit"
-          disabled={!hasRequiredImages}
-          className="bg-black text-white hover:bg-gray-800 border-2 border-black font-bold flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-black text-white hover:bg-gray-800 border-2 border-black font-bold flex-1"
         >
           Continue to Signatures
         </Button>

@@ -128,7 +128,8 @@ export async function GET(
 
     // For projector, return the full structure
     if (fileType === "projector") {
-      return NextResponse.json({ data: data.projector_parts || [] })
+      const partsData = Array.isArray(data) ? data[0]?.projector_parts : data?.projector_parts
+      return NextResponse.json({ data: partsData || [] })
     }
 
     return NextResponse.json({ data })
@@ -189,7 +190,8 @@ export async function POST(
         return NextResponse.json({ error: "Data must be an array" }, { status: 400 })
       }
 
-      await writeDataFile(fileType, { projector_parts: data })
+      // Match the file format: [{ projector_parts: [...] }]
+      await writeDataFile(fileType, [{ projector_parts: data }])
       return NextResponse.json({ success: true, saved: data.length })
     }
 
