@@ -38,12 +38,12 @@
     "type": "select",
     "section": "Cinema Details",
     "options": [
-      "First",
-      "Second",
-      "Third",
-      "Fourth",
-      "Fifth",
-      "Sixth",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
       "special"
     ]
   },
@@ -77,15 +77,7 @@
       "OK (Part is Ok)",
       "YES (Needs Replacement)"
     ],
-    "defaultValue": "OK",
-    "componentType": "statusSelectWithNote",
-    "noteDefault": "",
-    "noteOptions": [
-      "Solarized",
-      "Chipped",
-      "Cracked",
-      "Not Present"
-    ]
+    "defaultValue": "OK"
   },
   {
     "key": "uvFilter",

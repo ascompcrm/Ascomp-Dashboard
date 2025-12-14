@@ -1,40 +1,78 @@
 import { NextResponse } from "next/server"
 import { promises as fs } from "fs"
 import path from "path"
+import prisma from "@/lib/db"
 
 const CONFIG_FILE_PATH = path.join(process.cwd(), "data", "form-config.json")
 
-async function ensureConfigDir() {
-  const dir = path.dirname(CONFIG_FILE_PATH)
+async function readConfigFromFile(): Promise<any[] | null> {
   try {
-    await fs.access(dir)
-  } catch {
-    await fs.mkdir(dir, { recursive: true })
-  }
-}
+    const dir = path.dirname(CONFIG_FILE_PATH)
+    // Ensure access to file system just in case, but ignore errors if it doesn't exist
+    await fs.access(dir).catch(() => { })
 
-async function readConfig(): Promise<any[] | null> {
-  try {
-    await ensureConfigDir()
     const data = await fs.readFile(CONFIG_FILE_PATH, "utf-8")
     return JSON.parse(data)
   } catch (error: any) {
     if (error.code === "ENOENT") {
       return null
     }
-    console.error("Error reading form config:", error)
+    console.error("Error reading form config file:", error)
     return null
   }
 }
 
+async function readConfig(): Promise<any[] | null> {
+  try {
+    // Try reading from Database
+    const dbConfig = await prisma.formConfiguration.findFirst({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    if (dbConfig?.config) {
+      return dbConfig.config as any[]
+    }
+
+    // If no DB config, fallback to file and seed DB
+    console.log("No DB config found. Falling back to file...")
+    const fileConfig = await readConfigFromFile()
+
+    if (fileConfig) {
+      console.log("Seeding form config from file to database...")
+      try {
+        await prisma.formConfiguration.create({
+          data: {
+            config: fileConfig,
+            version: 1,
+            isActive: true
+          }
+        })
+      } catch (seedError) {
+        console.error("Failed to seed form config to DB:", seedError)
+      }
+      return fileConfig
+    }
+  } catch (error) {
+    console.error("Error in readConfig:", error)
+    // Fallback solely to file if DB fails completely
+    return readConfigFromFile()
+  }
+
+  return null
+}
+
 async function writeConfig(config: any[]): Promise<void> {
   try {
-    await ensureConfigDir()
-    const configString = JSON.stringify(config, null, 2)
-    console.log("Writing form config to:", CONFIG_FILE_PATH)
-    await fs.writeFile(CONFIG_FILE_PATH, configString, "utf-8")
+    await prisma.formConfiguration.create({
+      data: {
+        config: config,
+        isActive: true
+      }
+    })
+    console.log("Form config saved to database.")
   } catch (error) {
-    console.error("Error writing form config:", error)
+    console.error("Error writing form config to DB:", error)
     throw error
   }
 }

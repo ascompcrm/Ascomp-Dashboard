@@ -325,12 +325,19 @@ export default function FormBuilderPage() {
         if (fileType === "lamp-models") setLampModelsData(values as Array<{ projector_model: string; Models: string[] }>)
         if (fileType === "software") setSoftwareVersions(values as string[])
       } else {
-        const error = await res.json()
-        alert(`Failed to save: ${error.error || "Unknown error"}`)
+        const errorText = await res.text()
+        console.error(`Failed to save ${fileType} - Response:`, errorText)
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { error: errorText }
+        }
+        alert(`Failed to save: ${errorData.error || "Unknown error"}\nDetails: ${errorData.details || ""}`)
       }
     } catch (error) {
       console.error(`Failed to save ${fileType}:`, error)
-      alert(`Failed to save ${fileType}. Please try again.`)
+      alert(`Failed to save ${fileType}: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 

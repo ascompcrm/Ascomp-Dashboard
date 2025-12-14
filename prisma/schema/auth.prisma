@@ -289,3 +289,24 @@ model ServiceRecord {
   @@index([assignedToId])
   @@map("service_record")
 }
+
+model FormConfiguration {
+  id        String   @id @map("_id") @default(cuid())
+  config    Json
+  version   Int      @default(1)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("form_configuration")
+}
+
+model DataFile {
+  id        String   @id @map("_id") @default(cuid())
+  type      String   @unique // "software", "content-player", "lamp-models", "projector"
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("data_file")
+}
