@@ -222,8 +222,9 @@ const FormField = ({
 )
 
 export default function RecordWorkStep({ data, onNext, onBack }: any) {
+  const [beforeImages, setBeforeImages] = useState<UploadedImage[]>([])
+  const [afterImages, setAfterImages] = useState<UploadedImage[]>([])
   const [brokenImages, setBrokenImages] = useState<UploadedImage[]>([])
-  const [referenceImages, setReferenceImages] = useState<UploadedImage[]>([])
   const [imageError, setImageError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [partsData, setPartsData] = useState<ProjectorPart[]>([])
@@ -233,8 +234,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const [lampModels, setLampModels] = useState<string[]>([])
   const [softwareVersions, setSoftwareVersions] = useState<string[]>([])
   const [contentPlayers, setContentPlayers] = useState<string[]>([])
+  const beforeImagesRef = useRef<UploadedImage[]>([])
+  const afterImagesRef = useRef<UploadedImage[]>([])
   const brokenImagesRef = useRef<UploadedImage[]>([])
-  const referenceImagesRef = useRef<UploadedImage[]>([])
   const { config: formConfig, loading: configLoading } = useFormConfig()
 
   const {
@@ -306,20 +308,17 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     }
 
     if (data?.workImages) {
-      if (Array.isArray(data.workImages)) {
-        setReferenceImages(data.workImages)
-        setBrokenImages([])
-      } else {
-        setBrokenImages(data.workImages.broken || [])
-        setReferenceImages(data.workImages.other || [])
-      }
+      setBeforeImages(data.workImages.images || [])
+      setAfterImages(data.workImages.afterImages || [])
+      setBrokenImages(data.workImages.brokenImages || [])
     } else if (typeof window !== 'undefined' && data?.selectedService?.id) {
       const storageKey = `recordWorkImages_${data.selectedService.id}`
       const savedImages = localStorage.getItem(storageKey)
       if (savedImages) {
         const parsed = JSON.parse(savedImages)
+        setBeforeImages(parsed.before || [])
+        setAfterImages(parsed.after || [])
         setBrokenImages(parsed.broken || [])
-        setReferenceImages(parsed.other || [])
       }
     }
   }, [data, reset])
@@ -334,12 +333,16 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   }, [watch, data?.selectedService?.id])
 
   useEffect(() => {
-    brokenImagesRef.current = brokenImages
-  }, [brokenImages])
+    beforeImagesRef.current = beforeImages
+  }, [beforeImages])
 
   useEffect(() => {
-    referenceImagesRef.current = referenceImages
-  }, [referenceImages])
+    afterImagesRef.current = afterImages
+  }, [afterImages])
+
+  useEffect(() => {
+    brokenImagesRef.current = brokenImages
+  }, [brokenImages])
 
   // Load projector parts data
   useEffect(() => {
@@ -447,19 +450,20 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     }
   }, [isDialogOpen, getValues])
 
-  const persistImages = (broken: UploadedImage[], other: UploadedImage[]) => {
+  const persistImages = (before: UploadedImage[], after: UploadedImage[], broken: UploadedImage[]) => {
+    setBeforeImages(before)
+    setAfterImages(after)
     setBrokenImages(broken)
-    setReferenceImages(other)
     if (typeof window !== 'undefined' && data?.selectedService?.id) {
       const storageKey = `recordWorkImages_${data.selectedService.id}`
-      localStorage.setItem(storageKey, JSON.stringify({ broken, other }))
+      localStorage.setItem(storageKey, JSON.stringify({ before, after, broken }))
     }
   }
 
-  const uploadToBlob = async (file: File, category: 'broken' | 'reference'): Promise<UploadedImage> => {
+  const uploadToBlob = async (file: File, category: 'before' | 'after' | 'broken'): Promise<UploadedImage> => {
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('folder', category === 'broken' ? 'broken-images' : 'reference-images')
+    formData.append('folder', `${category}-images`)
 
     const response = await fetch('/api/blob/upload', {
       method: 'POST',
@@ -475,16 +479,18 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     return { name: file.name, url: result.url, size: result.size }
   }
 
-  const handleImageUpload = async (type: 'broken' | 'reference', files: FileList | null) => {
+  const handleImageUpload = async (type: 'before' | 'after' | 'broken', files: FileList | null) => {
     if (!files || files.length === 0) return
     setUploading(true)
     try {
       const uploads = await Promise.all(Array.from(files).map((file) => uploadToBlob(file, type)))
       setImageError(null)
+      
+      const nextBefore = type === 'before' ? [...beforeImagesRef.current, ...uploads] : beforeImagesRef.current
+      const nextAfter = type === 'after' ? [...afterImagesRef.current, ...uploads] : afterImagesRef.current
       const nextBroken = type === 'broken' ? [...brokenImagesRef.current, ...uploads] : brokenImagesRef.current
-      const nextReference =
-        type === 'reference' ? [...referenceImagesRef.current, ...uploads] : referenceImagesRef.current
-      persistImages(nextBroken, nextReference)
+      
+      persistImages(nextBefore, nextAfter, nextBroken)
     } catch (error) {
       console.error('Image upload failed:', error)
       setImageError('Failed to upload images. Please try again.')
@@ -493,17 +499,19 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     }
   }
 
-  const handleRemoveImage = (type: 'broken' | 'reference', index: number) => {
-    if (type === 'broken') {
+  const handleRemoveImage = (type: 'before' | 'after' | 'broken', index: number) => {
+    if (type === 'before') {
+      const newImages = [...beforeImages]
+      newImages.splice(index, 1)
+      persistImages(newImages, afterImages, brokenImages)
+    } else if (type === 'after') {
+      const newImages = [...afterImages]
+      newImages.splice(index, 1)
+      persistImages(beforeImages, newImages, brokenImages)
+    } else { // type === 'broken'
       const newImages = [...brokenImages]
       newImages.splice(index, 1)
-      setBrokenImages(newImages)
-      persistImages(newImages, referenceImages)
-    } else {
-      const newImages = [...referenceImages]
-      newImages.splice(index, 1)
-      setReferenceImages(newImages)
-      persistImages(brokenImages, newImages)
+      persistImages(beforeImages, afterImages, newImages)
     }
   }
 
@@ -512,7 +520,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
       return
     }
     reset(createInitialFormData())
-    persistImages([], [])
+    persistImages([], [], [])
     setImageError(null)
     if (typeof window !== 'undefined' && data?.selectedService?.id) {
       localStorage.removeItem(`recordWorkFormData_${data.selectedService.id}`)
@@ -528,7 +536,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     }
   }
 
-  const hasRequiredImages = brokenImages.length > 0 && referenceImages.length > 0
+  const hasRequiredImages = beforeImages.length > 0 && afterImages.length > 0 && brokenImages.length > 0
 
   // Filter parts by projector model
   const projectorModel = watch('projectorModel')
@@ -911,7 +919,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
   const onSubmit = (values: RecordWorkForm) => {
     if (!hasRequiredImages) {
-      setImageError('Please upload at least one broken-part image and one additional reference image.')
+      setImageError('Please upload at least one image for Before, After, and Broken Parts categories.')
       return
     }
 
@@ -948,8 +956,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     onNext({
       workDetails: formattedValues,
       workImages: {
-        broken: brokenImages,
-        other: referenceImages,
+        images: beforeImages,
+        afterImages: afterImages,
+        brokenImages: brokenImages,
       },
     })
   }
@@ -1335,9 +1344,70 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
         <FormSection title="Service Images">
           <p className="text-xs sm:text-sm text-gray-600 mb-2">
-            Upload at least one image of the broken component and one supporting/reference image before proceeding.
+            Please upload at least one image for Before, After, and Broken Parts categories.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Before Images */}
+            <div>
+              <p className="font-semibold text-sm text-black mb-2">Before Images *</p>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => handleImageUpload('before', e.target.files)}
+                className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50"
+              />
+              {beforeImages.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {beforeImages.map((file, index) => (
+                    <div key={`before-${index}`} className="relative border border-gray-200 p-1 group">
+                      <img src={file.url} alt={file.name} className="w-full h-24 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage('before', index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove image"
+                      >
+                        ✕
+                      </button>
+                      <p className="text-[11px] text-gray-600 truncate mt-1">{file.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* After Images */}
+            <div>
+              <p className="font-semibold text-sm text-black mb-2">After Images *</p>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => handleImageUpload('after', e.target.files)}
+                className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50"
+              />
+              {afterImages.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {afterImages.map((file, index) => (
+                    <div key={`after-${index}`} className="relative border border-gray-200 p-1 group">
+                      <img src={file.url} alt={file.name} className="w-full h-24 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage('after', index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove image"
+                      >
+                        ✕
+                      </button>
+                      <p className="text-[11px] text-gray-600 truncate mt-1">{file.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Broken Images */}
             <div>
               <p className="font-semibold text-sm text-black mb-2">Broken Parts Images *</p>
               <input
@@ -1355,34 +1425,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                       <button
                         type="button"
                         onClick={() => handleRemoveImage('broken', index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Remove image"
-                      >
-                        ✕
-                      </button>
-                      <p className="text-[11px] text-gray-600 truncate mt-1">{file.name}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div>
-              <p className="font-semibold text-sm text-black mb-2">Other Evidence Images *</p>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => handleImageUpload('reference', e.target.files)}
-                className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50"
-              />
-              {referenceImages.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {referenceImages.map((file, index) => (
-                    <div key={`reference-${index}`} className="relative border border-gray-200 p-1 group">
-                      <img src={file.url} alt={file.name} className="w-full h-24 object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage('reference', index)}
                         className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                         title="Remove image"
                       >

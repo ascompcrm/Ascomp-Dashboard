@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       'pixelDefects', 'imageVibration', 'liteloc',
       'hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10', 'temperature', 'humidity',
       'remarks', 'lightEngineSerialNumber', 'signatures', 'recommendedParts',
-      'images', 'brokenImages', 'reportUrl', 'photosDriveLink',
+      'images', 'brokenImages', 'afterImages', 'reportUrl', 'photosDriveLink',
       // Note fields
       'reflectorNote', 'uvFilterNote', 'integratorRodNote', 'coldMirrorNote', 'foldMirrorNote',
       'touchPanelNote', 'evbBoardNote', 'ImcbBoardNote', 'pibBoardNote', 'IcpBoardNote', 'imbSBoardNote',
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Handle null values - Prisma prefers null over empty strings for optional fields
-        if (value === '' && key !== 'images' && key !== 'brokenImages') {
+        if (value === '' && key !== 'images' && key !== 'brokenImages' && key !== 'afterImages') {
           cleanedData[key] = null
         } else {
           cleanedData[key] = value

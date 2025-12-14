@@ -46,6 +46,7 @@ interface Service {
   projectorRunningHours: number | null
   remarks: string | null
   images: string[]
+  afterImages: string[]
   brokenImages: string[]
   signatures: any
   reportGenerated: boolean
@@ -648,14 +649,15 @@ function ServiceDetailView({
 
           <Section title="Mechanical">
             <StatusTable items={[
-              { label: "AC Blower", status: service.workDetails?.acBlowerVane },
-              { label: "Extractor", status: service.workDetails?.extractorVane },
+              { label: "AC Blower Vane", status: service.workDetails?.acBlowerVane },
+              { label: "Extractor Vane", status: service.workDetails?.extractorVane },
               { label: "Exhaust CFM", status: service.workDetails?.exhaustCfm },
               { label: "LE Fans", status: service.workDetails?.lightEngineFans },
               { label: "Card Cage Fans", status: service.workDetails?.cardCageFans },
               { label: "Radiator Fan", status: service.workDetails?.radiatorFanPump },
               { label: "Connector Hose", status: service.workDetails?.pumpConnectorHose },
               { label: "Security Lock", status: service.workDetails?.securityLampHouseLock },
+              { label: "Lamp LOC Mech", status: service.workDetails?.lampLocMechanism },
             ]} />
           </Section>
 
@@ -670,8 +672,13 @@ function ServiceDetailView({
           </Section>
         </div>
 
-        {/* Coolant Section */}
+        {/* Consumables & Coolant */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Section title="Consumables">
+             <StatusTable items={[
+              { label: "Air Intake/Rad", status: service.workDetails?.AirIntakeLadRad },
+            ]} />
+          </Section>
           <Section title="Coolant">
             <StatusTable items={[
               { label: "Level and Color", status: service.workDetails?.coolantLevelColor },
@@ -690,14 +697,17 @@ function ServiceDetailView({
               { label: "Flat H", value: service.workDetails?.flatHeight },
               { label: "Flat W", value: service.workDetails?.flatWidth },
               { label: "Gain", value: service.workDetails?.screenGain },
+              { label: "fL Left", value: service.workDetails?.flLeft },
+              { label: "fL Right", value: service.workDetails?.flRight },
             ]} />
             <div className="mt-2 pt-2 border-t border-gray-200">
                <StatusTable items={[
                 { label: "Focus/Boresight", status: service.workDetails?.focusBoresight ? "Yes" : "No" },
                 { label: "Integrator Pos", status: service.workDetails?.integratorPosition ? "Yes" : "No" },
                 { label: "Spots", status: service.workDetails?.spotsOnScreen ? "Yes" : "No" },
-                { label: "Cropping", status: service.workDetails?.screenCroppingOk ? "Yes" : "No" },
-                { label: "Convergence", status: service.workDetails?.convergenceOk ? "Yes" : "No" },
+                { label: "Cropping", status: service.workDetails?.screenCropping ? "Yes" : (service.workDetails?.screenCroppingOk ? "Yes" : "No") },
+                { label: "Convergence", status: service.workDetails?.convergence ? "Yes" : (service.workDetails?.convergenceOk ? "Yes" : "No") },
+                { label: "Channels", status: service.workDetails?.channelsChecked ? "Yes" : (service.workDetails?.channelsCheckedOk ? "Yes" : "No") },
                 { label: "Pixel Defects", status: service.workDetails?.pixelDefects },
                 { label: "Vibration", status: service.workDetails?.imageVibration },
                 { label: "LiteLOC", status: service.workDetails?.liteloc },
@@ -739,10 +749,15 @@ function ServiceDetailView({
                 </tbody>
               </table>
             </div>
-            <div className="mt-4">
-              <h4 className="font-bold text-xs mb-1">CIE XYZ</h4>
-              <div className="text-xs">
-                x: {service.workDetails?.whiteX}, y: {service.workDetails?.whiteY}, fL: {service.workDetails?.whiteFl}
+            <div className="mt-4 pt-2 border-t border-gray-200">
+              <h4 className="font-bold text-xs mb-1">CIE XYZ (BW Step 10)</h4>
+              <div className="grid grid-cols-2 text-xs gap-2">
+                <div>
+                  <span className="font-semibold">2K:</span> x:{service.workDetails?.BW_Step_10_2Kx}, y:{service.workDetails?.BW_Step_10_2Ky}, fL:{service.workDetails?.BW_Step_10_2Kfl}
+                </div>
+                <div>
+                  <span className="font-semibold">4K:</span> x:{service.workDetails?.BW_Step_10_4Kx}, y:{service.workDetails?.BW_Step_10_4Ky}, fL:{service.workDetails?.BW_Step_10_4Kfl}
+                </div>
               </div>
             </div>
           </Section>
@@ -754,6 +769,7 @@ function ServiceDetailView({
               { label: "Humidity", value: service.workDetails?.humidity },
               { label: "HCHO", value: service.workDetails?.hcho },
               { label: "TVOC", value: service.workDetails?.tvoc },
+              { label: "PM1.0", value: service.workDetails?.pm1 },
               { label: "PM2.5", value: service.workDetails?.pm2_5 },
               { label: "PM10", value: service.workDetails?.pm10 },
             ]} />
@@ -781,7 +797,7 @@ function ServiceDetailView({
               <ul className="list-disc list-inside text-sm text-black">
                 {service.workDetails.recommendedParts.map((part: any, idx: number) => (
                   <li key={idx}>
-                    <span className="font-semibold">{part.partNumber}</span> - {part.description}
+                    <span className="font-semibold">{part.partNumber || (part as any).part_number}</span> - {part.description}
                   </li>
                 ))}
               </ul>
@@ -790,23 +806,61 @@ function ServiceDetailView({
         </div>
 
         {/* Images */}
-        {service.images && service.images.length > 0 && (
-          <Section title={`Images (${service.images.length})`}>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-              {service.images.map((imageUrl, index) => (
-                <div key={index} className="relative aspect-square border border-gray-200 rounded overflow-hidden bg-gray-50">
-                  <Image
-                    src={imageUrl}
-                    alt={`Service image ${index + 1}`}
-                    fill
-                    className="object-cover hover:scale-105 transition-transform"
-                    sizes="150px"
-                  />
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
+        <div className="space-y-4">
+          {service.images && service.images.length > 0 && (
+            <Section title={`Before Images (${service.images.length})`}>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {service.images.map((imageUrl, index) => (
+                  <div key={index} className="relative aspect-square border border-gray-200 rounded overflow-hidden bg-gray-50">
+                    <Image
+                      src={imageUrl}
+                      alt={`Before image ${index + 1}`}
+                      fill
+                      className="object-cover hover:scale-105 transition-transform"
+                      sizes="150px"
+                    />
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+          
+          {service.afterImages && service.afterImages.length > 0 && (
+            <Section title={`After Images (${service.afterImages.length})`}>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {service.afterImages.map((imageUrl: string, index: number) => (
+                  <div key={index} className="relative aspect-square border border-gray-200 rounded overflow-hidden bg-gray-50">
+                    <Image
+                      src={imageUrl}
+                      alt={`After image ${index + 1}`}
+                      fill
+                      className="object-cover hover:scale-105 transition-transform"
+                      sizes="150px"
+                    />
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {service.brokenImages && service.brokenImages.length > 0 && (
+            <Section title={`Broken Parts / Other Images (${service.brokenImages.length})`}>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {service.brokenImages.map((imageUrl, index) => (
+                  <div key={index} className="relative aspect-square border border-gray-200 rounded overflow-hidden bg-gray-50">
+                    <Image
+                      src={imageUrl}
+                      alt={`Broken part image ${index + 1}`}
+                      fill
+                      className="object-cover hover:scale-105 transition-transform"
+                      sizes="150px"
+                    />
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+        </div>
         
         {/* Signatures */}
         <div className="flex justify-between items-end border-t border-black pt-4 mt-8">

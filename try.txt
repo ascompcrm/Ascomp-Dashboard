@@ -36,3 +36,6 @@ PDF
 - engineer name - service visit in text ( first, second, third ) -- Done
 - part name not showing in recommended part -- Done
 - replacement required on top of yes/no - ok -- Done
+
+-- previous values of image evaluation part add them
+-- transfer all ownership
