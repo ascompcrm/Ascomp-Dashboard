@@ -406,11 +406,17 @@
     "key": "leStatus",
     "label": "LE Status",
     "type": "select",
+    "componentType": "statusSelectWithNote",
     "section": "Content Player & AC Status",
     "options": [
       "Removed",
       "Not removed – Good fL",
       "Not removed – De-bonded"
+    ],
+    "issueValues": [
+      "Removed",
+      "Not removed – De-bonded",
+      "Not removed – Good fL"
     ]
   },
   {
@@ -427,6 +433,7 @@
     "key": "integratorPosition",
     "label": "Integrator Position",
     "type": "select",
+    "componentType": "statusSelectWithNote",
     "section": "Image Evaluation",
     "options": [
       "OK (Part is Ok)",
@@ -437,6 +444,7 @@
     "key": "spotsOnScreen",
     "label": "Spots on Screen",
     "type": "select",
+    "componentType": "statusSelectWithNote",
     "section": "Image Evaluation",
     "options": [
       "OK (Part is Ok)",
@@ -447,6 +455,7 @@
     "key": "screenCroppingOk",
     "label": "Screen Cropping",
     "type": "select",
+    "componentType": "statusSelectWithNote",
     "section": "Image Evaluation",
     "options": [
       "OK (Part is Ok)",
@@ -457,6 +466,7 @@
     "key": "convergenceOk",
     "label": "Convergence",
     "type": "select",
+    "componentType": "statusSelectWithNote",
     "section": "Image Evaluation",
     "options": [
       "OK (Part is Ok)",
@@ -467,6 +477,7 @@
     "key": "channelsCheckedOk",
     "label": "Channels Checked",
     "type": "select",
+    "componentType": "statusSelectWithNote",
     "section": "Image Evaluation",
     "options": [
       "OK (Part is Ok)",
@@ -477,6 +488,7 @@
     "key": "pixelDefects",
     "label": "Pixel Defects",
     "type": "select",
+    "componentType": "statusSelectWithNote",
     "section": "Image Evaluation",
     "options": [
       "OK (Part is Ok)",
@@ -487,6 +499,7 @@
     "key": "imageVibration",
     "label": "Image Vibration",
     "type": "select",
+    "componentType": "statusSelectWithNote",
     "section": "Image Evaluation",
     "options": [
       "OK (Part is Ok)",
@@ -497,6 +510,7 @@
     "key": "liteloc",
     "label": "LiteLOC Status",
     "type": "select",
+    "componentType": "statusSelectWithNote",
     "section": "Image Evaluation",
     "options": [
       "OK (Part is Ok)",

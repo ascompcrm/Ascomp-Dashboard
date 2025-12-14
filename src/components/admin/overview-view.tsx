@@ -80,6 +80,15 @@ const NOTE_FIELD_MAP: Record<string, string> = {
   pumpConnectorHose: "pumpConnectorHoseNote",
   lampLocMechanism: "lampLocMechanismNote",
   securityLampHouseLock: "securityLampHouseLockNote",
+  focusBoresight: "focusBoresightNote",
+  integratorPosition: "integratorPositionNote",
+  spotsOnScreen: "spotsOnScreenNote",
+  screenCroppingOk: "screenCroppingNote",
+  convergenceOk: "convergenceNote",
+  channelsCheckedOk: "channelsCheckedNote",
+  pixelDefects: "pixelDefectsNote",
+  imageVibration: "imageVibrationNote",
+  liteloc: "litelocNote",
 }
 
 // Priority order for columns - most important first
@@ -298,14 +307,23 @@ function EditServiceDialog({
               BW_Step_10_4Kfl: service.workDetails?.BW_Step_10_4Kfl || "",
               // Image Evaluation
               focusBoresight: service.workDetails?.focusBoresight || false,
+              focusBoresightNote: service.workDetails?.focusBoresightNote || "",
               integratorPosition: service.workDetails?.integratorPosition || false,
+              integratorPositionNote: service.workDetails?.integratorPositionNote || "",
               spotsOnScreen: service.workDetails?.spotsOnScreen || false,
+              spotsOnScreenNote: service.workDetails?.spotsOnScreenNote || "",
               screenCroppingOk: service.workDetails?.screenCroppingOk || false,
+              screenCroppingNote: service.workDetails?.screenCroppingNote || "",
               convergenceOk: service.workDetails?.convergenceOk || false,
+              convergenceNote: service.workDetails?.convergenceNote || "",
               channelsCheckedOk: service.workDetails?.channelsCheckedOk || false,
+              channelsCheckedNote: service.workDetails?.channelsCheckedNote || "",
               pixelDefects: service.workDetails?.pixelDefects || "",
+              pixelDefectsNote: service.workDetails?.pixelDefectsNote || "",
               imageVibration: service.workDetails?.imageVibration || "",
+              imageVibrationNote: service.workDetails?.imageVibrationNote || "",
               liteloc: service.workDetails?.liteloc || "",
+              litelocNote: service.workDetails?.litelocNote || "",
               // Air Pollution Data
               airPollutionLevel: service.workDetails?.airPollutionLevel || "",
               hcho: service.workDetails?.hcho || "",
@@ -388,6 +406,7 @@ function EditServiceDialog({
           <option value="OK">OK</option>
           <option value="YES">YES</option>
           <option value="NO">NO</option>
+          <option value="Concern">Concern</option>
         </select>
         <Input
           value={formData[`${field}Note`] || ""}
@@ -998,63 +1017,15 @@ function EditServiceDialog({
             {/* Image Evaluation */}
             <FormSection title="Image Evaluation">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Focus/Boresight OK">
-                  <Checkbox
-                    checked={formData.focusBoresight || false}
-                    onCheckedChange={(checked) => updateField("focusBoresight", checked)}
-                  />
-                </FormField>
-                <FormField label="Integrator Position OK">
-                  <Checkbox
-                    checked={formData.integratorPosition || false}
-                    onCheckedChange={(checked) => updateField("integratorPosition", checked)}
-                  />
-                </FormField>
-                <FormField label="Spots on Screen OK">
-                  <Checkbox
-                    checked={formData.spotsOnScreen || false}
-                    onCheckedChange={(checked) => updateField("spotsOnScreen", checked)}
-                  />
-                </FormField>
-                <FormField label="Screen Cropping OK">
-                  <Checkbox
-                    checked={formData.screenCroppingOk || false}
-                    onCheckedChange={(checked) => updateField("screenCroppingOk", checked)}
-                  />
-                </FormField>
-                <FormField label="Convergence OK">
-                  <Checkbox
-                    checked={formData.convergenceOk || false}
-                    onCheckedChange={(checked) => updateField("convergenceOk", checked)}
-                  />
-                </FormField>
-                <FormField label="Channels Checked OK">
-                  <Checkbox
-                    checked={formData.channelsCheckedOk || false}
-                    onCheckedChange={(checked) => updateField("channelsCheckedOk", checked)}
-                  />
-                </FormField>
-                <FormField label="Pixel Defects">
-                  <Input
-                    value={formData.pixelDefects || ""}
-                    onChange={(e) => updateField("pixelDefects", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Image Vibration">
-                  <Input
-                    value={formData.imageVibration || ""}
-                    onChange={(e) => updateField("imageVibration", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="LiteLOC">
-                  <Input
-                    value={formData.liteloc || ""}
-                    onChange={(e) => updateField("liteloc", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
+                <StatusField field="focusBoresight" label="Focus/Boresight" />
+                <StatusField field="integratorPosition" label="Integrator Position" />
+                <StatusField field="spotsOnScreen" label="Spots on Screen" />
+                <StatusField field="screenCroppingOk" label="Screen Cropping" />
+                <StatusField field="convergenceOk" label="Convergence" />
+                <StatusField field="channelsCheckedOk" label="Channels Checked" />
+                <StatusField field="pixelDefects" label="Pixel Defects" />
+                <StatusField field="imageVibration" label="Image Vibration" />
+                <StatusField field="liteloc" label="LiteLOC" />
               </div>
             </FormSection>
 
@@ -1351,15 +1322,15 @@ function PreviewDownloadDialog({
         },
         throwDistance: fullService.workDetails?.throwDistance?.toString() || "",
         imageEvaluation: {
-          focusBoresite: fullService.workDetails?.focusBoresight ? "Yes" : "No",
-          integratorPosition: fullService.workDetails?.integratorPosition ? "Yes" : "No",
-          spotOnScreen: fullService.workDetails?.spotsOnScreen ? "Yes" : "No",
-          screenCropping: fullService.workDetails?.screenCroppingOk ? "Yes" : "No",
-          convergence: fullService.workDetails?.convergenceOk ? "Yes" : "No",
-          channelsChecked: fullService.workDetails?.channelsCheckedOk ? "Yes" : "No",
-          pixelDefects: fullService.workDetails?.pixelDefects || "",
-          imageVibration: fullService.workDetails?.imageVibration || "",
-          liteLOC: fullService.workDetails?.liteloc || "",
+          focusBoresite: mapStatus(fullService.workDetails?.focusBoresight, fullService.workDetails?.focusBoresightNote),
+          integratorPosition: mapStatus(fullService.workDetails?.integratorPosition, fullService.workDetails?.integratorPositionNote),
+          spotOnScreen: mapStatus(fullService.workDetails?.spotsOnScreen, fullService.workDetails?.spotsOnScreenNote),
+          screenCropping: mapStatus(fullService.workDetails?.screenCroppingOk, fullService.workDetails?.screenCroppingNote),
+          convergence: mapStatus(fullService.workDetails?.convergenceOk, fullService.workDetails?.convergenceNote),
+          channelsChecked: mapStatus(fullService.workDetails?.channelsCheckedOk, fullService.workDetails?.channelsCheckedNote),
+          pixelDefects: mapStatus(fullService.workDetails?.pixelDefects, fullService.workDetails?.pixelDefectsNote),
+          imageVibration: mapStatus(fullService.workDetails?.imageVibration, fullService.workDetails?.imageVibrationNote),
+          liteLOC: mapStatus(fullService.workDetails?.liteloc, fullService.workDetails?.litelocNote),
         },
         airPollution: {
           airPollutionLevel: fullService.workDetails?.airPollutionLevel || "",

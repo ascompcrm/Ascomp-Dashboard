@@ -133,7 +133,10 @@ export default function GenerateReportStep({ data, onBack }: any) {
     localStorage.setItem('serviceReports', JSON.stringify(reports))
   }
 
-  const safe = (value: unknown) => (value ?? '').toString()
+  const safe = (value: unknown) => {
+    if (value === undefined || value === null) return ''
+    return String(value).trim()
+  }
 
   const buildPdfPayloadFromWorkflow = (): MaintenanceReportData => {
     // Build PDF data from in-memory workflow state (used as a fallback)
@@ -151,6 +154,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
         yesNo: rawValue,
       }
     }
+
     const formatDateTime = (value?: string) => {
       if (!value) return ''
       const date = new Date(value)
@@ -240,7 +244,10 @@ export default function GenerateReportStep({ data, onBack }: any) {
       flAfter: safe(workDetails.flRight),
       contentPlayer: safe(workDetails.contentPlayerModel),
       acStatus: safe(workDetails.acStatus),
-      leStatus: safe(workDetails.leStatus),
+      leStatus: {
+        status: safe(workDetails.leStatus),
+        remarks: safe(workDetails.leStatusNote),
+      },
       remarks: safe(workDetails.remarks),
       leSerialNo: safe(workDetails.lightEngineSerialNumber),
       mcgdData: {
@@ -271,23 +278,23 @@ export default function GenerateReportStep({ data, onBack }: any) {
           gain: safe(workDetails.screenGain),
         },
         flat: {
-          height: safe(workDetails.screenHeight),
-          width: safe(workDetails.screenWidth),
+          height: safe(workDetails.flatHeight), // Fix: was using screenHeight
+          width: safe(workDetails.flatWidth), // Fix: was using screenWidth
           gain: safe(workDetails.screenGain),
         },
         make: safe(workDetails.screenMake),
       },
       throwDistance: safe(workDetails.throwDistance),
       imageEvaluation: {
-        focusBoresite: safe(workDetails.focusBoresight),
-        integratorPosition: safe(workDetails.integratorPosition),
-        spotOnScreen: safe(workDetails.spotsOnScreen),
-        screenCropping: safe(workDetails.screenCroppingOk),
-        convergence: safe(workDetails.convergenceOk),
-        channelsChecked: safe(workDetails.channelsCheckedOk),
-        pixelDefects: safe(workDetails.pixelDefects),
-        imageVibration: safe(workDetails.imageVibration),
-        liteLOC: safe(workDetails.liteloc),
+        focusBoresite: toStatus(workDetails.focusBoresight, 'focusBoresightNote'),
+        integratorPosition: toStatus(workDetails.integratorPosition, 'integratorPositionNote'),
+        spotOnScreen: toStatus(workDetails.spotsOnScreen, 'spotsOnScreenNote'),
+        screenCropping: toStatus(workDetails.screenCroppingOk, 'screenCroppingNote'),
+        convergence: toStatus(workDetails.convergenceOk, 'convergenceNote'),
+        channelsChecked: toStatus(workDetails.channelsCheckedOk, 'channelsCheckedNote'),
+        pixelDefects: toStatus(workDetails.pixelDefects, 'pixelDefectsNote'),
+        imageVibration: toStatus(workDetails.imageVibration, 'imageVibrationNote'),
+        liteLOC: toStatus(workDetails.liteloc, 'litelocNote'),
       },
       airPollution: {
         airPollutionLevel: safe(workDetails.airPollutionLevel),
@@ -316,25 +323,31 @@ export default function GenerateReportStep({ data, onBack }: any) {
       note?: string | undefined | null
     ) => {
       return {
-        status: note ? note.toString() : '',
-        yesNo: value ? value.toString() : '',
+        status: safe(note), // Ensure safe string
+        yesNo: safe(value), // Ensure safe string
       }
     }
 
+    const formatDateTime = (value?: string | Date) => {
+      if (!value) return ''
+      const date = new Date(value)
+      return isNaN(date.getTime()) ? '' : date.toLocaleString()
+    }
+
     return {
-      cinemaName: service.cinemaName || service.site.name || '',
+      cinemaName: safe(service.cinemaName || service.site.name),
       date: service.date ? new Date(service.date).toLocaleDateString() : '',
-      address: service.address || service.site.address || '',
-      contactDetails: service.contactDetails || service.site.contactDetails || '',
-      location: service.location || '',
-      screenNo: service.screenNumber || service.site.screenNo || '',
-      serviceVisit: service.engineerName ? `${service.engineerName} - ${numberToOrdinal(service.serviceNumber)}` : service.serviceNumber.toString(),
-      projectorModel: service.projector.model,
-      serialNo: service.projector.serialNo,
-      runningHours: service.projectorRunningHours?.toString() || '',
-      projectorEnvironment: service.workDetails?.projectorPlacementEnvironment || '',
-      startTime: service.workDetails?.startTime,
-      endTime: service.workDetails?.endTime,
+      address: safe(service.address || service.site.address),
+      contactDetails: safe(service.contactDetails || service.site.contactDetails),
+      location: safe(service.location),
+      screenNo: safe(service.screenNumber || service.site.screenNo),
+      serviceVisit: service.engineerName ? `${service.engineerName} - ${numberToOrdinal(service.serviceNumber)}` : numberToOrdinal(service.serviceNumber),
+      projectorModel: safe(service.projector.model),
+      serialNo: safe(service.projector.serialNo),
+      runningHours: safe(service.projectorRunningHours),
+      projectorEnvironment: safe(service.workDetails?.projectorPlacementEnvironment),
+      startTime: formatDateTime(service.workDetails?.startTime),
+      endTime: formatDateTime(service.workDetails?.endTime),
 
       opticals: {
         reflector: mapStatus(service.workDetails?.reflector, service.workDetails?.reflectorNote),
@@ -378,118 +391,121 @@ export default function GenerateReportStep({ data, onBack }: any) {
 
       lampLOC: mapStatus(service.workDetails?.lampLocMechanism, service.workDetails?.lampLocMechanismNote),
 
-      lampMake: service.workDetails?.lampMakeModel || '',
-      lampHours: service.workDetails?.lampTotalRunningHours?.toString() || '',
-      currentLampHours: service.workDetails?.lampCurrentRunningHours?.toString() || '',
+      lampMake: safe(service.workDetails?.lampMakeModel),
+      lampHours: safe(service.workDetails?.lampTotalRunningHours),
+      currentLampHours: safe(service.workDetails?.lampCurrentRunningHours),
 
       voltageParams: {
-        pvn: service.workDetails?.pvVsN || '',
-        pve: service.workDetails?.pvVsE || '',
-        nve: service.workDetails?.nvVsE || '',
+        pvn: safe(service.workDetails?.pvVsN),
+        pve: safe(service.workDetails?.pvVsE),
+        nve: safe(service.workDetails?.nvVsE),
       },
 
-      flBefore: service.workDetails?.flLeft?.toString() || '',
-      flAfter: service.workDetails?.flRight?.toString() || '',
+      flBefore: safe(service.workDetails?.flLeft),
+      flAfter: safe(service.workDetails?.flRight),
 
-      contentPlayer: service.workDetails?.contentPlayerModel || '',
-      acStatus: service.workDetails?.acStatus || '',
-      leStatus: service.workDetails?.leStatus || '',
-      remarks: service.remarks || '',
-      leSerialNo: service.workDetails?.lightEngineSerialNumber || '',
+      contentPlayer: safe(service.workDetails?.contentPlayerModel),
+      acStatus: safe(service.workDetails?.acStatus),
+      leStatus: {
+        status: safe(service.workDetails?.leStatus),
+        remarks: safe(service.workDetails?.leStatusNote),
+      },
+      remarks: safe(service.remarks),
+      leSerialNo: safe(service.workDetails?.lightEngineSerialNumber),
 
       mcgdData: {
         white2K: {
-          fl: service.workDetails?.white2Kfl?.toString() || '',
-          x: service.workDetails?.white2Kx?.toString() || '',
-          y: service.workDetails?.white2Ky?.toString() || '',
+          fl: safe(service.workDetails?.white2Kfl),
+          x: safe(service.workDetails?.white2Kx),
+          y: safe(service.workDetails?.white2Ky),
         },
         white4K: {
-          fl: service.workDetails?.white4Kfl?.toString() || '',
-          x: service.workDetails?.white4Kx?.toString() || '',
-          y: service.workDetails?.white4Ky?.toString() || '',
+          fl: safe(service.workDetails?.white4Kfl),
+          x: safe(service.workDetails?.white4Kx),
+          y: safe(service.workDetails?.white4Ky),
         },
         red2K: {
-          fl: service.workDetails?.red2Kfl?.toString() || '',
-          x: service.workDetails?.red2Kx?.toString() || '',
-          y: service.workDetails?.red2Ky?.toString() || '',
+          fl: safe(service.workDetails?.red2Kfl),
+          x: safe(service.workDetails?.red2Kx),
+          y: safe(service.workDetails?.red2Ky),
         },
         red4K: {
-          fl: service.workDetails?.red4Kfl?.toString() || '',
-          x: service.workDetails?.red4Kx?.toString() || '',
-          y: service.workDetails?.red4Ky?.toString() || '',
+          fl: safe(service.workDetails?.red4Kfl),
+          x: safe(service.workDetails?.red4Kx),
+          y: safe(service.workDetails?.red4Ky),
         },
         green2K: {
-          fl: service.workDetails?.green2Kfl?.toString() || '',
-          x: service.workDetails?.green2Kx?.toString() || '',
-          y: service.workDetails?.green2Ky?.toString() || '',
+          fl: safe(service.workDetails?.green2Kfl),
+          x: safe(service.workDetails?.green2Kx),
+          y: safe(service.workDetails?.green2Ky),
         },
         green4K: {
-          fl: service.workDetails?.green4Kfl?.toString() || '',
-          x: service.workDetails?.green4Kx?.toString() || '',
-          y: service.workDetails?.green4Ky?.toString() || '',
+          fl: safe(service.workDetails?.green4Kfl),
+          x: safe(service.workDetails?.green4Kx),
+          y: safe(service.workDetails?.green4Ky),
         },
         blue2K: {
-          fl: service.workDetails?.blue2Kfl?.toString() || '',
-          x: service.workDetails?.blue2Kx?.toString() || '',
-          y: service.workDetails?.blue2Ky?.toString() || '',
+          fl: safe(service.workDetails?.blue2Kfl),
+          x: safe(service.workDetails?.blue2Kx),
+          y: safe(service.workDetails?.blue2Ky),
         },
         blue4K: {
-          fl: service.workDetails?.blue4Kfl?.toString() || '',
-          x: service.workDetails?.blue4Kx?.toString() || '',
-          y: service.workDetails?.blue4Ky?.toString() || '',
+          fl: safe(service.workDetails?.blue4Kfl),
+          x: safe(service.workDetails?.blue4Kx),
+          y: safe(service.workDetails?.blue4Ky),
         },
       },
 
       cieXyz2K: {
-        x: service.workDetails?.BW_Step_10_2Kx?.toString() || '',
-        y: service.workDetails?.BW_Step_10_2Ky?.toString() || '',
-        fl: service.workDetails?.BW_Step_10_2Kfl?.toString() || '',
+        x: safe(service.workDetails?.BW_Step_10_2Kx),
+        y: safe(service.workDetails?.BW_Step_10_2Ky),
+        fl: safe(service.workDetails?.BW_Step_10_2Kfl),
       },
       cieXyz4K: {
-        x: service.workDetails?.BW_Step_10_4Kx?.toString() || '',
-        y: service.workDetails?.BW_Step_10_4Ky?.toString() || '',
-        fl: service.workDetails?.BW_Step_10_4Kfl?.toString() || '',
+        x: safe(service.workDetails?.BW_Step_10_4Kx),
+        y: safe(service.workDetails?.BW_Step_10_4Ky),
+        fl: safe(service.workDetails?.BW_Step_10_4Kfl),
       },
 
-      softwareVersion: service.workDetails?.softwareVersion || '',
+      softwareVersion: safe(service.workDetails?.softwareVersion),
 
       screenInfo: {
         scope: {
-          height: service.workDetails?.screenHeight?.toString() || '',
-          width: service.workDetails?.screenWidth?.toString() || '',
-          gain: service.workDetails?.screenGain?.toString() || '',
+          height: safe(service.workDetails?.screenHeight),
+          width: safe(service.workDetails?.screenWidth),
+          gain: safe(service.workDetails?.screenGain),
         },
         flat: {
-          height: service.workDetails?.flatHeight?.toString() || '',
-          width: service.workDetails?.flatWidth?.toString() || '',
-          gain: service.workDetails?.screenGain?.toString() || '',
+          height: safe(service.workDetails?.flatHeight),
+          width: safe(service.workDetails?.flatWidth),
+          gain: safe(service.workDetails?.screenGain),
         },
-        make: service.workDetails?.screenMake || '',
+        make: safe(service.workDetails?.screenMake),
       },
 
-      throwDistance: service.workDetails?.throwDistance?.toString() || '',
+      throwDistance: safe(service.workDetails?.throwDistance),
 
       imageEvaluation: {
-        focusBoresite: service.workDetails?.focusBoresight ? 'Yes' : 'No',
-        integratorPosition: service.workDetails?.integratorPosition ? 'Yes' : 'No',
-        spotOnScreen: service.workDetails?.spotsOnScreen ? 'Yes' : 'No',
-        screenCropping: service.workDetails?.screenCroppingOk ? 'Yes' : 'No',
-        convergence: service.workDetails?.convergenceOk ? 'Yes' : 'No',
-        channelsChecked: service.workDetails?.channelsCheckedOk ? 'Yes' : 'No',
-        pixelDefects: service.workDetails?.pixelDefects || '',
-        imageVibration: service.workDetails?.imageVibration || '',
-        liteLOC: service.workDetails?.liteloc || '',
+        focusBoresite: mapStatus(service.workDetails?.focusBoresight, service.workDetails?.focusBoresightNote),
+        integratorPosition: mapStatus(service.workDetails?.integratorPosition, service.workDetails?.integratorPositionNote),
+        spotOnScreen: mapStatus(service.workDetails?.spotsOnScreen, service.workDetails?.spotsOnScreenNote),
+        screenCropping: mapStatus(service.workDetails?.screenCropping, service.workDetails?.screenCroppingNote),
+        convergence: mapStatus(service.workDetails?.convergence, service.workDetails?.convergenceNote),
+        channelsChecked: mapStatus(service.workDetails?.channelsChecked, service.workDetails?.channelsCheckedNote),
+        pixelDefects: mapStatus(service.workDetails?.pixelDefects, service.workDetails?.pixelDefectsNote),
+        imageVibration: mapStatus(service.workDetails?.imageVibration, service.workDetails?.imageVibrationNote),
+        liteLOC: mapStatus(service.workDetails?.liteloc, service.workDetails?.litelocNote),
       },
 
       airPollution: {
-        airPollutionLevel: service.workDetails?.airPollutionLevel || '',
-        hcho: service.workDetails?.hcho?.toString() || '',
-        tvoc: service.workDetails?.tvoc?.toString() || '',
-        pm10: service.workDetails?.pm10?.toString() || '',
-        pm25: service.workDetails?.pm2_5?.toString() || '',
-        pm100: service.workDetails?.pm1?.toString() || '',
-        temperature: service.workDetails?.temperature?.toString() || '',
-        humidity: service.workDetails?.humidity?.toString() || '',
+        airPollutionLevel: safe(service.workDetails?.airPollutionLevel),
+        hcho: safe(service.workDetails?.hcho),
+        tvoc: safe(service.workDetails?.tvoc),
+        pm10: safe(service.workDetails?.pm10),
+        pm25: safe(service.workDetails?.pm2_5),
+        pm100: safe(service.workDetails?.pm1),
+        temperature: safe(service.workDetails?.temperature),
+        humidity: safe(service.workDetails?.humidity),
       },
 
       recommendedParts: service.workDetails?.recommendedParts || [],

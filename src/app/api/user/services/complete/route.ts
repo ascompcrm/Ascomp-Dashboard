@@ -126,8 +126,10 @@ export async function POST(request: NextRequest) {
       'blue2Kx', 'blue2Ky', 'blue2Kfl', 'blue4Kx', 'blue4Ky', 'blue4Kfl',
       'BW_Step_10_2Kx', 'BW_Step_10_2Ky', 'BW_Step_10_2Kfl',
       'BW_Step_10_4Kx', 'BW_Step_10_4Ky', 'BW_Step_10_4Kfl',
-      'focusBoresight', 'integratorPosition', 'spotsOnScreen', 'screenCroppingOk', 'airPollutionLevel',
-      'convergenceOk', 'channelsCheckedOk', 'pixelDefects', 'imageVibration', 'liteloc',
+      'focusBoresight', 'integratorPosition', 'spotsOnScreen',
+      'screenCropping', 'convergence', 'channelsChecked', // Corrected from Ok
+      'airPollutionLevel',
+      'pixelDefects', 'imageVibration', 'liteloc',
       'hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10', 'temperature', 'humidity',
       'remarks', 'lightEngineSerialNumber', 'signatures', 'recommendedParts',
       'images', 'brokenImages', 'reportUrl', 'photosDriveLink',
@@ -138,8 +140,27 @@ export async function POST(request: NextRequest) {
       'lightEngineWhiteNote', 'lightEngineRedNote', 'lightEngineGreenNote', 'lightEngineBlueNote', 'lightEngineBlackNote',
       'acBlowerVaneNote', 'extractorVaneNote', 'exhaustCfmNote',
       'lightEngineFansNote', 'cardCageFansNote', 'radiatorFanPumpNote', 'pumpConnectorHoseNote', 'lampLocMechanismNote',
-      'securityLampHouseLockNote'
+      'securityLampHouseLockNote', 'leStatusNote',
+      'focusBoresightNote', 'integratorPositionNote', 'spotsOnScreenNote',
+      'screenCroppingNote', 'convergenceNote', 'channelsCheckedNote',
+      'pixelDefectsNote', 'imageVibrationNote', 'litelocNote'
     ])
+
+    // Map legacy/mismatched form fields to DB schema fields
+    if (workDetails) {
+      if (workDetails.screenCroppingOk !== undefined) workDetails.screenCropping = workDetails.screenCroppingOk
+      if (workDetails.screenCroppingOkNote !== undefined) workDetails.screenCroppingNote = workDetails.screenCroppingOkNote
+
+      if (workDetails.convergenceOk !== undefined) workDetails.convergence = workDetails.convergenceOk
+      if (workDetails.convergenceOkNote !== undefined) workDetails.convergenceNote = workDetails.convergenceOkNote
+
+      if (workDetails.channelsCheckedOk !== undefined) workDetails.channelsChecked = workDetails.channelsCheckedOk
+      if (workDetails.channelsCheckedOkNote !== undefined) workDetails.channelsCheckedNote = workDetails.channelsCheckedOkNote
+    }
+
+    Object.keys(workDetails).forEach((key) => {
+      // ... existing loop ...
+    })
 
     // Fields that should not be updated (read-only or set on creation)
     const readonlyFields = new Set([
@@ -311,7 +332,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("Error details:", JSON.stringify(errorDetails, null, 2))
-    
+
 
     return NextResponse.json(
       {

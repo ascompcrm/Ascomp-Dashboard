@@ -17,6 +17,7 @@ export type FieldConfig = {
   noteOptions?: string[] // Options for the note dropdown (when status is YES)
   noteDefault?: string // Default value for note field
   optionDescriptions?: Record<string, string> // Map option values to descriptions
+  issueValues?: string[] // Values that trigger the note field (defaults to ['YES', 'Concern'])
 }
 
 const DEFAULT_CONFIG: FieldConfig[] = [
@@ -45,7 +46,7 @@ export function useFormConfig() {
     const loadConfig = async () => {
       try {
         // Add cache-busting timestamp to ensure fresh data
-        const res = await fetch(`/api/admin/form-config?t=${Date.now()}`, { 
+        const res = await fetch(`/api/admin/form-config?t=${Date.now()}`, {
           credentials: "include",
           cache: "no-store",
         })
@@ -64,11 +65,11 @@ export function useFormConfig() {
       }
     }
     loadConfig()
-    
+
     // Poll for changes every 10 seconds (in case user updates config)
     // This ensures the form stays in sync with admin updates
     const interval = setInterval(loadConfig, 10000)
-    
+
     return () => {
       clearInterval(interval)
     }

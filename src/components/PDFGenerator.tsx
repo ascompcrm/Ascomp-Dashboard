@@ -5,6 +5,11 @@ type StatusItem = {
   yesNo?: string;
 };
 
+type LeStatusItem = {
+  status: string;
+  remarks: string;
+};
+
 export interface MaintenanceReportData {
   cinemaName: string
   date: string
@@ -70,7 +75,7 @@ export interface MaintenanceReportData {
   flAfter: string;
   contentPlayer: string;
   acStatus: string;
-  leStatus: string;
+  leStatus: LeStatusItem;
   remarks: string;
   leSerialNo: string;
 
@@ -97,15 +102,15 @@ export interface MaintenanceReportData {
   throwDistance: string;
 
   imageEvaluation: {
-    focusBoresite: string;
-    integratorPosition: string;
-    spotOnScreen: string;
-    screenCropping: string;
-    convergence: string;
-    channelsChecked: string;
-    pixelDefects: string;
-    imageVibration: string;
-    liteLOC: string;
+    focusBoresite: StatusItem;
+    integratorPosition: StatusItem;
+    spotOnScreen: StatusItem;
+    screenCropping: StatusItem;
+    convergence: StatusItem;
+    channelsChecked: StatusItem;
+    pixelDefects: StatusItem;
+    imageVibration: StatusItem;
+    liteLOC: StatusItem;
   };
 
   airPollution: {
@@ -508,10 +513,22 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     ['Content Player Model:', data.contentPlayer, 'AC Status:', data.acStatus], [150, 150, 95, 120], 20);
   yPos -= 20;
 
-  drawTableRow(page2, timesRomanBold, timesRoman, 40, yPos, width - 80,
-    ['LE Status during PM:', data.leStatus], [150, 365], 20);
-  yPos -= 20;
+  // const leStatusText = data.leStatus.remarks 
+  //   ? `${data.leStatus.status} - ${data.leStatus.remarks}`
+  //   : data.leStatus.status;
 
+  // const leStatusLines = wrapText(leStatusText, 365 - 6, timesRoman, 8);
+  // const leRowHeight = Math.max(20, (leStatusLines.length * 12) + 8);
+
+  const leStatusStr = data.leStatus.status;
+  const leRemarksStr = data.leStatus.remarks;
+  const leCombined = (leStatusStr && leRemarksStr) 
+    ? `${leStatusStr} - ${leRemarksStr}` 
+    : (leStatusStr || leRemarksStr || '');
+
+  drawTableRow(page2, timesRomanBold, timesRoman, 40, yPos, width - 80,
+    ['LE Status during PM:', leCombined], [150, 365], 20);
+  yPos -= 20;
   // Draw remarks row with multi-line support
   const remarksText = data.remarks || '';
   const remarksWidth = 285;
@@ -645,8 +662,9 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     ['Image Evaluation', 'OK - Yes/No'], [180, 60], 20);
   leftY -= 20;
 
-  const evaluationItems = [
-    ['Focus/boresite', data.imageEvaluation.focusBoresite],
+  const evaluationItems: [string, StatusItem][] = [
+    ['Focus/boresight', data.imageEvaluation.focusBoresite],
+
     ['Integrator Position', data.imageEvaluation.integratorPosition],
     ['Any Spot on the Screen after PPM', data.imageEvaluation.spotOnScreen],
     ['Check Screen Cropping - FLAT and SCOPE', data.imageEvaluation.screenCropping],
@@ -657,10 +675,21 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     ['LiteLOC', data.imageEvaluation.liteLOC],
   ];
 
-  for (const [label, value] of evaluationItems) {
+  for (const [label, item] of evaluationItems) {
+    const itemObj = item as StatusItem; // Type assertion since array elements are inferred as StatusItem
+    const statusText = normalizeYesNo(itemObj.yesNo);
+    const displayLabel = itemObj.status ? `${label} (${itemObj.status})` : label;
+    
     drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, 240,
-      [label || '', normalizeYesNo(value)], [180, 60], 16)
+      [label || '', statusText], [180, 60], 16)
+
     leftY -= 16
+
+    if (itemObj.status) {
+      drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, 240,
+        [`Remarks: ${itemObj.status}`], [240], 16);
+      leftY -= 16;
+    }
   }
 
   let rightY = rightColumnStart;
@@ -734,7 +763,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   if (data.recommendedParts && data.recommendedParts.length > 0) {
     data.recommendedParts.forEach((part) => {
       // Support both 'name' and 'description' fields (name takes priority)
-      const partName = (part as any).description || ''
+      const partName = (part as any).name || (part as any).description || ''
       // Support both { partNumber } and { part_number } shapes
       const rawPartNumber = (part as any).partNumber ?? (part as any).part_number ?? ''
       const partNumber = String(rawPartNumber || '')
@@ -760,7 +789,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   }
   rightY -= 10;
 
-  leftY -= 90;
+  leftY -= 60;
 
   drawTableRow(page2, timesRomanBold, timesRomanBold, leftTableX, leftY, width - 80,
     ['Air Pollution Level', 'HCHO', 'TVOC', 'PM1.0', 'PM2.5', 'PM10', 'Temperature C', 'Humidity %'], [100, 59, 59, 59, 59, 59, 59, 59], 20);

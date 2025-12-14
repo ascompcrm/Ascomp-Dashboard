@@ -13,19 +13,20 @@ User Side
 
 - pre fill screen number in form -- Done
 - in form also show text in service type -- Done
-- LE Status Note
 - screen height, screen width - duplicate  -- Done
 - Flat Height (m), Flat Width - duplicate -- Done
 - lamp make and model ( list based on projector )  -- Done
 - Current Running Hours lamp ( 0 - 3000 ) -- Done
 - P vs N & P vs E ( 180 - 240 ) vs N vs E ( 0 - 7 ) -- Done
 - Yes -> Concern (Light Engine Test Pattern) -- Done
-- ac blower vane  and other option ( select others add text in remarks )
-- image evaluation remarks notes, yes -> concern
+- ac blower vane  and other option ( select others add text in remarks ) -- Done
+- Image evaluation yes -> concern -- Done
 - image evaluation heading text + ok ( remove ok ) -- Done
 - Security & Lamp Lock ( needs attention remove ) -- Done
-- ac blower vane  and other option ( select others add text in remarks )
+- ac blower vane  and other option ( select others add text in remarks ) -- Done
 - range option required -- Done
+- LE Status Note -- Done
+- image evaluation remarks notes -- Done
 
 /service
 - Coolant box seperate in /services -- Done

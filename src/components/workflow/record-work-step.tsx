@@ -124,6 +124,7 @@ const createInitialFormData = () => ({
   contentPlayerModel: '',
   acStatus: '',
   leStatus: '',
+  leStatusNote: '',
   remarks: '',
   lightEngineSerialNumber: '',
   white2Kx: '',
@@ -165,6 +166,15 @@ const createInitialFormData = () => ({
   pixelDefects: '',
   imageVibration: '',
   liteloc: '',
+  focusBoresightNote: '',
+  integratorPositionNote: '',
+  spotsOnScreenNote: '',
+  screenCroppingNote: '',
+  convergenceNote: '',
+  channelsCheckedNote: '',
+  pixelDefectsNote: '',
+  imageVibrationNote: '',
+  litelocNote: '',
   hcho: '',
   tvoc: '',
   pm1: '',
@@ -620,6 +630,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                     options={selectOptions}
                     noteOptions={field.noteOptions}
                     noteDefault={field.noteDefault}
+                    issueValues={field.issueValues}
                   />
                 )
               }
@@ -758,12 +769,14 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     options,
     noteOptions,
     noteDefault,
+    issueValues, // New prop
   }: {
     field: keyof RecordWorkForm & string
     label: string
     options?: Array<{ value: string; label: string; description?: string }>
     noteOptions?: string[]
     noteDefault?: string
+    issueValues?: string[]
   }) => {
     const status = (watch(field as keyof RecordWorkForm) as string) || 'OK'
     const noteField = `${field}Note` as keyof RecordWorkForm
@@ -780,6 +793,10 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
             { value: 'YES', label: 'YES', description: 'Needs replacement' },
           ]
 
+    const isIssue = issueValues 
+      ? issueValues.includes(status) 
+      : (status === 'YES' || status === 'Concern')
+
     const formatNote = (choice: string, text: string) => {
       const c = choice?.trim()
       const t = text?.trim()
@@ -791,21 +808,21 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
     const handleReasonChange = (val: string) => {
       setNoteChoice(val)
-      if (status === 'YES') {
+      if (isIssue) {
         setValue(noteField, formatNote(val, noteText), { shouldDirty: true })
       }
     }
 
     const handleNoteTextChange = (text: string) => {
       setNoteText(text)
-      if (status === 'YES') {
+      if (isIssue) {
         setValue(noteField, formatNote(noteChoice, text), { shouldDirty: true })
       }
     }
 
-    // Clear on status change away from YES
+    // Clear on status change away from Issue
     useEffect(() => {
-      if (status !== 'YES') {
+      if (!isIssue) {
         const currentNote = getValues(noteField)
         const shouldResetChoice = noteChoice !== initialChoice
         const shouldClearValue = Boolean(currentNote)
@@ -814,14 +831,14 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         if (noteText) setNoteText('')
         if (shouldClearValue) setValue(noteField, '', { shouldDirty: true })
       }
-    }, [status, initialChoice, noteField, noteChoice, noteText, getValues, setValue])
+    }, [status, initialChoice, noteField, noteChoice, noteText, getValues, setValue, isIssue])
 
-    // Keep note field in sync when status is YES
+    // Keep note field in sync when status is Issue
     useEffect(() => {
-      if (status === 'YES') {
+      if (isIssue) {
         setValue(noteField, formatNote(noteChoice, noteText), { shouldDirty: true })
       }
-    }, [status, noteChoice, noteText, noteField, setValue])
+    }, [status, noteChoice, noteText, noteField, setValue, isIssue])
 
     // Initialize choice on first render if missing
     useEffect(() => {
@@ -841,7 +858,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
             const value = event.target.value
             setValue(field, value, { shouldDirty: true })
             statusRegister.onChange(event)
-            if (value !== 'Not OK') {
+            if (value !== 'YES' && value !== 'Concern') {
               clearIssueNote(field)
             }
           }}
@@ -854,7 +871,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           ))}
         </select>
 
-        {status === 'YES' && noteOptions?.length ? (
+        {isIssue && noteOptions?.length ? (
           <>
             <select
               className="w-full border-2 border-black p-2 text-black text-sm mt-2"
@@ -880,7 +897,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           </>
         ) : null}
 
-        {status === 'YES' && !noteOptions?.length && (
+        {isIssue && !noteOptions?.length && (
           <Input
             {...register(noteField)}
             defaultValue={noteDefault}

@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
@@ -26,9 +26,9 @@ model User {
   id               String          @id @map("_id")
   name             String
   email            String
-  password         String?         // Optional - better-auth stores passwords in Account table
+  password         String? // Optional - better-auth stores passwords in Account table
   emailVerified    Boolean
-  phoneNumber      String?          @unique
+  phoneNumber      String?         @unique
   image            String?
   createdAt        DateTime
   updatedAt        DateTime
@@ -56,10 +56,10 @@ model Site {
 
 model Projector {
   id             String          @id @map("_id")
-  serialNo       String          @unique  
-  modelNo        String          
+  serialNo       String          @unique
+  modelNo        String
   noOfservices   Int?
-  status         ServiceStatus @default(DRAFT)
+  status         ServiceStatus   @default(DRAFT)
   siteId         String
   site           Site            @relation(fields: [siteId], references: [id])
   serviceRecords ServiceRecord[]
@@ -115,16 +115,16 @@ model Verification {
 }
 
 model ServiceRecord {
-  id                            String        @id @map("_id")
-  createdAt                     DateTime      @default(now())
+  id                            String    @id @map("_id")
+  createdAt                     DateTime  @default(now())
   userId                        String
-  user                          User          @relation("CreatedServices", fields: [userId], references: [id], onDelete: Cascade)
+  user                          User      @relation("CreatedServices", fields: [userId], references: [id], onDelete: Cascade)
   assignedToId                  String?
-  assignedTo                    User?         @relation("AssignedServices", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedTo                    User?     @relation("AssignedServices", fields: [assignedToId], references: [id], onDelete: SetNull)
   projectorId                   String
-  projector                     Projector     @relation(fields: [projectorId], references: [id], onDelete: Cascade)
+  projector                     Projector @relation(fields: [projectorId], references: [id], onDelete: Cascade)
   siteId                        String
-  site                          Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site                          Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
   serviceNumber                 String
   date                          DateTime?
   cinemaName                    String?
@@ -209,6 +209,7 @@ model ServiceRecord {
   contentPlayerModel            String?
   acStatus                      String?
   leStatus                      String?
+  leStatusNote                  String?
   white2Kx                      Float?
   white2Ky                      Float?
   white2Kfl                     Float?
@@ -233,15 +234,24 @@ model ServiceRecord {
   blue4Kx                       Float?
   blue4Ky                       Float?
   blue4Kfl                      Float?
-  focusBoresight                Boolean       @default(false)
-  integratorPosition            Boolean       @default(false)
-  spotsOnScreen                 Boolean       @default(false)
-  screenCroppingOk              Boolean       @default(false)
-  convergenceOk                 Boolean       @default(false)
-  channelsCheckedOk             Boolean       @default(false)
+  focusBoresight                String?
+  focusBoresightNote            String?
+  integratorPosition            String?
+  integratorPositionNote        String?
+  spotsOnScreen                 String?
+  spotsOnScreenNote             String?
+  screenCropping                String?
+  screenCroppingNote            String?
+  convergence                   String?
+  convergenceNote               String?
+  channelsChecked               String?
+  channelsCheckedNote           String?
   pixelDefects                  String?
+  pixelDefectsNote              String?
   imageVibration                String?
+  imageVibrationNote            String?
   liteloc                       String?
+  litelocNote                   String?
   hcho                          Float?
   tvoc                          Float?
   pm1                           Float?
@@ -255,17 +265,18 @@ model ServiceRecord {
   startTime                     DateTime?
   endTime                       DateTime?
   signatures                    Json?
-  reportGenerated               Boolean       @default(false)
+  reportGenerated               Boolean   @default(false)
   reportUrl                     String?
   recommendedParts              Json?
-  images                        String[] @default([])
-  brokenImages                  String[] @default([])
-  BW_Step_10_2Kx                  String?
-  BW_Step_10_2Ky                  String?
-  BW_Step_10_2Kfl                 String?
-  BW_Step_10_4Kx                  String?
-  BW_Step_10_4Ky                  String?
-  BW_Step_10_4Kfl                 String?
+  images                        String[]  @default([])
+  afterImages                   String[]  @default([])
+  brokenImages                  String[]  @default([])
+  BW_Step_10_2Kx                String?
+  BW_Step_10_2Ky                String?
+  BW_Step_10_2Kfl               String?
+  BW_Step_10_4Kx                String?
+  BW_Step_10_4Ky                String?
+  BW_Step_10_4Kfl               String?
   photosDriveLink               String?
 
   @@unique([projectorId, serviceNumber])
