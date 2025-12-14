@@ -75,9 +75,7 @@ export async function POST(request: NextRequest) {
 
       // Boolean fields
       const boolFields = [
-        'reportGenerated', 'replacementRequired', 'focusBoresight',
-        'integratorPosition', 'spotsOnScreen', 'screenCroppingOk',
-        'convergenceOk', 'channelsCheckedOk'
+        'reportGenerated', 'replacementRequired'
       ]
       if (boolFields.includes(key)) {
         if (typeof value === 'boolean') return value
@@ -265,9 +263,7 @@ export async function POST(request: NextRequest) {
 
         // Ensure boolean fields are always booleans (not strings)
         const boolFields = [
-          'reportGenerated', 'replacementRequired', 'focusBoresight',
-          'integratorPosition', 'spotsOnScreen', 'screenCroppingOk',
-          'convergenceOk', 'channelsCheckedOk'
+          'reportGenerated', 'replacementRequired'
         ]
         if (boolFields.includes(key)) {
           if (typeof value === 'string') {
