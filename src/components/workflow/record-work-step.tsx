@@ -348,10 +348,10 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   useEffect(() => {
     const loadPartsData = async () => {
       try {
-        const response = await fetch('/data/Projector.json')
+        const response = await fetch('/api/admin/data-files/projector')
         if (response.ok) {
           const data = await response.json()
-          setPartsData(data.projector_parts || [])
+          setPartsData(data.data || [])
         }
       } catch (error) {
         console.error('Failed to load projector parts data:', error)
@@ -364,13 +364,10 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   useEffect(() => {
     const loadLampModelsData = async () => {
       try {
-        const response = await fetch('/data/Lamp_Models.json')
+        const response = await fetch('/api/admin/data-files/lamp-models')
         if (!response.ok) return
         const data = await response.json()
-        // Extract the Lamp_Model array from the JSON structure
-        if (Array.isArray(data) && data[0]?.Lamp_Model) {
-          setLampModelsData(data[0].Lamp_Model)
-        }
+        setLampModelsData(data.data || [])
       } catch (error) {
         console.error('Failed to load lamp models data:', error)
       }
@@ -406,13 +403,10 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   useEffect(() => {
     const loadSoftwareVersions = async () => {
       try {
-        const response = await fetch('/data/Software.json')
+        const response = await fetch('/api/admin/data-files/software')
         if (!response.ok) return
-        const text = await response.text()
-        const matches = [...text.matchAll(/"Software Version"\s*:\s*"([^"]+)"/g)].map((m) => m[1])
-        const cleaned = matches.filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
-        const unique = Array.from(new Set(cleaned))
-        setSoftwareVersions(unique)
+        const data = await response.json()
+        setSoftwareVersions(data.values || [])
       } catch (error) {
         console.error('Failed to load software versions:', error)
       }
@@ -424,13 +418,10 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   useEffect(() => {
     const loadContentPlayers = async () => {
       try {
-        const response = await fetch('/data/Content_Player.json')
+        const response = await fetch('/api/admin/data-files/content-player')
         if (!response.ok) return
-        const text = await response.text()
-        const matches = [...text.matchAll(/"Content Player"\s*:\s*"([^"]+)"/g)].map((m) => m[1])
-        const cleaned = matches.filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
-        const unique = Array.from(new Set(cleaned))
-        setContentPlayers(unique)
+        const data = await response.json()
+        setContentPlayers(data.values || [])
       } catch (error) {
         console.error('Failed to load content players:', error)
       }
