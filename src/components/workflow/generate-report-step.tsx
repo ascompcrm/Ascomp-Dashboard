@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { generateMaintenanceReport, type MaintenanceReportData } from '@/components/PDFGenerator'
@@ -40,13 +40,7 @@ const numberToOrdinal = (value: string | number | null | undefined): string => {
 export default function GenerateReportStep({ data, onBack }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const hasImageEvidence = useMemo(() => {
-    if (!data?.workImages) return false
-    if (Array.isArray(data.workImages)) {
-      return data.workImages.length > 0
-    }
-    return Boolean((data.workImages.broken || []).length && (data.workImages.other || []).length)
-  }, [data])
+
 
   const getIssueEntries = () => {
     const workDetails = data.workDetails || {}
@@ -590,9 +584,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
     setIsSubmitting(true)
     setSubmitError(null)
     try {
-      if (!hasImageEvidence) {
-        throw new Error('Please upload required images before submitting the report.')
-      }
+
 
       // Submit to database
       await submitServiceRecord()
@@ -734,11 +726,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
             {submitError}
           </div>
         )}
-        {!hasImageEvidence && (
-          <div className="p-3 border-2 border-amber-500 bg-amber-50 text-amber-800 text-sm">
-            Images are required before you can submit the report. Please return to Record Work and upload them.
-          </div>
-        )}
+
 
         {!isSubmitted ? (
           <Button
