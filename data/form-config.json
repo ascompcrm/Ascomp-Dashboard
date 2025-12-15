@@ -511,6 +511,7 @@
     "key": "focusBoresight",
     "label": "Focus/Boresight",
     "type": "select",
+    "componentType": "statusSelectWithNote",
     "section": "Image Evaluation",
     "options": [
       "OK (Part is Ok)",

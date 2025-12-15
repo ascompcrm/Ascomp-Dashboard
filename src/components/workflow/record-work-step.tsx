@@ -221,6 +221,170 @@ const FormField = ({
   </div>
 )
 
+
+
+const StatusSelectWithNote = ({
+  field,
+  label,
+  options,
+  noteOptions,
+  noteDefault,
+  issueValues,
+  form,
+  required,
+}: {
+  field: keyof RecordWorkForm & string
+  label: string
+  options?: Array<{ value: string; label: string; description?: string }>
+  noteOptions?: string[]
+  noteDefault?: string
+  issueValues?: string[]
+  form: any 
+  required?: boolean
+}) => {
+  const { watch, register, setValue, getValues } = form
+  const statusVal = (watch(field as keyof RecordWorkForm) as string)
+  // If options are provided (custom dropdown), default to empty string to force selection if not set.
+  // If no options (standard OK/YES), default to 'OK' if not set.
+  const status = statusVal || (options ? '' : 'OK')
+  const noteField = `${field}Note` as keyof RecordWorkForm
+  const initialChoice = noteDefault || noteOptions?.[0] || ''
+  const [noteChoice, setNoteChoice] = useState<string>(initialChoice)
+  const [noteText, setNoteText] = useState<string>('')
+  const statusRegister = register(field as keyof RecordWorkForm)
+
+  const selectOptions =
+    options && options.length
+      ? options
+      : [
+          { value: 'OK', label: 'OK', description: 'Part is OK' },
+          { value: 'YES', label: 'YES', description: 'Needs replacement' },
+        ]
+
+  const isIssue = (issueValues && issueValues.length > 0)
+    ? issueValues.includes(status) 
+    : (status === 'YES' || status === 'Concern' || status.startsWith('YES') || status.includes('Concern'))
+
+  const formatNote = (choice: string, text: string) => {
+    const c = choice?.trim()
+    const t = text?.trim()
+    if (c && t) return `${c} - ${t}`
+    if (c) return c
+    if (t) return t
+    return ''
+  }
+
+  const handleReasonChange = (val: string) => {
+    setNoteChoice(val)
+    if (isIssue) {
+      setValue(noteField, formatNote(val, noteText), { shouldDirty: true })
+    }
+  }
+
+  const handleNoteTextChange = (text: string) => {
+    setNoteText(text)
+    if (isIssue) {
+      setValue(noteField, formatNote(noteChoice, text), { shouldDirty: true })
+    }
+  }
+
+  // Clear on status change away from Issue
+  useEffect(() => {
+    if (!isIssue) {
+      const currentNote = getValues(noteField)
+      const shouldResetChoice = noteChoice !== initialChoice
+      const shouldClearValue = Boolean(currentNote)
+
+      if (shouldResetChoice) setNoteChoice(initialChoice)
+      if (noteText) setNoteText('')
+      if (shouldClearValue) setValue(noteField, '', { shouldDirty: true })
+    }
+  }, [status, initialChoice, noteField, noteChoice, noteText, getValues, setValue, isIssue])
+
+  // Keep note field in sync when status is Issue
+  useEffect(() => {
+    if (isIssue && noteOptions?.length) {
+      setValue(noteField, formatNote(noteChoice, noteText), { shouldDirty: true })
+    }
+  }, [status, noteChoice, noteText, noteField, setValue, isIssue, noteOptions])
+
+  // Initialize choice on first render if missing
+  useEffect(() => {
+    if (!noteChoice && initialChoice) {
+      setNoteChoice(initialChoice)
+    }
+  }, [noteChoice, initialChoice])
+
+
+
+  return (
+    <FormField label={label} required={required}>
+      <select
+        name={statusRegister.name}
+        ref={statusRegister.ref}
+        onBlur={statusRegister.onBlur}
+        required={required}
+        value={status}
+        onChange={(event) => {
+          const value = event.target.value
+          setValue(field, value, { shouldDirty: true })
+          statusRegister.onChange(event)
+          if (value !== 'YES' && value !== 'Concern') {
+             // We need to clear issue notes if they were stored in 'issueNotes' object
+             // But here we are using individual fields like 'securityLampHouseLockNote'
+             // The clearIssueNote logic in original component handled 'issueNotes' object
+             // Let's rely on the useEffect inside this component which clears the field
+             // But we might need to clear the specific note field
+          }
+        }}
+        className="w-full border-2 border-black p-2 text-black text-sm"
+      >
+        {options && <option value="" disabled>Select Status</option>}
+        {selectOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label} {option.description && `(${option.description})`}
+          </option>
+        ))}
+      </select>
+
+      {isIssue && noteOptions?.length ? (
+        <>
+          <select
+            className="w-full border-2 border-black p-2 text-black text-sm mt-2"
+            value={noteChoice}
+            onChange={(e) => handleReasonChange(e.target.value)}
+          >
+            <option value="" disabled>
+              Select reason
+            </option>
+            {noteOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+          <Input
+            type="text"
+            value={noteText}
+            onChange={(e) => handleNoteTextChange(e.target.value)}
+            placeholder="Add details"
+            className="border-2 border-black text-sm mt-2"
+          />
+        </>
+      ) : null}
+
+      {isIssue && !noteOptions?.length && (
+        <Input
+          {...register(noteField)}
+          defaultValue={noteDefault}
+          placeholder="Enter details..."
+          className="border-2 border-black text-sm mt-2"
+        />
+      )}
+    </FormField>
+  )
+}
+
 export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const [beforeImages, setBeforeImages] = useState<UploadedImage[]>([])
   const [afterImages, setAfterImages] = useState<UploadedImage[]>([])
@@ -519,13 +683,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     }
   }
 
-  const clearIssueNote = (field: string) => {
-    const currentNotes = getValues('issueNotes') || {}
-    if (currentNotes[field]) {
-      const { [field]: _removed, ...rest } = currentNotes
-      setValue('issueNotes', rest as IssueNotes, { shouldDirty: true })
-    }
-  }
+
 
   // Filter parts by projector model
   const projectorModel = watch('projectorModel')
@@ -628,6 +786,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                     noteOptions={field.noteOptions}
                     noteDefault={field.noteDefault}
                     issueValues={field.issueValues}
+                    form={{ watch, register, setValue, getValues }}
+                    required={field.required}
                   />
                 )
               }
@@ -760,151 +920,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     )
   }
 
-  const StatusSelectWithNote = ({
-    field,
-    label,
-    options,
-    noteOptions,
-    noteDefault,
-    issueValues, // New prop
-  }: {
-    field: keyof RecordWorkForm & string
-    label: string
-    options?: Array<{ value: string; label: string; description?: string }>
-    noteOptions?: string[]
-    noteDefault?: string
-    issueValues?: string[]
-  }) => {
-    const status = (watch(field as keyof RecordWorkForm) as string) || 'OK'
-    const noteField = `${field}Note` as keyof RecordWorkForm
-    const initialChoice = noteDefault || noteOptions?.[0] || ''
-    const [noteChoice, setNoteChoice] = useState<string>(initialChoice)
-    const [noteText, setNoteText] = useState<string>('')
-    const statusRegister = register(field as keyof RecordWorkForm)
 
-    const selectOptions =
-      options && options.length
-        ? options
-        : [
-            { value: 'OK', label: 'OK', description: 'Part is OK' },
-            { value: 'YES', label: 'YES', description: 'Needs replacement' },
-          ]
-
-    const isIssue = (issueValues && issueValues.length > 0)
-      ? issueValues.includes(status) 
-      : (status === 'YES' || status === 'Concern' || status.startsWith('YES') || status.includes('Concern'))
-
-    const formatNote = (choice: string, text: string) => {
-      const c = choice?.trim()
-      const t = text?.trim()
-      if (c && t) return `${c} - ${t}`
-      if (c) return c
-      if (t) return t
-      return ''
-    }
-
-    const handleReasonChange = (val: string) => {
-      setNoteChoice(val)
-      if (isIssue) {
-        setValue(noteField, formatNote(val, noteText), { shouldDirty: true })
-      }
-    }
-
-    const handleNoteTextChange = (text: string) => {
-      setNoteText(text)
-      if (isIssue) {
-        setValue(noteField, formatNote(noteChoice, text), { shouldDirty: true })
-      }
-    }
-
-    // Clear on status change away from Issue
-    useEffect(() => {
-      if (!isIssue) {
-        const currentNote = getValues(noteField)
-        const shouldResetChoice = noteChoice !== initialChoice
-        const shouldClearValue = Boolean(currentNote)
-
-        if (shouldResetChoice) setNoteChoice(initialChoice)
-        if (noteText) setNoteText('')
-        if (shouldClearValue) setValue(noteField, '', { shouldDirty: true })
-      }
-    }, [status, initialChoice, noteField, noteChoice, noteText, getValues, setValue, isIssue])
-
-    // Keep note field in sync when status is Issue
-    useEffect(() => {
-      if (isIssue) {
-        setValue(noteField, formatNote(noteChoice, noteText), { shouldDirty: true })
-      }
-    }, [status, noteChoice, noteText, noteField, setValue, isIssue])
-
-    // Initialize choice on first render if missing
-    useEffect(() => {
-      if (!noteChoice && initialChoice) {
-        setNoteChoice(initialChoice)
-      }
-    }, [noteChoice, initialChoice])
-
-    return (
-      <FormField label={label}>
-        <select
-          name={statusRegister.name}
-          ref={statusRegister.ref}
-          onBlur={statusRegister.onBlur}
-          value={status}
-          onChange={(event) => {
-            const value = event.target.value
-            setValue(field, value, { shouldDirty: true })
-            statusRegister.onChange(event)
-            if (value !== 'YES' && value !== 'Concern') {
-              clearIssueNote(field)
-            }
-          }}
-          className="w-full border-2 border-black p-2 text-black text-sm"
-        >
-          {selectOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label} {option.description && `(${option.description})`}
-            </option>
-          ))}
-        </select>
-
-        {isIssue && noteOptions?.length ? (
-          <>
-            <select
-              className="w-full border-2 border-black p-2 text-black text-sm mt-2"
-              value={noteChoice}
-              onChange={(e) => handleReasonChange(e.target.value)}
-            >
-              <option value="" disabled>
-                Select reason
-              </option>
-              {noteOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-            <Input
-              type="text"
-              value={noteText}
-              onChange={(e) => handleNoteTextChange(e.target.value)}
-              placeholder="Add details"
-              className="border-2 border-black text-sm mt-2"
-            />
-          </>
-        ) : null}
-
-        {isIssue && !noteOptions?.length && (
-          <Input
-            {...register(noteField)}
-            defaultValue={noteDefault}
-            placeholder="Enter details..."
-            className="border-2 border-black text-sm mt-2"
-          />
-        )}
-      </FormField>
-    )
-  }
 
   const onSubmit = (values: RecordWorkForm) => {
     const validationErrors: string[] = []

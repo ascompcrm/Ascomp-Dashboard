@@ -419,11 +419,11 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   yPos -= 20;
 
   drawTableRow(page1, timesRomanBold, timesRoman, 40, yPos, width - 80,
-    ['Projector Model:', data.projectorModel, 'Serial No.:', data.serialNo, 'Running Hours:', data.runningHours, 'Replacement Required'], [80, 80, 70, 70, 60, 90, 85], 20);
+    ['Projector Model:', data.projectorModel, 'Serial No.:', data.serialNo, 'Running Hours:', data.runningHours, 'Replacement Required'], [80, 80, 70, 70, 70, 80, 85], 20);
   yPos -= 20;
 
   drawTableRow(page1, timesRomanBold, timesRomanBold, 40, yPos, width - 80,
-    ['SECTIONS', 'DESCRIPTION', 'STATUS', 'YES/NO - OK'], [120, 235, 100, 80], 20);
+    ['SECTIONS', 'DESCRIPTION', 'STATUS', 'YES/NO - OK'], [120, 170, 165, 80], 20);
   yPos -= 20;
 
   yPos = drawSection(page1, timesRomanBold, timesRoman, 40, yPos, width - 80, 'OPTICALS', [
@@ -848,7 +848,9 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 function wrapText(text: string, maxWidth: number, font: any, fontSize: number): string[] {
   if (!text) return [''];
   
-  const words = text.split(' ');
+  // Replace newlines with spaces and sanitize text
+  const sanitizedText = text.replace(/[\n\r]+/g, ' ').replace(/[^\x20-\x7E]/g, '');
+  const words = sanitizedText.split(' ');
   const lines: string[] = [];
   let currentLine = '';
   
@@ -967,7 +969,7 @@ function drawSection(
     page.drawRectangle({
       x: x + 120,
       y: itemY - rowHeight,
-      width: 235,
+      width: 170,
       height: rowHeight,
       borderColor: rgb(0, 0, 0),
       borderWidth: 0.5,
@@ -981,18 +983,18 @@ function drawSection(
     });
 
     page.drawRectangle({
-      x: x + 355,
+      x: x + 290,
       y: itemY - rowHeight,
-      width: 100,
+      width: 165,
       height: rowHeight,
       borderColor: rgb(0, 0, 0),
       borderWidth: 0.5,
     });
 
     page.drawText(items[i]?.[1] || '', {
-      x: x + 360,
+      x: x + 295,
       y: itemY - 10,
-      size: 8,
+      size: 7,
       font: regularFont,
     });
 

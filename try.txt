@@ -39,3 +39,18 @@ PDF
 
 -- previous values of image evaluation part add them
 -- transfer all ownership
+
+
+Admin ----
+- Parameters set, Update Form input box
+- List Update Add List
+
+
+serial number verified - OK - YES > input(Factory file required)
+Disposable Consumables - OK - YES > input
+Coolant - OK - YES
+Opticals options
+
+
+ac blower vane, security lamp lock, ( bypassed default ), exhaust cfm value correct
+update admin full, engineer name

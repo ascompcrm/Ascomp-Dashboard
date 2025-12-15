@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { ArrowLeft, Download, ChevronRight, Search, CalendarIcon } from "lucide-react"
 
-import { generateMaintenanceReport, convertServiceVisitToText, type MaintenanceReportData } from "@/components/PDFGenerator"
+
 
 interface Service {
   id: string
@@ -321,175 +321,33 @@ function ServiceDetailView({
 
   console.log("services here", service);
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = async (service: any) => {
     try {
       setIsGeneratingPdf(true)
-      
-      // Map DB status + note to PDF StatusItem:
-      // - yesNo: raw status value from DB (e.g. OK / YES / NO)
-      // - status: free-text note from the corresponding *Note field (or empty)
-      const mapStatus = (value?: string | null, note?: string | null) => ({
-        status: note ? String(note) : '',
-        yesNo: value ? String(value) : '',
-      })
-
-      const reportData: MaintenanceReportData = {
-        cinemaName: service.cinemaName || service.site.name || '',
-        date: service.date ? new Date(service.date).toLocaleDateString() : '',
-        address: service.address || service.site.address || '',
-        contactDetails: service.contactDetails || service.site.contactDetails || '',
-        location: service.location || '',
-        screenNo: service.screenNumber || service.site.screenNo || '',
-        serviceVisit: service.engineerName ? `${service.engineerName} - ${convertServiceVisitToText(service.serviceNumber)}` : service.serviceNumber.toString(),
-        projectorModel: service.projector.model,
-        serialNo: service.projector.serialNo,
-        runningHours: service.projectorRunningHours?.toString() || '',
-        projectorEnvironment: service.workDetails?.projectorPlacementEnvironment || '',
-        startTime: service.workDetails?.startTime,
-        endTime: service.workDetails?.endTime,
-        
-        opticals: {
-          reflector: mapStatus(service.workDetails?.reflector, service.workDetails?.reflectorNote),
-          uvFilter: mapStatus(service.workDetails?.uvFilter, service.workDetails?.uvFilterNote),
-          integratorRod: mapStatus(service.workDetails?.integratorRod, service.workDetails?.integratorRodNote),
-          coldMirror: mapStatus(service.workDetails?.coldMirror, service.workDetails?.coldMirrorNote),
-          foldMirror: mapStatus(service.workDetails?.foldMirror, service.workDetails?.foldMirrorNote),
-        },
-        
-        electronics: {
-          touchPanel: mapStatus(service.workDetails?.touchPanel, service.workDetails?.touchPanelNote),
-          evbBoard: mapStatus(service.workDetails?.evbBoard, service.workDetails?.evbBoardNote),
-          ImcbBoard: mapStatus(service.workDetails?.ImcbBoard, service.workDetails?.ImcbBoardNote),
-          pibBoard: mapStatus(service.workDetails?.pibBoard, service.workDetails?.pibBoardNote),
-          IcpBoard: mapStatus(service.workDetails?.IcpBoard, service.workDetails?.IcpBoardNote),
-          imbSBoard: mapStatus(service.workDetails?.imbSBoard, service.workDetails?.imbSBoardNote),
-        },
-        
-        serialVerified: mapStatus(service.workDetails?.serialNumberVerified, service.workDetails?.serialNumberVerifiedNote),
-        AirIntakeLadRad: mapStatus(service.workDetails?.AirIntakeLadRad, service.workDetails?.AirIntakeLadRadNote),
-        coolant: mapStatus(service.workDetails?.coolantLevelColor, service.workDetails?.coolantLevelColorNote),
-        
-        lightEngineTest: {
-          white: mapStatus(service.workDetails?.lightEngineWhite),
-          red: mapStatus(service.workDetails?.lightEngineRed),
-          green: mapStatus(service.workDetails?.lightEngineGreen),
-          blue: mapStatus(service.workDetails?.lightEngineBlue),
-          black: mapStatus(service.workDetails?.lightEngineBlack),
-        },
-        
-        mechanical: {
-          acBlower: mapStatus(service.workDetails?.acBlowerVane, service.workDetails?.acBlowerVaneNote),
-          extractor: mapStatus(service.workDetails?.extractorVane, service.workDetails?.extractorVaneNote),
-          exhaustCFM: mapStatus(service.workDetails?.exhaustCfm, service.workDetails?.exhaustCfmNote),
-          lightEngine4Fans: mapStatus(service.workDetails?.lightEngineFans, service.workDetails?.lightEngineFansNote),
-          cardCageFans: mapStatus(service.workDetails?.cardCageFans, service.workDetails?.cardCageFansNote),
-          radiatorFan: mapStatus(service.workDetails?.radiatorFanPump, service.workDetails?.radiatorFanPumpNote),
-          connectorHose: mapStatus(service.workDetails?.pumpConnectorHose, service.workDetails?.pumpConnectorHoseNote),
-          securityLock: mapStatus(service.workDetails?.securityLampHouseLock),
-        },
-        
-        lampLOC: mapStatus(service.workDetails?.lampLocMechanism, service.workDetails?.lampLocMechanismNote),
-        
-        lampMake: service.workDetails?.lampMakeModel || '',
-        lampHours: service.workDetails?.lampTotalRunningHours?.toString() || '',
-        currentLampHours: service.workDetails?.lampCurrentRunningHours?.toString() || '',
-        
-        voltageParams: {
-          pvn: service.workDetails?.pvVsN || '',
-          pve: service.workDetails?.pvVsE || '',
-          nve: service.workDetails?.nvVsE || '',
-        },
-        
-        flBefore: service.workDetails?.flLeft?.toString() || '', // Using flLeft as placeholder if flBefore not explicit
-        flAfter: service.workDetails?.flRight?.toString() || '', // Using flRight as placeholder
-        
-        contentPlayer: service.workDetails?.contentPlayerModel || '',
-        acStatus: service.workDetails?.acStatus || '',
-        leStatus: service.workDetails?.leStatus || '',
-        remarks: service.remarks || '',
-        leSerialNo: service.workDetails?.lightEngineSerialNumber || '',
-        
-        mcgdData: {
-          white2K: { fl: service.workDetails?.white2Kfl?.toString() || '', x: service.workDetails?.white2Kx?.toString() || '', y: service.workDetails?.white2Ky?.toString() || '' },
-          white4K: { fl: service.workDetails?.white4Kfl?.toString() || '', x: service.workDetails?.white4Kx?.toString() || '', y: service.workDetails?.white4Ky?.toString() || '' },
-          red2K: { fl: service.workDetails?.red2Kfl?.toString() || '', x: service.workDetails?.red2Kx?.toString() || '', y: service.workDetails?.red2Ky?.toString() || '' },
-          red4K: { fl: service.workDetails?.red4Kfl?.toString() || '', x: service.workDetails?.red4Kx?.toString() || '', y: service.workDetails?.red4Ky?.toString() || '' },
-          green2K: { fl: service.workDetails?.green2Kfl?.toString() || '', x: service.workDetails?.green2Kx?.toString() || '', y: service.workDetails?.green2Ky?.toString() || '' },
-          green4K: { fl: service.workDetails?.green4Kfl?.toString() || '', x: service.workDetails?.green4Kx?.toString() || '', y: service.workDetails?.green4Ky?.toString() || '' },
-          blue2K: { fl: service.workDetails?.blue2Kfl?.toString() || '', x: service.workDetails?.blue2Kx?.toString() || '', y: service.workDetails?.blue2Ky?.toString() || '' },
-          blue4K: { fl: service.workDetails?.blue4Kfl?.toString() || '', x: service.workDetails?.blue4Kx?.toString() || '', y: service.workDetails?.blue4Ky?.toString() || '' },
-        },
-        
-        cieXyz2K: {
-          x: service.workDetails?.BW_Step_10_2Kx?.toString() || '',
-          y: service.workDetails?.BW_Step_10_2Ky?.toString() || '',
-          fl: service.workDetails?.BW_Step_10_2Kfl?.toString() || '',
-        },
-        cieXyz4K: {
-          x: service.workDetails?.BW_Step_10_4Kx?.toString() || '',
-          y: service.workDetails?.BW_Step_10_4Ky?.toString() || '',
-          fl: service.workDetails?.BW_Step_10_4Kfl?.toString() || '',
-        },
-        
-        softwareVersion: service.workDetails?.softwareVersion || '',
-        
-        screenInfo: {
-          scope: { 
-            height: service.workDetails?.screenHeight?.toString() || '', 
-            width: service.workDetails?.screenWidth?.toString() || '', 
-            gain: service.workDetails?.screenGain?.toString() || '' 
-          },
-          flat: { 
-            height: service.workDetails?.flatHeight?.toString() || '', 
-            width: service.workDetails?.flatWidth?.toString() || '', 
-            gain: service.workDetails?.screenGain?.toString() || '' 
-          },
-          make: service.workDetails?.screenMake || '',
-        },
-        
-        throwDistance: service.workDetails?.throwDistance?.toString() || '',
-        
-        imageEvaluation: {
-          focusBoresite: mapStatus(service.workDetails?.focusBoresight, service.workDetails?.focusBoresightNote),
-          integratorPosition: mapStatus(service.workDetails?.integratorPosition, service.workDetails?.integratorPositionNote),
-          spotOnScreen: mapStatus(service.workDetails?.spotsOnScreen, service.workDetails?.spotsOnScreenNote),
-          screenCropping: mapStatus(service.workDetails?.screenCroppingOk, service.workDetails?.screenCroppingNote),
-          convergence: mapStatus(service.workDetails?.convergenceOk, service.workDetails?.convergenceNote),
-          channelsChecked: mapStatus(service.workDetails?.channelsCheckedOk, service.workDetails?.channelsCheckedNote),
-          pixelDefects: mapStatus(service.workDetails?.pixelDefects, service.workDetails?.pixelDefectsNote),
-          imageVibration: mapStatus(service.workDetails?.imageVibration, service.workDetails?.imageVibrationNote),
-          liteLOC: mapStatus(service.workDetails?.liteloc, service.workDetails?.litelocNote),
-        },
-        
-        airPollution: {
-          airPollutionLevel: service.workDetails?.airPollutionLevel || '',
-          hcho: service.workDetails?.hcho?.toString() || '',
-          tvoc: service.workDetails?.tvoc?.toString() || '',
-          pm10: service.workDetails?.pm10?.toString() || '',
-          pm25: service.workDetails?.pm2_5?.toString() || '',
-          pm100: service.workDetails?.pm1?.toString() || '',
-          temperature: service.workDetails?.temperature?.toString() || '',
-          humidity: service.workDetails?.humidity?.toString() || '',
-        },
-        
-        recommendedParts: service.workDetails?.recommendedParts || [],
-        engineerSignatureUrl: service.signatures?.engineer || (service.signatures as any)?.engineerSignatureUrl,
-        siteSignatureUrl: service.signatures?.site || (service.signatures as any)?.siteSignatureUrl,
+      const { constructAndGeneratePDF } = await import('@/lib/pdf-helper')
+      // PDF helper expects an ID, but here we have the full service object.
+      // However, to ensure consistency, we should let the helper fetch the latest data.
+      // If service.id is available, use it.
+      if (!service.id) {
+          console.error("Service ID missing for PDF generation")
+          setIsGeneratingPdf(false)
+          return
       }
 
-
+      const pdfBytes = await constructAndGeneratePDF(service.id)
       
-      const pdfBytes = await generateMaintenanceReport(reportData)
-      const blob = new Blob([pdfBytes as any], { type: "application/pdf" })
+      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' })
       const url = window.URL.createObjectURL(blob)
-      const link = document.createElement("a")
+      const link = document.createElement('a')
       link.href = url
       link.download = `Service_Report_${service.serviceNumber}.pdf`
+      document.body.appendChild(link)
       link.click()
+      document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
     } catch (error) {
-      console.error("Failed to generate PDF:", error)
-      alert("Failed to generate PDF. Please try again.")
+      console.error('Error generating PDF:', error)
+      alert('Failed to generate PDF')
     } finally {
       setIsGeneratingPdf(false)
     }
@@ -574,7 +432,7 @@ function ServiceDetailView({
             )}
             <Button
               size="sm"
-              onClick={handleDownloadPDF}
+              onClick={() => handleDownloadPDF(service)}
               disabled={isGeneratingPdf}
               className="flex-1 sm:flex-none bg-black text-white hover:bg-gray-800"
             >
