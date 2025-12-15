@@ -8,6 +8,8 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import { PwaProvider } from '@/components/pwa-provider'
 import { PwaInstallBanner } from '@/components/pwa-install-banner'
 
+import { Toaster } from "@/components/ui/sonner"
+
 const _geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
 const _geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
 
@@ -52,6 +54,7 @@ export default function RootLayout({
             <SidebarProvider>
               <DataProvider>{children}</DataProvider>
               <Analytics />
+              <Toaster />
             </SidebarProvider>
           </AuthProvider>
           <PwaInstallBanner />
