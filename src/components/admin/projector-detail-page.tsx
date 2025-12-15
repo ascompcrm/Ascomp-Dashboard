@@ -118,37 +118,37 @@ export default function ProjectorDetailPage({ siteId: siteIdProp, projectorId: p
 
   return (
     <div className="space-y-6">
-      <Card className="border-border bg-white">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
+      <Card className="border-border bg-white shadow-sm">
+        <CardHeader className="pb-3 border-b border-border">
+          <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl">{projector.name}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">{site.name}</p>
+              <CardTitle className="text-xl">{projector.name}</CardTitle>
+              <p className="text-sm text-muted-foreground mt-0.5">{site.name}</p>
             </div>
-            <Badge className={statusColor}>
+            <Badge className={`${statusColor} px-3 py-1 text-sm`}>
               {projector.status.charAt(0).toUpperCase() + projector.status.slice(1)}
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Serial Number</p>
-              <p className="text-foreground font-medium">{projector.serialNumber}</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Serial Number</p>
+              <p className="text-base text-foreground font-medium">{projector.serialNumber}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Model</p>
-              <p className="text-foreground">{projector.model}</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Model</p>
+              <p className="text-base text-foreground font-medium">{projector.model}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Last Service</p>
-              <p className="text-foreground">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Last Service</p>
+              <p className="text-base text-foreground font-medium">
                 {projector.lastServiceDate ? new Date(projector.lastServiceDate).toLocaleDateString() : "—"}
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
-              <p className="text-foreground font-semibold">{projector.status.toUpperCase()}</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Status</p>
+              <p className="text-base text-foreground font-medium">{projector.status.toUpperCase()}</p>
             </div>
           </div>
         </CardContent>
@@ -165,13 +165,15 @@ export default function ProjectorDetailPage({ siteId: siteIdProp, projectorId: p
         )}
       </div>
 
-      <Card className="border-border">
-        <CardHeader className="pb-3">
+      <Card className="border-border bg-white shadow-sm">
+        <CardHeader className="pb-4 border-b border-border">
           <CardTitle className="text-lg">Service History</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {projector.serviceHistory.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No service records available yet.</p>
+            <div className="text-center py-8 border border-dashed border-border rounded-lg">
+               <p className="text-sm text-muted-foreground">No service records available yet.</p>
+            </div>
           ) : (
             <div className="space-y-4">
               {projector.serviceHistory.map((service, index) => {
@@ -186,80 +188,61 @@ export default function ProjectorDetailPage({ siteId: siteIdProp, projectorId: p
                       : "bg-green-100 text-green-700"
 
                 return (
-                  <Card key={service.id} className="border border-border">
-                    <CardContent className="pt-6">
+                  <Card key={service.id} className="border border-border shadow-sm">
+                    <CardContent className="p-5">
                       {/* Header */}
-                      <div className="flex items-start justify-between gap-4 mb-4">
-                        <div>
-                          <h4 className="text-base font-semibold text-foreground mb-1">
-                            Service #{projector.serviceHistory.length - index}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {service.date ? new Date(service.date).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            }) : "—"}
-                          </p>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                           <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold text-sm">
+                             #{projector.serviceHistory.length - index}
+                           </div>
+                           <div>
+                             <h4 className="text-sm font-semibold text-foreground">
+                               Service Record
+                             </h4>
+                             <p className="text-xs text-muted-foreground">
+                               {service.date ? new Date(service.date).toLocaleDateString("en-US", {
+                                 year: "numeric",
+                                 month: "short",
+                                 day: "numeric",
+                               }) : "—"}
+                             </p>
+                           </div>
                         </div>
-                        <Badge className={`${statusStyles} text-xs`}>{statusLabel}</Badge>
+                        <Badge className={`${statusStyles} text-xs px-2.5 py-0.5`}>{statusLabel}</Badge>
                       </div>
 
-                      {/* Report Details Table */}
-                      <div className="mb-4 overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="border-b border-border">
-                              <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                                Field
-                              </th>
-                              <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                                Value
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="text-sm">
-                            <tr className="border-b border-border/50">
-                              <td className="py-2 px-3 font-medium text-muted-foreground">Service Date</td>
-                              <td className="py-2 px-3 text-foreground">
+                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 pt-4 border-t border-border">
+                          <div>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Technician</p>
+                            <p className="text-sm font-medium text-foreground">{service.technician || "Unassigned"}</p>
+                          </div>
+                           <div>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Date</p>
+                            <p className="text-sm font-medium text-foreground">
                                 {service.date
-                                  ? new Date(service.date).toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "long",
-                                      day: "numeric",
-                                    })
+                                  ? new Date(service.date).toLocaleDateString()
                                   : "—"}
-                              </td>
-                            </tr>
-                            <tr className="border-b border-border/50">
-                              <td className="py-2 px-3 font-medium text-muted-foreground">Technician</td>
-                              <td className="py-2 px-3 text-foreground">{service.technician || "Unassigned"}</td>
-                            </tr>
-                            <tr className="border-b border-border/50">
-                              <td className="py-2 px-3 font-medium text-muted-foreground">Status</td>
-                              <td className="py-2 px-3">
-                                <Badge className={`${statusStyles} text-xs`}>{statusLabel}</Badge>
-                              </td>
-                            </tr>
+                            </p>
+                          </div>
                             {service.notes && (
-                              <tr className="border-b border-border/50">
-                                <td className="py-2 px-3 font-medium text-muted-foreground">Notes</td>
-                                <td className="py-2 px-3 text-foreground">{service.notes}</td>
-                              </tr>
+                            <div className="col-span-2">
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Notes</p>
+                                <p className="text-sm text-foreground line-clamp-1" title={service.notes}>{service.notes}</p>
+                            </div>
                             )}
-                          </tbody>
-                        </table>
-                      </div>
+                       </div>
 
                       {/* Preview & Download Button */}
-                      <div className="flex justify-end pt-2 border-t border-border">
+                      <div className="flex justify-end pt-3 border-t border-border">
                         <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => setPreviewServiceId(service.id)}
-                          className="gap-2"
+                          className="gap-2 h-8 text-xs"
                         >
-                          <FileText className="h-4 w-4" />
-                          Preview & Download Report
+                          <FileText className="h-3 w-3" />
+                          View Report
                         </Button>
                       </div>
                     </CardContent>

@@ -8,8 +8,8 @@ function generateObjectId(): string {
 
 export async function GET() {
   try {
-    const now = new Date()
-    const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
+    // const now = new Date()
+    // const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
 
     const sites = await prisma.site.findMany({
       include: {
@@ -56,8 +56,27 @@ export async function GET() {
         createdDate: new Date().toISOString().split("T")[0], // Sites don't have createdAt in schema, using current date
         totalCompletedServices,
         projectors: site.projector.map((proj) => {
+          // Calculate effective last service date
+          // Use projector.lastServiceAt if available, otherwise find the latest date from service records
+          let effectiveLastServiceDate: Date | null = proj.lastServiceAt
+
+          if (!effectiveLastServiceDate && proj.serviceRecords.length > 0) {
+            // Find the latest record with a valid date and completed status (endTime or reportGenerated)
+            // Note: serviceRecords here are filtered in the select above? No, we select all but map them.
+
+            const validRecords = proj.serviceRecords
+              .filter((r) => (r.endTime !== null || r.reportGenerated === true) && r.date != null)
+              .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
+
+            if (validRecords[0]) {
+              effectiveLastServiceDate = validRecords[0].date
+            }
+          }
+
           // Derive status based on lastServiceAt and projector status
-          const lastServiceAt = proj.lastServiceAt
+          const now = new Date()
+          const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
+
           let status: "completed" | "pending" | "scheduled"
 
           if (
@@ -66,7 +85,7 @@ export async function GET() {
           ) {
             // Any scheduled / in-progress work is treated as scheduled
             status = "scheduled"
-          } else if (lastServiceAt && lastServiceAt >= sixMonthsAgo) {
+          } else if (effectiveLastServiceDate && effectiveLastServiceDate >= sixMonthsAgo) {
             // Serviced within last ~6 months → completed
             status = "completed"
           } else {
@@ -75,12 +94,12 @@ export async function GET() {
           }
 
           const nextServiceDue =
-            lastServiceAt != null
+            effectiveLastServiceDate != null
               ? (() => {
-                  const d = new Date(lastServiceAt)
-                  d.setMonth(d.getMonth() + 6)
-                  return d.toISOString().split("T")[0]
-                })()
+                const d = new Date(effectiveLastServiceDate)
+                d.setMonth(d.getMonth() + 6)
+                return d.toISOString().split("T")[0]
+              })()
               : null
 
           const completedServiceHistory = proj.serviceRecords.filter(
@@ -93,7 +112,7 @@ export async function GET() {
             model: proj.modelNo,
             serialNumber: proj.serialNo,
             installDate: proj.lastServiceAt?.toISOString().split("T")[0] || null,
-            lastServiceDate: proj.lastServiceAt?.toISOString().split("T")[0] || null,
+            lastServiceDate: effectiveLastServiceDate?.toISOString().split("T")[0] || null,
             status,
             nextServiceDue,
             serviceHistory: completedServiceHistory,

@@ -16,7 +16,9 @@ export default async function ProjectorDetailRoute({
 
   return (
     <DashboardPageShell breadcrumbs={breadcrumbs}>
-      <ProjectorDetailPage siteId={siteId} projectorId={projectorId} />
+      <div className="p-6">
+        <ProjectorDetailPage siteId={siteId} projectorId={projectorId} />
+      </div>
     </DashboardPageShell>
   )
 }

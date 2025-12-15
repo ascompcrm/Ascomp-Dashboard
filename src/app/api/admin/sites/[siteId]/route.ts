@@ -48,25 +48,37 @@ export async function GET(
       siteCode: site.siteCode || null,
       createdDate: new Date().toISOString().split("T")[0],
       projectors: site.projector.map((proj) => {
-        // Map projector.status enum to frontend status string
+        // Calculate effective last service date
+        // Use projector.lastServiceAt if available, otherwise find the latest date from service records
+        let effectiveLastServiceDate: Date | null = proj.lastServiceAt
+
+        if (!effectiveLastServiceDate && proj.serviceRecords.length > 0) {
+          // serviceRecords are ordered by createdAt desc (line 18), but we should check 'date' field
+          // Find the latest record with a valid date
+          const validRecords = proj.serviceRecords
+            .filter((r) => r.date != null)
+            .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
+
+          if (validRecords[0]) {
+            effectiveLastServiceDate = validRecords[0].date
+          }
+        }
+
+        const now = new Date()
+        const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
+
+        // Default to pending
         let status: "completed" | "pending" | "scheduled" = "pending"
         const projectorStatus = proj.status
-        
-        switch (projectorStatus) {
-          case ServiceStatus.COMPLETED:
-            status = "completed"
-            break
-          case ServiceStatus.SCHEDULED:
-            status = "scheduled"
-            break
-          case ServiceStatus.IN_PROGRESS:
-            status = "scheduled" // In progress is treated as scheduled for display
-            break
-          case ServiceStatus.PENDING:
-            status = "pending"
-            break
-          default:
-            status = "pending"
+
+        if (projectorStatus === ServiceStatus.SCHEDULED || projectorStatus === ServiceStatus.IN_PROGRESS) {
+          status = "scheduled"
+        } else if (effectiveLastServiceDate && effectiveLastServiceDate >= sixMonthsAgo) {
+          // If last service was within 6 months, it's completed (good standing)
+          status = "completed"
+        } else {
+          // Otherwise (no service or older than 6 months), it's pending
+          status = "pending"
         }
 
         const serviceHistory = proj.serviceRecords.map((record) => ({
@@ -78,14 +90,24 @@ export async function GET(
           reportGenerated: record.reportGenerated,
         }))
 
+        const nextServiceDue =
+          effectiveLastServiceDate != null
+            ? (() => {
+              const d = new Date(effectiveLastServiceDate)
+              d.setMonth(d.getMonth() + 6)
+              return d.toISOString().split("T")[0]
+            })()
+            : null
+
         return {
           id: proj.id,
           name: `${proj.modelNo} (${proj.serialNo})`,
           model: proj.modelNo,
           serialNumber: proj.serialNo,
           installDate: proj.lastServiceAt?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
-          lastServiceDate: proj.lastServiceAt?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
+          lastServiceDate: effectiveLastServiceDate?.toISOString().split("T")[0] || null,
           status,
+          nextServiceDue,
           serviceHistory,
         }
       }),

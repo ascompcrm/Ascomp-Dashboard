@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Plus, Trash2, Save, RefreshCw } from "lucide-react"
+import { toast } from "sonner"
 
 type FieldType = "text" | "number" | "date" | "textarea" | "select" | "checkbox"
 
@@ -290,7 +291,7 @@ export default function FormBuilderPage() {
       
       if (res.ok) {
         const result = await res.json()
-        alert(`Form configuration saved successfully! ${result.savedFields || fieldConfigs.length} fields saved.`)
+        toast.success(`Form configuration saved! ${result.savedFields || fieldConfigs.length} fields.`)
       } else {
         const errorText = await res.text()
         console.error("Failed to save config - Response:", errorText)
@@ -300,11 +301,11 @@ export default function FormBuilderPage() {
         } catch {
           errorData = { error: errorText }
         }
-        alert(`Failed to save: ${errorData.error || "Unknown error"}\nDetails: ${errorData.details || "No details provided"}`)
+        toast.error(`Failed to save: ${errorData.error || "Unknown error"}`)
       }
     } catch (error) {
       console.error("Failed to save form config - Exception:", error)
-      alert(`Failed to save form configuration: ${error instanceof Error ? error.message : String(error)}`)
+      toast.error(`Failed to save: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
@@ -334,7 +335,7 @@ export default function FormBuilderPage() {
   }
 
   // Data file management functions
-  const saveDataFile = async (fileType: "content-player" | "lamp-models" | "software" | "projector", values: any) => {
+  const saveDataFile = async (fileType: "content-player" | "lamp-models" | "software" | "projector", values: any, silent = false) => {
     try {
       let bodyData: any = {}
       if (fileType === "lamp-models") {
@@ -354,7 +355,9 @@ export default function FormBuilderPage() {
 
       if (res.ok) {
         const result = await res.json()
-        alert(`${fileType} saved successfully! ${result.saved} items saved.`)
+        if (!silent) {
+          toast.success(`Saved ${result.saved} ${fileType.replace('-', ' ')} items`)
+        }
         
         // Update local state
         if (fileType === "content-player") setContentPlayers(values as string[])
@@ -370,11 +373,11 @@ export default function FormBuilderPage() {
         } catch {
           errorData = { error: errorText }
         }
-        alert(`Failed to save: ${errorData.error || "Unknown error"}\nDetails: ${errorData.details || ""}`)
+        toast.error(`Failed to save ${fileType}: ${errorData.error || "Unknown error"}`)
       }
     } catch (error) {
       console.error(`Failed to save ${fileType}:`, error)
-      alert(`Failed to save ${fileType}: ${error instanceof Error ? error.message : String(error)}`)
+      toast.error(`Failed to save ${fileType}: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
@@ -418,9 +421,9 @@ export default function FormBuilderPage() {
 
   const saveDataValueOnBlur = (fileType: "content-player" | "lamp-models" | "software") => {
     if (fileType === "content-player") {
-      saveDataFile(fileType, contentPlayers)
+      saveDataFile(fileType, contentPlayers, true) // silent
     } else if (fileType === "software") {
-      saveDataFile(fileType, softwareVersions)
+      saveDataFile(fileType, softwareVersions, true) // silent
     }
   }
 
@@ -457,7 +460,7 @@ export default function FormBuilderPage() {
   }
 
   const saveProjectorPartsOnBlur = () => {
-    saveDataFile("projector", projectorPartsData)
+    saveDataFile("projector", projectorPartsData, true) // silent
   }
 
   const addNewPartsProjectorModel = () => {
@@ -517,7 +520,7 @@ export default function FormBuilderPage() {
   }
 
   const saveLampModelOnBlur = () => {
-    saveDataFile("lamp-models", lampModelsData)
+    saveDataFile("lamp-models", lampModelsData, true) // silent
   }
 
   const addProjectorModel = () => {
@@ -554,135 +557,146 @@ export default function FormBuilderPage() {
     return acc
   }, {} as Record<string, FieldConfig[]>)
 
+  // Map sections to their associated data file types
+  const sectionDataFileMap: Record<string, "content-player" | "lamp-models" | "software" | "projector" | null> = {
+    "Lamp Information": "lamp-models",
+    "Software & Screen Information": "software",
+    "Content Player & AC Status": "content-player",
+    "Recommended Parts": "projector",
+  }
+
   return (
-    <div className="min-h-screen bg-white p-6 w-full">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-gray-50/50 p-6 w-full">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
           <div>
-            <h1 className="text-3xl font-bold text-black">Form Builder</h1>
-            <p className="text-gray-600 mt-2">Customize form fields, types, and dropdown options</p>
+            <h1 className="text-xl font-bold text-foreground">Form Builder</h1>
+            <p className="text-sm text-muted-foreground mt-1">Customize form fields, types, and dropdown options</p>
           </div>
-          <Button onClick={saveConfig} className="bg-black text-white hover:bg-gray-800">
-            <Save className="h-4 w-4 mr-2" />
+          <Button onClick={saveConfig} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 text-sm">
+            <Save className="h-3.5 w-3.5 mr-2" />
             Save Configuration
           </Button>
         </div>
 
-        <div className="space-y-6">
+        {/* Form Sections */}
+        <div className="space-y-4">
           {FORM_SECTIONS.map((section) => {
             const fields = fieldsBySection[section] || []
             if (fields.length === 0) return null
+            const associatedDataFile = sectionDataFileMap[section]
 
             return (
-              <Card key={section} className="border-2 border-black">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-black">{section}</CardTitle>
+              <Card key={section} className="border border-border bg-white shadow-sm">
+                <CardHeader className="py-3 px-4 border-b border-border bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-semibold text-foreground">{section}</CardTitle>
+                    {associatedDataFile && (
+                      <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                        Has Data File
+                      </span>
+                    )}
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-4 space-y-3">
                   {fields.map((field) => (
-                    <div key={field.key} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <Label className="font-semibold text-black">{field.label}</Label>
-                          <p className="text-xs text-gray-500 mt-1">Field: {field.key}</p>
+                    <div key={field.key} className="border border-border rounded-md p-4 bg-background hover:bg-muted/20 transition-colors">
+                      {/* Field Header Row */}
+                      <div className="flex items-center justify-between gap-4 mb-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-medium text-foreground truncate">{field.label}</span>
+                            {field.required && <span className="text-xs text-red-500 font-medium">Required</span>}
+                          </div>
+                          <p className="text-xs text-muted-foreground font-mono">key: {field.key}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={field.type}
-                            onValueChange={(value) => updateField(field.key, { type: value as FieldType })}
-                          >
-                            <SelectTrigger className="w-40 border-2 border-black">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="text">Text Input</SelectItem>
-                              <SelectItem value="number">Number Input</SelectItem>
-                              <SelectItem value="date">Date Input</SelectItem>
-                              <SelectItem value="textarea">Textarea</SelectItem>
-                              <SelectItem value="select">Dropdown</SelectItem>
-                              <SelectItem value="checkbox">Checkbox</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        <Select
+                          value={field.type}
+                          onValueChange={(value) => updateField(field.key, { type: value as FieldType })}
+                        >
+                          <SelectTrigger className="w-36 h-9 text-sm border-border">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="text" className="text-sm">Text</SelectItem>
+                            <SelectItem value="number" className="text-sm">Number</SelectItem>
+                            <SelectItem value="date" className="text-sm">Date</SelectItem>
+                            <SelectItem value="textarea" className="text-sm">Textarea</SelectItem>
+                            <SelectItem value="select" className="text-sm">Dropdown</SelectItem>
+                            <SelectItem value="checkbox" className="text-sm">Checkbox</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      {/* Field Settings Row */}
+                      <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border/50">
                         <div>
-                          <Label className="text-xs text-gray-600">Label</Label>
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wide">Label</Label>
                           <Input
                             value={field.label}
                             onChange={(e) => updateField(field.key, { label: e.target.value })}
-                            className="border-2 border-black text-sm"
+                            className="h-9 text-sm border-border mt-1"
                           />
                         </div>
                         <div>
-                          <Label className="text-xs text-gray-600">Placeholder</Label>
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wide">Placeholder</Label>
                           <Input
                             value={field.placeholder || ""}
                             onChange={(e) => updateField(field.key, { placeholder: e.target.value })}
-                            className="border-2 border-black text-sm"
-                            placeholder="Optional placeholder"
+                            className="h-9 text-sm border-border mt-1"
+                            placeholder="Optional"
                           />
+                        </div>
+                        <div className="flex items-end">
+                          <label className="flex items-center gap-2 cursor-pointer h-9">
+                            <input
+                              type="checkbox"
+                              checked={field.required || false}
+                              onChange={(e) => updateField(field.key, { required: e.target.checked })}
+                              className="w-4 h-4 rounded border-border"
+                            />
+                            <span className="text-sm text-muted-foreground">Required</span>
+                          </label>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={field.required || false}
-                          onChange={(e) => updateField(field.key, { required: e.target.checked })}
-                          className="border-2 border-black"
-                        />
-                        <Label className="text-sm">Required field</Label>
-                      </div>
-
                       {field.type === "number" && (
-                        <div className="border-t pt-3 space-y-2">
-                          <Label className="text-sm font-semibold">Number Range (Optional)</Label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-xs text-gray-600">Minimum Value</Label>
-                              <Input
-                                type="number"
-                                value={field.min !== undefined ? String(field.min) : ""}
-                                onChange={(e) => {
-                                  const value = e.target.value.trim()
-                                  updateField(field.key, { 
-                                    min: value === "" ? undefined : parseFloat(value) 
-                                  })
-                                }}
-                                placeholder="No minimum"
-                                className="border-2 border-black text-sm"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs text-gray-600">Maximum Value</Label>
-                              <Input
-                                type="number"
-                                value={field.max !== undefined ? String(field.max) : ""}
-                                onChange={(e) => {
-                                  const value = e.target.value.trim()
-                                  updateField(field.key, { 
-                                    max: value === "" ? undefined : parseFloat(value) 
-                                  })
-                                }}
-                                placeholder="No maximum"
-                                className="border-2 border-black text-sm"
-                              />
-                            </div>
+                        <div className="mt-3 pt-3 border-t border-border/50">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wide">Range (Optional)</Label>
+                          <div className="grid grid-cols-2 gap-3 mt-2">
+                            <Input
+                              type="number"
+                              value={field.min !== undefined ? String(field.min) : ""}
+                              onChange={(e) => {
+                                const value = e.target.value.trim()
+                                updateField(field.key, { 
+                                  min: value === "" ? undefined : parseFloat(value) 
+                                })
+                              }}
+                              placeholder="Min"
+                              className="h-9 text-sm border-border"
+                            />
+                            <Input
+                              type="number"
+                              value={field.max !== undefined ? String(field.max) : ""}
+                              onChange={(e) => {
+                                const value = e.target.value.trim()
+                                updateField(field.key, { 
+                                  max: value === "" ? undefined : parseFloat(value) 
+                                })
+                              }}
+                              placeholder="Max"
+                              className="h-9 text-sm border-border"
+                            />
                           </div>
-                          {(field.min !== undefined || field.max !== undefined) && (
-                            <p className="text-xs text-gray-500">
-                              Range: {field.min !== undefined ? field.min : "no min"} - {field.max !== undefined ? field.max : "no max"}
-                            </p>
-                          )}
                         </div>
                       )}
 
                       {field.type === "select" && (
-                        <div className="border-t pt-3 space-y-2">
-                          <Label className="text-sm font-semibold">Dropdown Options</Label>
-                          <div className="space-y-2">
+                        <div className="mt-3 pt-3 border-t border-border/50">
+                          <Label className="text-xs text-muted-foreground uppercase tracking-wide">Options</Label>
+                          <div className="space-y-2 mt-2">
                             {field.options?.map((option, idx) => (
                               <div key={idx} className="flex items-center gap-2">
                                 <Input
@@ -692,14 +706,14 @@ export default function FormBuilderPage() {
                                     newOptions[idx] = e.target.value
                                     updateField(field.key, { options: newOptions })
                                   }}
-                                  className="border-2 border-black text-sm flex-1"
+                                  className="h-9 text-sm border-border flex-1"
                                 />
                                 <Button
                                   type="button"
-                                  variant="outline"
+                                  variant="ghost"
                                   size="sm"
                                   onClick={() => removeOption(field.key, idx)}
-                                  className="border-red-600 text-red-600 hover:bg-red-50"
+                                  className="h-9 w-9 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -709,8 +723,8 @@ export default function FormBuilderPage() {
                               <Input
                                 value={newOption[field.key] || ""}
                                 onChange={(e) => setNewOption((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                                placeholder="Add new option"
-                                className="border-2 border-black text-sm flex-1"
+                                placeholder="Add option..."
+                                className="h-9 text-sm border-border flex-1"
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault()
@@ -723,7 +737,7 @@ export default function FormBuilderPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => addOption(field.key)}
-                                className="border-black"
+                                className="h-9 w-9 p-0 border-border"
                               >
                                 <Plus className="h-4 w-4" />
                               </Button>
@@ -733,18 +747,18 @@ export default function FormBuilderPage() {
                       )}
 
                       {field.type === "select" && field.defaultValue && (
-                        <div>
-                          <Label className="text-xs text-gray-600">Default Value</Label>
+                        <div className="mt-2">
+                          <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">Default</Label>
                           <Select
                             value={field.defaultValue}
                             onValueChange={(value) => updateField(field.key, { defaultValue: value })}
                           >
-                            <SelectTrigger className="border-2 border-black text-sm">
+                            <SelectTrigger className="h-8 text-xs border-border mt-1">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               {field.options?.map((opt) => (
-                                <SelectItem key={opt} value={opt}>
+                                <SelectItem key={opt} value={opt} className="text-xs">
                                   {opt}
                                 </SelectItem>
                               ))}
@@ -919,18 +933,196 @@ export default function FormBuilderPage() {
                       )}
                     </div>
                   ))}
+
+                  {/* Inline Data Editor for Software Versions */}
+                  {associatedDataFile === "software" && (
+                    <div className="mt-4 pt-4 border-t border-dashed border-border">
+                      <div className="flex items-center justify-between mb-3">
+                        <Label className="text-sm font-semibold text-primary">Software Versions (Data File)</Label>
+                        <span className="text-xs text-muted-foreground">{softwareVersions.length} items</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {softwareVersions.map((version, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5 bg-muted/50 px-3 py-1.5 rounded text-sm group">
+                            <span>{version}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeDataValue("software", idx)}
+                              className="text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newDataValue["software"] || ""}
+                          onChange={(e) => setNewDataValue((prev) => ({ ...prev, "software": e.target.value }))}
+                          placeholder="Add version..."
+                          className="h-9 text-sm border-border flex-1 max-w-xs"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault()
+                              addDataValue("software")
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addDataValue("software")}
+                          className="h-9 px-3 border-border hover:bg-primary hover:text-primary-foreground"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Inline Data Editor for Content Players */}
+                  {associatedDataFile === "content-player" && (
+                    <div className="mt-4 pt-4 border-t border-dashed border-border">
+                      <div className="flex items-center justify-between mb-3">
+                        <Label className="text-sm font-semibold text-primary">Content Players (Data File)</Label>
+                        <span className="text-xs text-muted-foreground">{contentPlayers.length} items</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {contentPlayers.map((player, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5 bg-muted/50 px-3 py-1.5 rounded text-sm group">
+                            <span>{player}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeDataValue("content-player", idx)}
+                              className="text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newDataValue["content-player"] || ""}
+                          onChange={(e) => setNewDataValue((prev) => ({ ...prev, "content-player": e.target.value }))}
+                          placeholder="Add player..."
+                          className="h-9 text-sm border-border flex-1 max-w-xs"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault()
+                              addDataValue("content-player")
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addDataValue("content-player")}
+                          className="h-9 px-3 border-border hover:bg-primary hover:text-primary-foreground"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Inline Data Editor for Lamp Models - simplified view */}
+                  {associatedDataFile === "lamp-models" && (
+                    <div className="mt-4 pt-4 border-t border-dashed border-border">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-xs font-semibold text-primary">Lamp Models (Data File)</Label>
+                        <span className="text-[10px] text-muted-foreground">{lampModelsData.length} projectors</span>
+                      </div>
+                      <div className="flex gap-2 items-end">
+                        <div className="flex-1 max-w-xs">
+                          <Select
+                            value={selectedProjectorIndex !== null ? String(selectedProjectorIndex) : ""}
+                            onValueChange={(value) => setSelectedProjectorIndex(value ? parseInt(value, 10) : null)}
+                          >
+                            <SelectTrigger className="h-7 text-xs border-border">
+                              <SelectValue placeholder="Select projector..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {lampModelsData.map((projectorData, idx) => (
+                                <SelectItem key={idx} value={String(idx)} className="text-xs">
+                                  {projectorData.projector_model} ({projectorData.Models?.length || 0} lamps)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex gap-1.5">
+                          <Input
+                            value={newProjectorModel}
+                            onChange={(e) => setNewProjectorModel(e.target.value)}
+                            placeholder="New projector..."
+                            className="h-7 text-xs border-border w-32"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault()
+                                addProjectorModel()
+                              }
+                            }}
+                          />
+                          <Button type="button" variant="outline" size="sm" onClick={addProjectorModel} className="h-7 px-2 border-border">
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      {selectedProjectorIndex !== null && lampModelsData[selectedProjectorIndex] && (
+                        <div className="mt-2 p-2 bg-muted/30 rounded">
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {lampModelsData[selectedProjectorIndex].Models?.map((model, modelIdx) => (
+                              <div key={modelIdx} className="flex items-center gap-1 bg-background px-2 py-1 rounded text-xs group border border-border">
+                                <span>{model}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeLampModel(selectedProjectorIndex, modelIdx)}
+                                  className="text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex gap-1.5">
+                            <Input
+                              value={newLampModelValue[selectedProjectorIndex] || ""}
+                              onChange={(e) => setNewLampModelValue((prev) => ({ ...prev, [selectedProjectorIndex]: e.target.value }))}
+                              placeholder="Add lamp model..."
+                              className="h-7 text-xs border-border flex-1"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault()
+                                  addLampModel(selectedProjectorIndex)
+                                }
+                              }}
+                            />
+                            <Button type="button" variant="outline" size="sm" onClick={() => addLampModel(selectedProjectorIndex)} className="h-7 px-2 border-border">
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )
           })}
         </div>
 
-        {/* Data Files Management Section */}
-        <div className="mt-8">
+        {/* Data Files Management Section - Projector Parts (Advanced) */}
+        <div className="mt-8 pt-6 border-t border-border">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-2xl font-bold text-black">Manage Dropdown Data Files</h2>
-              <p className="text-gray-600 mt-2">Edit values for Content Players, Lamp Models, and Software Versions</p>
+              <h2 className="text-lg font-bold text-foreground">Projector Parts Database</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Manage parts by projector model. 
+                <span className="text-[10px] ml-2 text-primary">(Software, Content Players & Lamp Models are edited inline above)</span>
+              </p>
             </div>
             <Button
               type="button"
@@ -971,45 +1163,45 @@ export default function FormBuilderPage() {
                 }
                 loadDataFiles()
               }}
-              className="border-2 border-black"
+              className="border-border h-9 text-sm"
               disabled={loadingDataFiles}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loadingDataFiles ? "animate-spin" : ""}`} />
-              Refresh Data
+              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loadingDataFiles ? "animate-spin" : ""}`} />
+              Refresh
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
             {/* Content Players */}
-            <Card className="border-2 border-black">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-black">Content Players</CardTitle>
+            <Card className="border border-border bg-white shadow-sm">
+              <CardHeader className="py-3 px-4 border-b border-border bg-muted/30">
+                <CardTitle className="text-sm font-semibold text-foreground">Content Players</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="p-4 space-y-2">
                 {loadingDataFiles ? (
-                  <p className="text-sm text-gray-500">Loading content players...</p>
+                  <p className="text-xs text-muted-foreground">Loading...</p>
                 ) : contentPlayers.length === 0 ? (
-                  <p className="text-sm text-gray-500 italic">No content players found. Add one below.</p>
+                  <p className="text-xs text-muted-foreground italic">No items. Add below.</p>
                 ) : (
-                  <p className="text-xs text-gray-500 mb-2">{contentPlayers.length} items</p>
+                  <p className="text-[10px] text-muted-foreground">{contentPlayers.length} items</p>
                 )}
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {contentPlayers.map((value, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
+                    <div key={idx} className="flex items-center gap-1.5">
                       <Input
                         value={value}
                         onChange={(e) => updateDataValue("content-player", idx, e.target.value)}
                         onBlur={() => saveDataValueOnBlur("content-player")}
-                        className="border-2 border-black text-sm flex-1"
+                        className="h-7 text-xs border-border flex-1"
                       />
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => removeDataValue("content-player", idx)}
-                        className="border-red-600 text-red-600 hover:bg-red-50"
+                        className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   ))}

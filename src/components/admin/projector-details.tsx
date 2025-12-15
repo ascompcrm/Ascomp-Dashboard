@@ -30,38 +30,38 @@ export default function ProjectorDetails({ site: _site, projector, onSchedule, o
       onClick={onViewDetails}
     >
       {/* Header + body */}
-      <div className="flex flex-col px-6 pt-6 pb-5 gap-5">
+      <div className="flex flex-col px-5 pt-5 pb-4 gap-4">
         {/* Header: Name and Status Badge */}
-        <div className="flex items-center justify-between gap-6">
+        <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h4 className="text-lg font-semibold text-foreground truncate mb-1">{projector.name}</h4>
+            <h4 className="text-base font-semibold text-foreground truncate mb-1">{projector.name}</h4>
             {/* Serial and Model aligned in a neat row */}
-            <div className="flex flex-row gap-6 mt-1">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 mt-0.5">
               <div className="flex items-center min-w-0">
-                <span className="text-base text-muted-foreground font-medium">Serial:</span>
-                <span className="ml-2 text-base font-semibold text-foreground truncate">{projector.serialNumber}</span>
+                <span className="text-xs text-muted-foreground font-medium">Serial:</span>
+                <span className="ml-1.5 text-xs font-medium text-foreground truncate">{projector.serialNumber}</span>
               </div>
               <div className="flex items-center min-w-0">
-                <span className="text-base text-muted-foreground font-medium">Model:</span>
-                <span className="ml-2 text-base font-semibold text-foreground truncate">{projector.model}</span>
+                <span className="text-xs text-muted-foreground font-medium">Model:</span>
+                <span className="ml-1.5 text-xs font-medium text-foreground truncate">{projector.model}</span>
               </div>
             </div>
           </div>
           <Badge
-            className={`${statusColor} text-[13px] px-4 py-1.5 rounded-full shrink-0 whitespace-nowrap`}
+            className={`${statusColor} text-[11px] px-2.5 py-0.5 rounded-full shrink-0 whitespace-nowrap`}
           >
             {projector.status.charAt(0).toUpperCase() + projector.status.slice(1)}
           </Badge>
         </div>
         {/* Metrics Row: only Last Service and Completed Services */}
-        <div className="grid grid-cols-2 gap-x-10 gap-y-3 text-base">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
           <div className="flex flex-col items-start">
-            <span className="text-[13px] uppercase tracking-wide text-muted-foreground/90 font-medium mb-0.5">Last Service</span>
-            <span className="text-lg font-semibold text-foreground">{formattedLastService}</span>
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground/90 font-medium mb-0.5">Last Service</span>
+            <span className="text-sm font-semibold text-foreground">{formattedLastService}</span>
           </div>
           <div className="flex flex-col items-start">
-            <span className="text-[13px] uppercase tracking-wide text-muted-foreground/90 font-medium mb-0.5">Completed Services</span>
-            <span className="text-lg font-semibold text-foreground">{serviceHistoryCount}</span>
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground/90 font-medium mb-0.5">Completed Services</span>
+            <span className="text-sm font-semibold text-foreground">{serviceHistoryCount}</span>
           </div>
         </div>
       </div>

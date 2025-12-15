@@ -94,43 +94,52 @@ export default function SiteDetailPage({ siteId: siteIdProp }: SiteDetailPagePro
               <p className="text-foreground">{site.location}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Created Date</p>
-              <p className="text-foreground">{new Date(site.createdDate).toLocaleDateString()}</p>
+             <p className="text-sm font-medium text-muted-foreground mb-1">Created Date</p>
+              <p className="text-foreground font-medium">{new Date(site.createdDate).toLocaleDateString()}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground mb-1">Total Projectors</p>
-              <p className="text-foreground">{site.projectors.length}</p>
+              <p className="text-foreground font-medium">{site.projectors.length}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Site Statistics */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="border-border">
-          <CardContent className="pt-4">
-            <p className="text-xs font-medium text-muted-foreground">Total Projectors</p>
-            <p className="text-2xl font-bold mt-2">{site.projectors.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardContent className="pt-4">
-            <p className="text-xs font-medium text-muted-foreground">Total Services</p>
-            <p className="text-2xl font-bold mt-2">{totalServices}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardContent className="pt-4">
-            <p className="text-xs font-medium text-muted-foreground">Pending</p>
-            <p className="text-2xl font-bold mt-2 text-red-600">{pendingProjectors}</p>
-          </CardContent>
-        </Card>
+      {/* Site Statistics - Simplified */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="border-border bg-white shadow-sm">
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Projectors</p>
+                  <p className="text-2xl font-bold mt-1 text-foreground">{site.projectors.length}</p>
+            </CardContent>
+          </Card>
+           <Card className="border-border bg-white shadow-sm">
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Services</p>
+                  <p className="text-2xl font-bold mt-1 text-foreground">{totalServices}</p>
+            </CardContent>
+          </Card>
+           <Card className="border-border bg-white shadow-sm">
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pending</p>
+                  <p className="text-2xl font-bold mt-1 text-red-600">{pendingProjectors}</p>
+            </CardContent>
+          </Card>
+            <Card className="border-border bg-white shadow-sm">
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pending</p>
+                  <p className="text-2xl font-bold mt-1 text-green-600">{site.projectors.filter(p => p.status === 'completed').length}</p>
+            </CardContent>
+          </Card>
       </div>
 
       {/* Projectors Section */}
-      <Card className="border-border">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Projectors in this Site</CardTitle>
+      <Card className="border-border bg-white shadow-sm">
+        <CardHeader className="pb-4 border-b border-border flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-lg">Projectors</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Manage projectors and their service schedules</p>
+          </div>
           <Button
             size="sm"
             onClick={() => setShowAddProjector(true)}
@@ -139,7 +148,8 @@ export default function SiteDetailPage({ siteId: siteIdProp }: SiteDetailPagePro
             Add Projector
           </Button>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 gap-4">
           {site.projectors.length === 0 ? (
             <p className="text-sm text-muted-foreground">No projectors added to this site yet.</p>
           ) : (
@@ -170,7 +180,8 @@ export default function SiteDetailPage({ siteId: siteIdProp }: SiteDetailPagePro
               )
             })
           )}
-        </CardContent>
+        </div>
+      </CardContent>
       </Card>
 
       {showAddProjector && (

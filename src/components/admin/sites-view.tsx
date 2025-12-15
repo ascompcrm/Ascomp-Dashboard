@@ -156,7 +156,7 @@ export default function SitesView() {
           ))}
         </div>
       ) : (
-        <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
+        <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 items-start">
           {filteredSites.length === 0 ? (
             <div className="border border-border p-6 text-center bg-background">
               <p className="text-muted-foreground">No sites found matching your search.</p>
@@ -173,12 +173,12 @@ export default function SitesView() {
               <div key={site.id} className="border border-border bg-background rounded-lg shadow-sm">
                 <div className="p-5">
                   {/* Site Header */}
-                  <div className="mb-4">
-                    <div className="flex items-start justify-between mb-3">
+                  <div className="mb-3">
+                    <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-foreground mb-1">{site.name}</h3>
+                        <h3 className="text-base font-bold text-foreground mb-0.5">{site.name}</h3>
                         {siteInfo?.siteCode && (
-                          <p className="text-sm text-muted-foreground">Site Code: {siteInfo.siteCode}</p>
+                          <p className="text-xs text-muted-foreground">Site Code: {siteInfo.siteCode}</p>
                         )}
                       </div>
                       <Button
@@ -189,7 +189,7 @@ export default function SitesView() {
                           e.stopPropagation()
                           router.push(`/admin/dashboard/sites/${site.id}`)
                         }}
-                        className="border-border shrink-0"
+                        className="border-border shrink-0 h-8 text-xs px-3"
                       >
                         View Details
                       </Button>
@@ -221,59 +221,44 @@ export default function SitesView() {
                   </div>
 
                   {/* Statistics */}
-                  <div className="flex flex-col items-center justify-between gap-4 pt-4 border-t border-border pb-4">
-                    <div className="flex items-center w-full justify-between gap-4">
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Total Projectors</p>
-                      <p className="text-xl font-bold text-foreground">{site.projectors.length}</p>
+                  {/* Statistics - Simplified */}
+                  <div className="flex items-center gap-3 pt-3 border-t border-border mt-3">
+                    <div className="flex-1 text-center border-r border-border last:border-0 px-1">
+                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Projectors</p>
+                       <p className="text-sm font-bold text-foreground">{site.projectors.length}</p>
                     </div>
-                    {/* <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Total Services</p>
-                      <p className="text-xl font-bold text-right text-foreground">{totalServices}</p>
-                    </div> */}
+                     <div className="flex-1 text-center border-r border-border last:border-0 px-1">
+                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Pending</p>
+                       <p className="text-sm font-bold text-red-600">{pendingCount}</p>
                     </div>
-                    <div className="flex items-center w-full justify-between gap-4">
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Pending</p>
-                      <p className="text-xl font-bold text-red-600">{pendingCount}</p>
+                     <div className="flex-1 text-center border-r border-border last:border-0 px-1">
+                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Scheduled</p>
+                       <p className="text-sm font-bold text-blue-600">{scheduledCount}</p>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Scheduled</p>
-                      <p className="text-xl font-bold text-center text-blue-600">{scheduledCount}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Completed</p>
-                      <p className="text-xl font-bold text-right text-green-600">{completedCount}</p>
-                    </div>
+                     <div className="flex-1 text-center border-r border-border last:border-0 px-1">
+                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Completed</p>
+                       <p className="text-sm font-bold text-green-600">{completedCount}</p>
                     </div>
                   </div>
 
                   {/* Toggle Button at the end */}
-                  <div className="pt-4 border-t border-border mt-4">
-                    <div className="flex justify-center">
-                      <Button
-                        variant="outline"
+                  <div className="pt-2 mt-2">
+                    <Button
+                        variant="ghost"
                         size="sm"
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
                           toggleSite(site.id)
                         }}
-                        className="flex items-center gap-2"
+                        className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground h-8"
                       >
                         {expandedSites.has(site.id) ? (
-                          <>
                             <ChevronUp className="h-4 w-4" />
-                            Hide Projectors
-                          </>
                         ) : (
-                          <>
                             <ChevronDown className="h-4 w-4" />
-                            Show Projectors ({site.projectors.length})
-                          </>
                         )}
                       </Button>
-                    </div>
                   </div>
                 </div>
 

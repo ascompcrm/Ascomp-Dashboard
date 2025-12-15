@@ -11,7 +11,9 @@ export default async function SingleSitePage({ params }: { params: Promise<{ sit
 
   return (
     <DashboardPageShell breadcrumbs={breadcrumbs}>
-      <SiteDetailPage siteId={siteId} />
+      <div className="p-6">
+        <SiteDetailPage siteId={siteId} />
+      </div>
     </DashboardPageShell>
   )
 }

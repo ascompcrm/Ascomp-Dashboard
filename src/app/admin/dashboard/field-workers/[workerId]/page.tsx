@@ -11,7 +11,9 @@ export default async function FieldWorkerDetailRoute({ params }: { params: Promi
 
   return (
     <DashboardPageShell breadcrumbs={breadcrumbs}>
+      <div className="p-6">
       <FieldWorkerDetailPage workerId={workerId} />
+      </div>
     </DashboardPageShell>
   )
 }

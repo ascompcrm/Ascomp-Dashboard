@@ -4,9 +4,9 @@
 
 
 fix download report function in admin table
-
-
 show bar chart, area chart, pie chart, tool tip charts. see whatever you can do
+
+
 
 // complete it tonight
 User Side
