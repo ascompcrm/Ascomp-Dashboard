@@ -5,6 +5,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -43,14 +51,22 @@ import {
   Projector,
   CalendarIcon,
   ChevronDown,
+  Eye,
+  ExternalLink,
+  MapPin,
+  CalendarPlus,
 } from "lucide-react"
 import { format } from "date-fns"
+import Link from "next/link"
+import ScheduleServiceModal from "@/components/admin/modals/schedule-service-modal"
 
 type LowFlProjector = {
   id: string
   serialNo: string
   modelNo: string
+  siteId: string
   siteName: string
+  siteAddress: string
   flLeft: string
   flRight: string
   avgFl: string
@@ -62,7 +78,10 @@ type PendingProjector = {
   serialNo: string
   modelNo: string
   status: string
+  siteId: string
   siteName: string
+  siteAddress: string
+  screenNumber: string | null
   lastServiceDate: string | null
 }
 
@@ -175,29 +194,34 @@ export default function DashboardClient() {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
 
+  // Dialog state for Low fL Projector details
+  const [selectedLowFlProjector, setSelectedLowFlProjector] = useState<LowFlProjector | null>(null)
+  const [isLowFlDialogOpen, setIsLowFlDialogOpen] = useState(false)
+
+  // Schedule modal state
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false)
+  const [selectedProjectorForSchedule, setSelectedProjectorForSchedule] = useState<PendingProjector | null>(null)
+
   // Load main dashboard data
-  useEffect(() => {
-    let mounted = true
-    const load = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const res = await fetch("/api/admin/analytics", { cache: "no-store" })
-        if (!res.ok) {
-          throw new Error("Failed to load analytics")
-        }
-        const json = (await res.json()) as DashboardData
-        if (mounted) setData(json)
-      } catch (err) {
-        if (mounted) setError(err instanceof Error ? err.message : "Failed to load analytics")
-      } finally {
-        if (mounted) setLoading(false)
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const res = await fetch("/api/admin/analytics", { cache: "no-store" })
+      if (!res.ok) {
+        throw new Error("Failed to load analytics")
       }
+      const json = (await res.json()) as DashboardData
+      setData(json)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load analytics")
+    } finally {
+      setLoading(false)
     }
-    load()
-    return () => {
-      mounted = false
-    }
+  }
+
+  useEffect(() => {
+    loadDashboardData()
   }, [])
 
   // Load engineer stats based on filter
@@ -256,6 +280,23 @@ export default function DashboardClient() {
     }
   }
 
+  const handleViewLowFlDetails = (proj: LowFlProjector) => {
+    setSelectedLowFlProjector(proj)
+    setIsLowFlDialogOpen(true)
+  }
+
+  const handleScheduleClick = (proj: PendingProjector) => {
+    setSelectedProjectorForSchedule(proj)
+    setScheduleModalOpen(true)
+  }
+
+  const handleScheduleSuccess = () => {
+    setScheduleModalOpen(false)
+    setSelectedProjectorForSchedule(null)
+    // Refresh dashboard data
+    loadDashboardData()
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -297,6 +338,97 @@ export default function DashboardClient() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Low fL Projector Details Dialog */}
+      <Dialog open={isLowFlDialogOpen} onOpenChange={setIsLowFlDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Low fL Projector Details
+            </DialogTitle>
+            <DialogDescription>
+              This projector has a low light output and may need attention.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedLowFlProjector && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Serial No.</p>
+                  <p className="font-semibold">{selectedLowFlProjector.serialNo}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Model No.</p>
+                  <p className="font-semibold">{selectedLowFlProjector.modelNo}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">fL Left</p>
+                  <p className="font-semibold text-red-600">{selectedLowFlProjector.flLeft}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">fL Right</p>
+                  <p className="font-semibold text-red-600">{selectedLowFlProjector.flRight}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Average fL</p>
+                  <p className="font-bold text-lg text-red-600">{selectedLowFlProjector.avgFl} fL</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Site Name</p>
+                  <p className="font-medium">{selectedLowFlProjector.siteName}</p>
+                </div>
+                {selectedLowFlProjector.siteAddress && (
+                  <div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      Site Address
+                    </p>
+                    <p className="text-sm text-muted-foreground">{selectedLowFlProjector.siteAddress}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-muted-foreground">Last Service Date</p>
+                  <p className={`font-medium ${selectedLowFlProjector.lastServiceDate ? "text-amber-600" : "text-red-600"}`}>
+                    {selectedLowFlProjector.lastServiceDate || "Never serviced"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsLowFlDialogOpen(false)}>
+              Close
+            </Button>
+            {selectedLowFlProjector && (
+              <Button asChild>
+                <Link href={`/admin/dashboard/sites/${selectedLowFlProjector.siteId}/projectors/${selectedLowFlProjector.id}`}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Projector Page
+                </Link>
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule Service Modal */}
+      {scheduleModalOpen && selectedProjectorForSchedule && (
+        <ScheduleServiceModal
+          siteId={selectedProjectorForSchedule.siteId}
+          projectorId={selectedProjectorForSchedule.id}
+          onClose={() => {
+            setScheduleModalOpen(false)
+            setSelectedProjectorForSchedule(null)
+          }}
+          onSuccess={handleScheduleSuccess}
+        />
+      )}
+
       {/* Top Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <MetricCard title="Total Services" value={totals.all} icon={Activity} />
@@ -375,6 +507,132 @@ export default function DashboardClient() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Pending Projectors Quick View */}
+        <div className="border border-border rounded-lg bg-white">
+          <div className="flex items-center justify-between p-4 pb-2">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              Projectors Needing Service
+            </h3>
+            <Badge variant="outline" className="text-xs">{pendingProjectors.length} Projectors</Badge>
+          </div>
+          
+          {pendingProjectors.length === 0 ? (
+            <div className="p-6 text-center">
+              <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">All projectors are up to date</p>
+            </div>
+          ) : (
+            <div className="max-h-[260px] overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="text-xs font-semibold">Serial No</TableHead>
+                    <TableHead className="text-xs font-semibold">Site</TableHead>
+                    <TableHead className="text-xs font-semibold">Screen</TableHead>
+                    <TableHead className="text-xs font-semibold">Last Service</TableHead>
+                    <TableHead className="text-xs font-semibold text-center w-24">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingProjectors.slice(0, 10).map((proj) => (
+                    <TableRow key={proj.id} className="hover:bg-muted/20">
+                      <TableCell className="text-xs font-medium">{proj.serialNo}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[120px]">
+                        <div className="truncate" title={proj.siteAddress || proj.siteName}>
+                          {proj.siteName}
+                        </div>
+                        {proj.siteAddress && (
+                          <div className="text-[10px] text-muted-foreground/70 truncate" title={proj.siteAddress}>
+                            {proj.siteAddress}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {proj.screenNumber || "-"}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {proj.lastServiceDate ? (
+                          <span className="text-amber-600">{proj.lastServiceDate}</span>
+                        ) : (
+                          <span className="text-red-600">Never</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handleScheduleClick(proj)}
+                        >
+                          <CalendarPlus className="h-3.5 w-3.5 mr-1" />
+                          Schedule
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Low fL & Pending Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Low fL Projectors */}
+        <div className="border border-border rounded-lg bg-white">
+          <div className="flex items-center justify-between p-4 pb-2">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Low fL Projectors (&lt;10 fL)
+            </h3>
+            <Badge variant="destructive" className="text-xs">{lowFlProjectors.length} Found</Badge>
+          </div>
+          
+          {lowFlProjectors.length === 0 ? (
+            <div className="p-6 text-center">
+              <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">All projectors have healthy fL levels</p>
+            </div>
+          ) : (
+            <div className="max-h-[260px] overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="text-xs font-semibold">Serial No</TableHead>
+                    <TableHead className="text-xs font-semibold">Site</TableHead>
+                    <TableHead className="text-xs font-semibold text-right">Avg fL</TableHead>
+                    <TableHead className="text-xs font-semibold text-center w-20">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lowFlProjectors.slice(0, 10).map((proj) => (
+                    <TableRow key={proj.id} className="hover:bg-muted/20">
+                      <TableCell className="text-xs font-medium">{proj.serialNo}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{proj.siteName}</TableCell>
+                      <TableCell className="text-xs text-right">
+                        <span className="text-red-600 font-semibold">{proj.avgFl}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handleViewLowFlDetails(proj)}
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
 
         {/* Engineer Performance with Date Filter */}
@@ -476,95 +734,6 @@ export default function DashboardClient() {
                 </div>
               </div>
             </>
-          )}
-        </div>
-      </div>
-
-      {/* Low fL & Pending Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Low fL Projectors */}
-        <div className="border border-border rounded-lg bg-white">
-          <div className="flex items-center justify-between p-4 pb-2">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-              Low fL Projectors (&lt;10 fL)
-            </h3>
-            <Badge variant="destructive" className="text-xs">{lowFlProjectors.length} Found</Badge>
-          </div>
-          
-          {lowFlProjectors.length === 0 ? (
-            <div className="p-6 text-center">
-              <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">All projectors have healthy fL levels</p>
-            </div>
-          ) : (
-            <div className="max-h-[220px] overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30">
-                    <TableHead className="text-xs font-semibold">Serial No</TableHead>
-                    <TableHead className="text-xs font-semibold">Site</TableHead>
-                    <TableHead className="text-xs font-semibold text-right">Avg fL</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lowFlProjectors.slice(0, 8).map((proj) => (
-                    <TableRow key={proj.id} className="hover:bg-muted/20">
-                      <TableCell className="text-xs font-medium">{proj.serialNo}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{proj.siteName}</TableCell>
-                      <TableCell className="text-xs text-right">
-                        <span className="text-red-600 font-semibold">{proj.avgFl}</span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-
-        {/* Pending Projectors Quick View */}
-        <div className="border border-border rounded-lg bg-white">
-          <div className="flex items-center justify-between p-4 pb-2">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              Projectors Needing Service
-            </h3>
-            <Badge variant="outline" className="text-xs">{pendingProjectors.length} Projectors</Badge>
-          </div>
-          
-          {pendingProjectors.length === 0 ? (
-            <div className="p-6 text-center">
-              <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">All projectors are up to date</p>
-            </div>
-          ) : (
-            <div className="max-h-[220px] overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30">
-                    <TableHead className="text-xs font-semibold">Serial No</TableHead>
-                    <TableHead className="text-xs font-semibold">Site</TableHead>
-                    <TableHead className="text-xs font-semibold text-right">Last Service</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pendingProjectors.slice(0, 8).map((proj) => (
-                    <TableRow key={proj.id} className="hover:bg-muted/20">
-                      <TableCell className="text-xs font-medium">{proj.serialNo}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{proj.siteName}</TableCell>
-                      <TableCell className="text-xs text-right">
-                        {proj.lastServiceDate ? (
-                          <span className="text-amber-600">{proj.lastServiceDate}</span>
-                        ) : (
-                          <span className="text-red-600">Never</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
           )}
         </div>
       </div>
