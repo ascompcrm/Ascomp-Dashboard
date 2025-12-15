@@ -20,7 +20,7 @@ export async function GET() {
     const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const last6Months = new Date(now.getFullYear(), now.getMonth() - 5, 1)
 
-    // Fetch all data in parallel
+    // Fetch all data in parallel - OPTIMIZED: removed unused queries
     const [
       totalServiceCount,
       completedServiceCount,
@@ -28,24 +28,21 @@ export async function GET() {
       pendingProjectorCount,
       totalProjectorCount,
       engineerCount,
-      projectorsWithServices,
-      recentCompleted,
       recentServiceRecords,
-      allEngineers,
-      inProgressCount,
-      scheduledServiceCount,
+      // Fetch only projectors that might have low fL (have service records with fL data)
+      lowFlCandidates,
+      // Pending projectors needing service
+      pendingProjectors,
     ] = await Promise.all([
       // Total service records (all time)
       prisma.serviceRecord.count(),
 
-      // Completed services (all time) - has endTime OR reportGenerated
-      prisma.projector.count(
-        {
-          where: {
-            status: "COMPLETED",
-          }
+      // Completed projectors (status = COMPLETED)
+      prisma.projector.count({
+        where: {
+          status: "COMPLETED",
         }
-      ),
+      }),
 
       // Projectors with SCHEDULED status
       prisma.projector.count({
@@ -65,10 +62,40 @@ export async function GET() {
         where: { role: "FIELD_WORKER" },
       }),
 
-      // Projectors with their latest service records (for low fL check)
+      // Service records from last 6 months (for charts) - only completed ones
+      prisma.serviceRecord.findMany({
+        where: {
+          date: { gte: last6Months },
+          OR: [
+            { endTime: { not: null } },
+            { reportGenerated: true },
+          ],
+        },
+        select: {
+          id: true,
+          date: true,
+        },
+      }),
+
+      // OPTIMIZED: Fetch projectors with fL data for low fL check
+      // Only get projectors that have at least one service record
       prisma.projector.findMany({
-        include: {
-          site: true,
+        where: {
+          serviceRecords: {
+            some: {},
+          },
+        },
+        select: {
+          id: true,
+          serialNo: true,
+          modelNo: true,
+          siteId: true,
+          site: {
+            select: {
+              siteName: true,
+              address: true,
+            },
+          },
           serviceRecords: {
             select: { date: true, flLeft: true, flRight: true },
             orderBy: { date: "desc" },
@@ -77,96 +104,30 @@ export async function GET() {
         },
       }),
 
-      // Recent completed services
-      prisma.serviceRecord.findMany({
+      // Pending projectors that need service
+      prisma.projector.findMany({
         where: {
           OR: [
-            { endTime: { not: null } },
-            { reportGenerated: true },
+            { status: "PENDING" },
+            { lastServiceAt: { lt: sixMonthsAgo } },
+            { lastServiceAt: null },
           ],
         },
-        orderBy: { createdAt: "desc" },
-        take: 10,
         include: {
-          projector: true,
-          user: true,
-        },
-      }),
-
-      // Service records from last 6 months (for charts)
-      prisma.serviceRecord.findMany({
-        where: {
-          date: { gte: last6Months },
-        },
-        select: {
-          id: true,
-          date: true,
-          endTime: true,
-          assignedToId: true,
-          startTime: true,
-          reportGenerated: true,
-        },
-      }),
-
-      // All engineers with their service stats
-      prisma.user.findMany({
-        where: { role: "FIELD_WORKER" },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          assignedServices: {
-            select: {
-              id: true,
-              endTime: true,
-              reportGenerated: true,
-            },
+          site: true,
+          serviceRecords: {
+            orderBy: { date: "desc" },
+            take: 1,
+            select: { screenNumber: true },
           },
         },
-      }),
-
-      // In progress services (started but not completed)
-      prisma.serviceRecord.count({
-        where: {
-          startTime: { not: null },
-          endTime: null,
-          reportGenerated: false,
-        },
-      }),
-
-      // Scheduled services (not started yet)
-      prisma.serviceRecord.count({
-        where: {
-          startTime: null,
-          endTime: null,
-          reportGenerated: false,
-        },
+        take: 20,
+        orderBy: { lastServiceAt: "asc" },
       }),
     ])
 
-    // Get pending projectors that need service (status = PENDING or not serviced in 6 months)
-    const pendingProjectors = await prisma.projector.findMany({
-      where: {
-        OR: [
-          { status: "PENDING" },
-          { lastServiceAt: { lt: sixMonthsAgo } },
-          { lastServiceAt: null },
-        ],
-      },
-      include: {
-        site: true,
-        serviceRecords: {
-          orderBy: { date: "desc" },
-          take: 1,
-          select: { screenNumber: true },
-        },
-      },
-      take: 20,
-      orderBy: { lastServiceAt: "asc" },
-    })
-
     // Calculate low fL projectors (fL < 10 in last service)
-    const lowFlProjectors = projectorsWithServices
+    const lowFlProjectors = lowFlCandidates
       .map((projector) => {
         const lastService = projector.serviceRecords[0]
         if (!lastService) return null
@@ -209,7 +170,7 @@ export async function GET() {
     }
 
     recentServiceRecords.forEach((record) => {
-      if (record.date && record.date >= last7Days && (record.endTime || record.reportGenerated)) {
+      if (record.date && record.date >= last7Days) {
         const dayIndex = record.date.getDay()
         const dayKey = dayNames[dayIndex]
         if (dayKey && servicesByDay[dayKey] !== undefined) {
@@ -235,7 +196,7 @@ export async function GET() {
     }
 
     recentServiceRecords.forEach((record) => {
-      if (record.date && (record.endTime || record.reportGenerated)) {
+      if (record.date) {
         const monthIndex = record.date.getMonth()
         const monthKey = monthNames[monthIndex]
         if (monthKey && servicesByMonth[monthKey] !== undefined) {
@@ -249,38 +210,6 @@ export async function GET() {
       count,
     }))
 
-    // Engineer stats - using assignedServices relation
-    const engineerStats = allEngineers.map((engineer) => {
-      const completed = engineer.assignedServices.filter(
-        (s) => s.endTime !== null || s.reportGenerated === true
-      ).length
-      const pending = engineer.assignedServices.filter(
-        (s) => s.endTime === null && s.reportGenerated !== true
-      ).length
-
-      return {
-        id: engineer.id,
-        name: engineer.name || engineer.email?.split("@")[0] || "Unknown",
-        completed,
-        pending,
-        total: completed + pending,
-      }
-    }).filter((e) => e.total > 0)
-      .sort((a, b) => b.total - a.total) // Sort by most services
-
-    // Format recent records
-    const recent = recentCompleted.map((r) => ({
-      id: r.id,
-      serviceNumber: r.serviceNumber ?? null,
-      cinemaName: r.cinemaName ?? r.address ?? null,
-      siteId: r.siteId,
-      projectorSerial: r.projector?.serialNo ?? null,
-      projectorModel: r.projector?.modelNo ?? null,
-      engineer: r.user?.name ?? r.user?.email ?? null,
-      status: r.endTime ? "Completed" : r.startTime ? "In Progress" : "Scheduled",
-      date: formatDate(r.endTime ?? r.date ?? r.createdAt),
-    }))
-
     return NextResponse.json({
       totals: {
         all: totalServiceCount,
@@ -290,11 +219,6 @@ export async function GET() {
         projectors: totalProjectorCount,
         engineers: engineerCount,
       },
-      serviceStatusBreakdown: [
-        { name: "Completed", value: completedServiceCount, fill: "#22c55e" },
-        { name: "In Progress", value: inProgressCount, fill: "#eab308" },
-        { name: "Scheduled", value: scheduledServiceCount, fill: "#3b82f6" },
-      ],
       servicesByDay: servicesByDayData,
       servicesByMonth: servicesByMonthData,
       lowFlProjectors,
@@ -309,8 +233,6 @@ export async function GET() {
         screenNumber: p.serviceRecords[0]?.screenNumber || null,
         lastServiceDate: formatDate(p.lastServiceAt),
       })),
-      engineerStats,
-      recent,
     })
   } catch (error) {
     console.error("Error fetching analytics:", error)

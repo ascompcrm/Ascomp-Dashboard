@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -118,8 +118,6 @@ type DashboardData = {
   servicesByMonth: ServiceByMonth[]
   lowFlProjectors: LowFlProjector[]
   pendingProjectors: PendingProjector[]
-  engineerStats: EngineerStat[]
-  recent: any[]
 }
 
 type EngineerStatsResponse = {
@@ -297,6 +295,23 @@ export default function DashboardClient() {
     loadDashboardData()
   }
 
+  // Transform service data for pie chart - memoized to prevent recalculation
+  // MUST be called before any conditional returns to follow Rules of Hooks
+  const servicePieData = useMemo(() => {
+    if (!data) return []
+    const source = serviceViewMode === "weekly" ? data.servicesByDay : data.servicesByMonth
+    return source.map((item, index) => ({
+      name: 'day' in item ? item.day : item.month,
+      value: item.count,
+      fill: PIE_COLORS[index % PIE_COLORS.length],
+    }))
+  }, [serviceViewMode, data])
+
+  const totalServices = useMemo(() => 
+    servicePieData.reduce((acc, item) => acc + item.value, 0),
+    [servicePieData]
+  )
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -319,22 +334,7 @@ export default function DashboardClient() {
     )
   }
 
-  const { totals, servicesByDay, servicesByMonth, lowFlProjectors, pendingProjectors } = data
-
-  // Transform service data for pie chart
-  const servicePieData = serviceViewMode === "weekly"
-    ? servicesByDay.map((item, index) => ({
-        name: item.day,
-        value: item.count,
-        fill: PIE_COLORS[index % PIE_COLORS.length],
-      }))
-    : servicesByMonth.map((item, index) => ({
-        name: item.month,
-        value: item.count,
-        fill: PIE_COLORS[index % PIE_COLORS.length],
-      }))
-
-  const totalServices = servicePieData.reduce((acc, item) => acc + item.value, 0)
+  const { totals, lowFlProjectors, pendingProjectors } = data
 
   return (
     <div className="flex flex-col gap-6">
