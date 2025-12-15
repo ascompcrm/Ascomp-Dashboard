@@ -306,6 +306,28 @@ export async function POST(request: NextRequest) {
       data: cleanedData,
     })
 
+    // === PROJECTOR STATUS UPDATE ===
+    // Always update the projector's lastServiceAt and status when a service is completed
+    const projectorId = serviceRecord.projectorId
+    const serviceDate = updatedRecord.date || updatedRecord.endTime || new Date()
+
+    // Calculate if the service date puts the projector in COMPLETED status
+    // (within 6 months from now)
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
+    const newStatus = serviceDate >= sixMonthsAgo ? 'COMPLETED' : 'PENDING'
+
+    await prisma.projector.update({
+      where: { id: projectorId },
+      data: {
+        lastServiceAt: serviceDate,
+        status: newStatus,
+      }
+    })
+
+    console.log(`✅ Updated projector ${projectorId}: lastServiceAt=${serviceDate.toISOString()}, status=${newStatus}`)
+
     return NextResponse.json({
       success: true,
       serviceRecord: {

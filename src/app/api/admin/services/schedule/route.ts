@@ -144,12 +144,42 @@ export async function DELETE(request: NextRequest) {
       },
     })
 
-    // If no more scheduled services, update projector status back to PENDING
+    // If no more scheduled services, recalculate projector status based on last completed service
     if (!remainingScheduledServices) {
+      // Find the last completed service
+      const lastCompletedService = await prisma.serviceRecord.findFirst({
+        where: {
+          projectorId,
+          OR: [
+            { endTime: { not: null } },
+            { reportGenerated: true },
+          ],
+        },
+        orderBy: { date: 'desc' },
+        select: { date: true },
+      })
+
+      const sixMonthsAgo = new Date()
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
+      let newStatus: ServiceStatus
+      let lastServiceAt: Date | null = null
+
+      if (lastCompletedService?.date) {
+        lastServiceAt = lastCompletedService.date
+        newStatus = lastCompletedService.date >= sixMonthsAgo
+          ? ServiceStatus.COMPLETED
+          : ServiceStatus.PENDING
+      } else {
+        // No completed services - PENDING
+        newStatus = ServiceStatus.PENDING
+      }
+
       await prisma.projector.update({
         where: { id: projectorId },
         data: {
-          status: ServiceStatus.PENDING,
+          status: newStatus,
+          lastServiceAt,
         },
       })
     }

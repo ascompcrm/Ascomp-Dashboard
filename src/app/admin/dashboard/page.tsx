@@ -1,11 +1,8 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { CalendarRange } from "lucide-react"
 import DashboardClient from "./dashboard-client"
 
 export default function Page() {
   return (
-    <div className="p-6 flex flex-col gap-4">
+    <div className="p-6 flex flex-col gap-6 bg-gray-50/50 min-h-screen">
       <Header />
       <DashboardClient />
     </div>
@@ -13,19 +10,13 @@ export default function Page() {
 }
 
 const Header = () => (
-  <div className="w-full flex items-center justify-between bg-white rounded-md border px-4 py-3 shadow-sm">
+  <div className="w-full flex items-center justify-between">
     <div className="flex items-center gap-3">
-      <h1 className="text-lg font-semibold text-slate-900">Analytics</h1>
-      <Badge variant="secondary" className="text-xs">
-        Live
-      </Badge>
+      <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
     </div>
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <Button variant="outline" size="sm" className="gap-2">
-        <CalendarRange className="h-4 w-4" />
-        All time
-      </Button>
-    </div>
+    <p className="text-sm flex gap-2 items-center px-4 py-2 bg-green-50 text-green-600 rounded-md">
+      <div className="h-2 w-2 bg-green-600 rounded-full" />
+      All systems normal
+    </p>
   </div>
 )
-
