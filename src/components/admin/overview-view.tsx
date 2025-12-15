@@ -1,6 +1,9 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useForm } from "react-hook-form"
+import { useFormConfig } from "@/hooks/use-form-config"
+import { DynamicFormField } from "../workflow/dynamic-form-field"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -10,7 +13,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, Image as ImageIcon, Folder, ExternalLink, Download, Edit } from "lucide-react"
@@ -150,995 +156,1102 @@ const toLabel = (key: string) => {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+type IssueNotes = Record<string, string>
+type UploadedImage = string
+type ProjectorPart = {
+  projector_model: string
+  part_number: string
+  description: string
+}
+type RecommendedPart = {
+  part_number: string
+  description: string
+}
+
+const createInitialFormData = () => ({
+  cinemaName: '',
+  date: new Date().toISOString().split('T')[0] ?? '',
+  address: '',
+  contactDetails: '',
+  location: '',
+  screenNumber: '',
+  serviceVisitType: '',
+  projectorModel: '',
+  projectorSerialNumber: '',
+  projectorRunningHours: '',
+  reflector: 'OK',
+  uvFilter: 'OK',
+  integratorRod: 'OK',
+  coldMirror: 'OK',
+  foldMirror: 'OK',
+  touchPanel: 'OK',
+  evbBoard: 'OK',
+  ImcbBoard: 'OK',
+  pibBoard: 'OK',
+  IcpBoard: 'OK',
+  imbSBoard: 'OK',
+  reflectorNote: '',
+  uvFilterNote: '',
+  integratorRodNote: '',
+  coldMirrorNote: '',
+  foldMirrorNote: '',
+  touchPanelNote: '',
+  evbBoardNote: '',
+  ImcbBoardNote: '',
+  pibBoardNote: '',
+  IcpBoardNote: '',
+  imbSBoardNote: '',
+  serialNumberVerified: '',
+  serialNumberVerifiedNote: '',
+  AirIntakeLadRad: '',
+  AirIntakeLadRadNote: '',
+  coolantLevelColor: '',
+  coolantLevelColorNote: '',
+  lightEngineWhite: '',
+  lightEngineRed: '',
+  lightEngineGreen: '',
+  lightEngineBlue: '',
+  lightEngineBlack: '',
+  lightEngineWhiteNote: '',
+  lightEngineRedNote: '',
+  lightEngineGreenNote: '',
+  lightEngineBlueNote: '',
+  lightEngineBlackNote: '',
+  acBlowerVane: 'OK',
+  extractorVane: 'OK',
+  exhaustCfm: '',
+  lightEngineFans: 'OK',
+  cardCageFans: 'OK',
+  radiatorFanPump: 'OK',
+  pumpConnectorHose: 'OK',
+  securityLampHouseLock: 'OK',
+  securityLampHouseLockNote: '',
+  lampLocMechanism: 'OK',
+  acBlowerVaneNote: '',
+  extractorVaneNote: '',
+  exhaustCfmNote: '',
+  lightEngineFansNote: '',
+  cardCageFansNote: '',
+  radiatorFanPumpNote: '',
+  pumpConnectorHoseNote: '',
+  lampLocMechanismNote: '',
+  projectorPlacementEnvironment: '',
+  softwareVersion: '',
+  screenHeight: '',
+  screenWidth: '',
+  flatHeight: '',
+  flatWidth: '',
+  screenGain: '',
+  screenMake: '',
+  throwDistance: '',
+  lampMakeModel: '',
+  lampTotalRunningHours: '',
+  lampCurrentRunningHours: '',
+  pvVsN: '',
+  pvVsE: '',
+  nvVsE: '',
+  flLeft: '',
+  flRight: '',
+  contentPlayerModel: '',
+  acStatus: '',
+  leStatus: '',
+  leStatusNote: '',
+  remarks: '',
+  lightEngineSerialNumber: '',
+  white2Kx: '',
+  white2Ky: '',
+  white2Kfl: '',
+  white4Kx: '',
+  white4Ky: '',
+  white4Kfl: '',
+  red2Kx: '',
+  red2Ky: '',
+  red2Kfl: '',
+  red4Kx: '',
+  red4Ky: '',
+  red4Kfl: '',
+  green2Kx: '',
+  green2Ky: '',
+  green2Kfl: '',
+  green4Kx: '',
+  green4Ky: '',
+  green4Kfl: '',
+  blue2Kx: '',
+  blue2Ky: '',
+  blue2Kfl: '',
+  blue4Kx: '',
+  blue4Ky: '',
+  blue4Kfl: '',
+  BW_Step_10_2Kx: '',
+  BW_Step_10_2Ky: '',
+  BW_Step_10_2Kfl: '',
+  BW_Step_10_4Kx: '',
+  BW_Step_10_4Ky: '',
+  BW_Step_10_4Kfl: '',
+  focusBoresight: '',
+  integratorPosition: '',
+  spotsOnScreen: '',
+  screenCroppingOk: '',
+  convergenceOk: '',
+  channelsCheckedOk: '',
+  pixelDefects: '',
+  imageVibration: '',
+  liteloc: '',
+  focusBoresightNote: '',
+  integratorPositionNote: '',
+  spotsOnScreenNote: '',
+  screenCroppingNote: '',
+  convergenceNote: '',
+  channelsCheckedNote: '',
+  pixelDefectsNote: '',
+  imageVibrationNote: '',
+  litelocNote: '',
+  hcho: '',
+  tvoc: '',
+  pm1: '',
+  pm2_5: '',
+  pm10: '',
+  temperature: '',
+  humidity: '',
+  airPollutionLevel: '',
+  startTime: '',
+  endTime: '',
+  signatures: '',
+  reportGenerated: false,
+  reportUrl: '',
+  photosDriveLink: '',
+  issueNotes: {} as IssueNotes,
+  recommendedParts: [] as RecommendedPart[],
+})
+
+type RecordWorkForm = ReturnType<typeof createInitialFormData>
+
+const COLOR_ACCURACY = [
+  { name: 'White', fields: ['white2Kx', 'white2Ky', 'white2Kfl', 'white4Kx', 'white4Ky', 'white4Kfl'] },
+  { name: 'Red', fields: ['red2Kx', 'red2Ky', 'red2Kfl', 'red4Kx', 'red4Ky', 'red4Kfl'] },
+  { name: 'Green', fields: ['green2Kx', 'green2Ky', 'green2Kfl', 'green4Kx', 'green4Ky', 'green4Kfl'] },
+  { name: 'Blue', fields: ['blue2Kx', 'blue2Ky', 'blue2Kfl', 'blue4Kx', 'blue4Ky', 'blue4Kfl'] },
+] as const
+
+const StatusSelectWithNote = ({
+  field,
+  label,
+  options,
+  noteOptions,
+  noteDefault,
+  issueValues,
+  form,
+  required,
+}: {
+  field: keyof RecordWorkForm & string
+  label: string
+  options?: Array<{ value: string; label: string; description?: string }>
+  noteOptions?: string[]
+  noteDefault?: string
+  issueValues?: string[]
+  form: any 
+  required?: boolean
+}) => {
+  const { watch, register, setValue, getValues } = form
+  const statusVal = (watch(field as keyof RecordWorkForm) as string)
+  const status = statusVal || (options ? '' : 'OK')
+  const noteField = `${field}Note` as keyof RecordWorkForm
+  const currentNoteValue = (watch(noteField) as string) || ''
+  
+  // Parse note value to split reasoning and custom text
+  // Doing this only once on mount or when noteDefault changes isn't enough if the form is reset dynamically
+  // We need an effect that runs when the form value changes externally (like from reset)
+  
+  const initialChoice = noteDefault || noteOptions?.[0] || ''
+  const [noteChoice, setNoteChoice] = useState<string>(initialChoice)
+  const [noteText, setNoteText] = useState<string>('')
+  
+  useEffect(() => {
+    if (currentNoteValue) {
+        // Try to match with known options
+        if (noteOptions?.length) {
+            const matchedOption = noteOptions.find(opt => currentNoteValue.startsWith(opt) || currentNoteValue === opt)
+            if (matchedOption) {
+                setNoteChoice(matchedOption)
+                // Extract text part: "Option - Text" -> "Text"
+                // Or just "Option" -> ""
+                if (currentNoteValue.length > matchedOption.length) {
+                    // Check for separator
+                    const separator = " - "
+                    const idx = currentNoteValue.indexOf(separator)
+                    if (idx !== -1 && currentNoteValue.substring(0, idx) === matchedOption) {
+                        setNoteText(currentNoteValue.substring(idx + separator.length))
+                    } else if (currentNoteValue.startsWith(matchedOption + " ")) {
+                        // Maybe just space separated?
+                         setNoteText(currentNoteValue.substring(matchedOption.length + 1))
+                    } else {
+                        // Fallback
+                        setNoteText('') 
+                    }
+                } else {
+                    setNoteText('')
+                }
+            } else {
+                // If value exists but doesn't match an option, likely custom or legacy
+                // We might default to "Other" if available, or just keep as is
+                // For now, let's assume if it doesn't match, we might put it in text if "Other" is selected?
+                // Or just leave it be.
+            }
+        }
+    }
+  }, [currentNoteValue, noteOptions]) // Depend on the form value
+
+  const statusRegister = register(field as keyof RecordWorkForm)
+
+  const selectOptions =
+    options && options.length
+      ? options
+      : [
+          { value: 'OK', label: 'OK', description: 'Part is OK' },
+          { value: 'YES', label: 'YES', description: 'Needs replacement' },
+        ]
+
+  const isIssue = (issueValues && issueValues.length > 0)
+    ? issueValues.includes(status) 
+    : (status === 'YES' || status === 'Concern' || status.startsWith('YES') || status.includes('Concern'))
+
+  const formatNote = (choice: string, text: string) => {
+    const c = choice?.trim()
+    const t = text?.trim()
+    if (c && t) return `${c} - ${t}`
+    if (c) return c
+    if (t) return t
+    return ''
+  }
+
+  const handleReasonChange = (val: string) => {
+    setNoteChoice(val)
+    if (isIssue) {
+      setValue(noteField, formatNote(val, noteText), { shouldDirty: true })
+    }
+  }
+
+  const handleNoteTextChange = (text: string) => {
+    setNoteText(text)
+    if (isIssue) {
+      setValue(noteField, formatNote(noteChoice, text), { shouldDirty: true })
+    }
+  }
+
+  // Clear on status change away from Issue
+  useEffect(() => {
+    if (!isIssue) {
+      const currentNote = getValues(noteField)
+      const shouldResetChoice = noteChoice !== initialChoice
+      const shouldClearValue = Boolean(currentNote)
+
+      if (shouldResetChoice) setNoteChoice(initialChoice)
+      if (noteText) setNoteText('')
+      if (shouldClearValue) setValue(noteField, '', { shouldDirty: true })
+    }
+  }, [status, initialChoice, noteField, noteChoice, noteText, getValues, setValue, isIssue])
+
+  // Keep note field in sync when status is Issue
+  useEffect(() => {
+    if (isIssue && noteOptions?.length) {
+      setValue(noteField, formatNote(noteChoice, noteText), { shouldDirty: true })
+    }
+  }, [status, noteChoice, noteText, noteField, setValue, isIssue, noteOptions])
+
+  // Initialize choice on first render if missing
+  useEffect(() => {
+    if (!noteChoice && initialChoice) {
+      setNoteChoice(initialChoice)
+    }
+  }, [noteChoice, initialChoice])
+
+  return (
+    <div>
+      <label className="block text-xs sm:text-sm font-semibold text-black mb-1">
+        {label} {required && '*'}
+      </label>
+      <select
+        name={statusRegister.name}
+        ref={statusRegister.ref}
+        onBlur={statusRegister.onBlur}
+        required={required}
+        value={status}
+        onChange={(event) => {
+          const value = event.target.value
+          setValue(field, value, { shouldDirty: true })
+          statusRegister.onChange(event)
+        }}
+        className="w-full border-2 border-black p-2 text-black text-sm"
+      >
+        {options && <option value="" disabled>Select Status</option>}
+        {selectOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label} {option.description && `(${option.description})`}
+          </option>
+        ))}
+      </select>
+
+      {isIssue && noteOptions?.length ? (
+        <>
+          <select
+            className="w-full border-2 border-black p-2 text-black text-sm mt-2"
+            value={noteChoice}
+            onChange={(e) => handleReasonChange(e.target.value)}
+          >
+            <option value="" disabled>
+              Select reason
+            </option>
+            {noteOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+          <Input
+            type="text"
+            value={noteText}
+            onChange={(e) => handleNoteTextChange(e.target.value)}
+            placeholder="Add details"
+            className="border-2 border-black text-sm mt-2"
+          />
+        </>
+      ) : null}
+
+      {isIssue && !noteOptions?.length && (
+        <Input
+          {...register(noteField)}
+          defaultValue={noteDefault}
+          placeholder="Enter details..."
+          className="border-2 border-black text-sm mt-2"
+        />
+      )}
+    </div>
+  )
+}
+
+
+const FormSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="mb-6">
+    <h3 className="text-lg font-bold text-black mb-3 border-b-2 border-black pb-1">{title}</h3>
+    <div className="space-y-4">{children}</div>
+  </div>
+)
+
+const FormField = ({
+  label,
+  children,
+  required,
+}: {
+  label: string
+  children: React.ReactNode
+  required?: boolean
+}) => (
+  <div>
+    <Label className="block text-xs sm:text-sm font-semibold text-black mb-1">
+      {label} {required && '*'}
+    </Label>
+    {children}
+  </div>
+)
+
+const FormRow = ({ children }: { children: React.ReactNode }) => (
+  <div className="grid grid-cols-1  sm:grid-cols-2 lg:grid-cols-3 gap-4">{children}</div>
+)
+
 // Edit Service Dialog Component
 function EditServiceDialog({
   open,
   onOpenChange,
   serviceId,
-  onSuccess,
+  onSave,
+  initialData, 
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   serviceId: string | null
-  onSuccess: () => void
+  onSave: () => void
+  initialData?: any
 }) {
   const [loading, setLoading] = useState(false)
-  const [serviceData, setServiceData] = useState<any>(null)
-  const [formData, setFormData] = useState<any>({})
+  
+  // Image states
+  const [beforeImages, setBeforeImages] = useState<UploadedImage[]>([])
+  const [afterImages, setAfterImages] = useState<UploadedImage[]>([])
+  const [brokenImages, setBrokenImages] = useState<UploadedImage[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
+  
+  // Recommended Parts states (simplified for Admin view)
+  const [recommendedParts, setRecommendedParts] = useState<RecommendedPart[]>([])
 
+  const { config: formConfig, loading: configLoading } = useFormConfig()
+  
+  const form = useForm<RecordWorkForm>({
+    defaultValues: createInitialFormData(),
+  })
+  
+  const { register, handleSubmit, reset, watch } = form
+
+  // Recommended Parts selection Logic
+  const [partsDialogOpen, setPartsDialogOpen] = useState(false)
+  const [partsData, setPartsData] = useState<ProjectorPart[]>([])
+  const [selectedPartIds, setSelectedPartIds] = useState<Set<string>>(new Set())
+
+  // Load projector parts data
   useEffect(() => {
-    if (open && serviceId) {
+    const loadPartsData = async () => {
+      try {
+        const response = await fetch('/api/admin/data-files/projector')
+        if (response.ok) {
+          const data = await response.json()
+          setPartsData(data.data || [])
+        }
+      } catch (error) {
+        console.error('Failed to load projector parts data:', error)
+      }
+    }
+    loadPartsData()
+  }, [])
+
+  // Sync selected parts when dialog opens
+  useEffect(() => {
+    if (partsDialogOpen) {
+      if (Array.isArray(recommendedParts) && recommendedParts.length > 0) {
+        setSelectedPartIds(new Set(recommendedParts.map((p) => p.part_number)))
+      } else {
+        setSelectedPartIds(new Set())
+      }
+    }
+  }, [partsDialogOpen, recommendedParts])
+
+  // Filter parts by projector model
+  const projectorModel = watch('projectorModel')
+  const filteredParts = partsData.filter(
+    (part) => part.projector_model.toLowerCase() === projectorModel?.toLowerCase()
+  )
+
+  // Handle part selection
+  const handlePartToggle = (part: ProjectorPart) => {
+    const newSelectedIds = new Set(selectedPartIds)
+    if (newSelectedIds.has(part.part_number)) {
+      newSelectedIds.delete(part.part_number)
+    } else {
+      newSelectedIds.add(part.part_number)
+    }
+    setSelectedPartIds(newSelectedIds)
+  }
+
+  // Save selected parts to form state
+  const handleSaveSelectedParts = () => {
+    const selectedParts: RecommendedPart[] = filteredParts
+      .filter((part) => selectedPartIds.has(part.part_number))
+      .map((part) => ({
+        part_number: part.part_number,
+        description: part.description,
+      }))
+    setRecommendedParts(selectedParts)
+    setPartsDialogOpen(false)
+  }
+
+  // Fetch or use provided service data on open
+  useEffect(() => {
+    if (open && (serviceId || initialData)) {
       const fetchService = async () => {
         try {
-          const res = await fetch(`/api/admin/service-records/${serviceId}`, {
-            credentials: "include",
-          })
-          if (res.ok) {
-            const json = await res.json()
-            const service = json.service || json
-            setServiceData(service)
-            // Map all service data to form format
-            const mapped: any = {
-              // Cinema Details
-              cinemaName: service.cinemaName || "",
-              address: service.address || "",
-              contactDetails: service.contactDetails || "",
-              location: service.location || "",
-              screenNumber: service.screenNumber || "",
-              // Projector Information
-              projectorRunningHours: service.projectorRunningHours || "",
-              projectorPlacementEnvironment: service.workDetails?.projectorPlacementEnvironment || "",
-              softwareVersion: service.workDetails?.softwareVersion || "",
-              lightEngineSerialNumber: service.workDetails?.lightEngineSerialNumber || "",
-              // Screen Information
-              screenHeight: service.workDetails?.screenHeight || "",
-              screenWidth: service.workDetails?.screenWidth || "",
-              flatHeight: service.workDetails?.flatHeight || "",
-              flatWidth: service.workDetails?.flatWidth || "",
-              screenGain: service.workDetails?.screenGain || "",
-              screenMake: service.workDetails?.screenMake || "",
-              throwDistance: service.workDetails?.throwDistance || "",
-              // Lamp Information
-              lampMakeModel: service.workDetails?.lampMakeModel || "",
-              lampTotalRunningHours: service.workDetails?.lampTotalRunningHours || "",
-              lampCurrentRunningHours: service.workDetails?.lampCurrentRunningHours || "",
-              // Voltage Parameters
-              pvVsN: service.workDetails?.pvVsN || "",
-              pvVsE: service.workDetails?.pvVsE || "",
-              nvVsE: service.workDetails?.nvVsE || "",
-              // fL Measurements
-              flLeft: service.workDetails?.flLeft || "",
-              flRight: service.workDetails?.flRight || "",
-              // Content Player & AC Status
-              contentPlayerModel: service.workDetails?.contentPlayerModel || "",
-              acStatus: service.workDetails?.acStatus || "",
-              leStatus: service.workDetails?.leStatus || "",
-              // Optical Fields
-              reflector: service.workDetails?.reflector || "",
-              reflectorNote: service.workDetails?.reflectorNote || "",
-              uvFilter: service.workDetails?.uvFilter || "",
-              uvFilterNote: service.workDetails?.uvFilterNote || "",
-              integratorRod: service.workDetails?.integratorRod || "",
-              integratorRodNote: service.workDetails?.integratorRodNote || "",
-              coldMirror: service.workDetails?.coldMirror || "",
-              coldMirrorNote: service.workDetails?.coldMirrorNote || "",
-              foldMirror: service.workDetails?.foldMirror || "",
-              foldMirrorNote: service.workDetails?.foldMirrorNote || "",
-              // Electronic Fields
-              touchPanel: service.workDetails?.touchPanel || "",
-              touchPanelNote: service.workDetails?.touchPanelNote || "",
-              evbBoard: service.workDetails?.evbBoard || "",
-              evbBoardNote: service.workDetails?.evbBoardNote || "",
-              ImcbBoard: service.workDetails?.ImcbBoard || "",
-              ImcbBoardNote: service.workDetails?.ImcbBoardNote || "",
-              pibBoard: service.workDetails?.pibBoard || "",
-              pibBoardNote: service.workDetails?.pibBoardNote || "",
-              IcpBoard: service.workDetails?.IcpBoard || "",
-              IcpBoardNote: service.workDetails?.IcpBoardNote || "",
-              imbSBoard: service.workDetails?.imbSBoard || "",
-              imbSBoardNote: service.workDetails?.imbSBoardNote || "",
-              // Other Status Fields
-              serialNumberVerified: service.workDetails?.serialNumberVerified || "",
-              serialNumberVerifiedNote: service.workDetails?.serialNumberVerifiedNote || "",
-              AirIntakeLadRad: service.workDetails?.AirIntakeLadRad || "",
-              AirIntakeLadRadNote: service.workDetails?.AirIntakeLadRadNote || "",
-              coolantLevelColor: service.workDetails?.coolantLevelColor || "",
-              coolantLevelColorNote: service.workDetails?.coolantLevelColorNote || "",
-              // Light Engine Test
-              lightEngineWhite: service.workDetails?.lightEngineWhite || "",
-              lightEngineWhiteNote: service.workDetails?.lightEngineWhiteNote || "",
-              lightEngineRed: service.workDetails?.lightEngineRed || "",
-              lightEngineRedNote: service.workDetails?.lightEngineRedNote || "",
-              lightEngineGreen: service.workDetails?.lightEngineGreen || "",
-              lightEngineGreenNote: service.workDetails?.lightEngineGreenNote || "",
-              lightEngineBlue: service.workDetails?.lightEngineBlue || "",
-              lightEngineBlueNote: service.workDetails?.lightEngineBlueNote || "",
-              lightEngineBlack: service.workDetails?.lightEngineBlack || "",
-              lightEngineBlackNote: service.workDetails?.lightEngineBlackNote || "",
-              // Mechanical Fields
-              acBlowerVane: service.workDetails?.acBlowerVane || "",
-              acBlowerVaneNote: service.workDetails?.acBlowerVaneNote || "",
-              extractorVane: service.workDetails?.extractorVane || "",
-              extractorVaneNote: service.workDetails?.extractorVaneNote || "",
-              exhaustCfm: service.workDetails?.exhaustCfm || "",
-              exhaustCfmNote: service.workDetails?.exhaustCfmNote || "",
-              lightEngineFans: service.workDetails?.lightEngineFans || "",
-              lightEngineFansNote: service.workDetails?.lightEngineFansNote || "",
-              cardCageFans: service.workDetails?.cardCageFans || "",
-              cardCageFansNote: service.workDetails?.cardCageFansNote || "",
-              radiatorFanPump: service.workDetails?.radiatorFanPump || "",
-              radiatorFanPumpNote: service.workDetails?.radiatorFanPumpNote || "",
-              pumpConnectorHose: service.workDetails?.pumpConnectorHose || "",
-              pumpConnectorHoseNote: service.workDetails?.pumpConnectorHoseNote || "",
-              securityLampHouseLock: service.workDetails?.securityLampHouseLock || "",
-              securityLampHouseLockNote: service.workDetails?.securityLampHouseLockNote || "",
-              lampLocMechanism: service.workDetails?.lampLocMechanism || "",
-              lampLocMechanismNote: service.workDetails?.lampLocMechanismNote || "",
-              // Color Accuracy (MCGD Data)
-              white2Kx: service.workDetails?.white2Kx || "",
-              white2Ky: service.workDetails?.white2Ky || "",
-              white2Kfl: service.workDetails?.white2Kfl || "",
-              white4Kx: service.workDetails?.white4Kx || "",
-              white4Ky: service.workDetails?.white4Ky || "",
-              white4Kfl: service.workDetails?.white4Kfl || "",
-              red2Kx: service.workDetails?.red2Kx || "",
-              red2Ky: service.workDetails?.red2Ky || "",
-              red2Kfl: service.workDetails?.red2Kfl || "",
-              red4Kx: service.workDetails?.red4Kx || "",
-              red4Ky: service.workDetails?.red4Ky || "",
-              red4Kfl: service.workDetails?.red4Kfl || "",
-              green2Kx: service.workDetails?.green2Kx || "",
-              green2Ky: service.workDetails?.green2Ky || "",
-              green2Kfl: service.workDetails?.green2Kfl || "",
-              green4Kx: service.workDetails?.green4Kx || "",
-              green4Ky: service.workDetails?.green4Ky || "",
-              green4Kfl: service.workDetails?.green4Kfl || "",
-              blue2Kx: service.workDetails?.blue2Kx || "",
-              blue2Ky: service.workDetails?.blue2Ky || "",
-              blue2Kfl: service.workDetails?.blue2Kfl || "",
-              blue4Kx: service.workDetails?.blue4Kx || "",
-              blue4Ky: service.workDetails?.blue4Ky || "",
-              blue4Kfl: service.workDetails?.blue4Kfl || "",
-              BW_Step_10_2Kx: service.workDetails?.BW_Step_10_2Kx || "",
-              BW_Step_10_2Ky: service.workDetails?.BW_Step_10_2Ky || "",
-              BW_Step_10_2Kfl: service.workDetails?.BW_Step_10_2Kfl || "",
-              BW_Step_10_4Kx: service.workDetails?.BW_Step_10_4Kx || "",
-              BW_Step_10_4Ky: service.workDetails?.BW_Step_10_4Ky || "",
-              BW_Step_10_4Kfl: service.workDetails?.BW_Step_10_4Kfl || "",
-              // Image Evaluation
-              focusBoresight: service.workDetails?.focusBoresight || false,
-              focusBoresightNote: service.workDetails?.focusBoresightNote || "",
-              integratorPosition: service.workDetails?.integratorPosition || false,
-              integratorPositionNote: service.workDetails?.integratorPositionNote || "",
-              spotsOnScreen: service.workDetails?.spotsOnScreen || false,
-              spotsOnScreenNote: service.workDetails?.spotsOnScreenNote || "",
-              screenCroppingOk: service.workDetails?.screenCroppingOk || false,
-              screenCroppingNote: service.workDetails?.screenCroppingNote || "",
-              convergenceOk: service.workDetails?.convergenceOk || false,
-              convergenceNote: service.workDetails?.convergenceNote || "",
-              channelsCheckedOk: service.workDetails?.channelsCheckedOk || false,
-              channelsCheckedNote: service.workDetails?.channelsCheckedNote || "",
-              pixelDefects: service.workDetails?.pixelDefects || "",
-              pixelDefectsNote: service.workDetails?.pixelDefectsNote || "",
-              imageVibration: service.workDetails?.imageVibration || "",
-              imageVibrationNote: service.workDetails?.imageVibrationNote || "",
-              liteloc: service.workDetails?.liteloc || "",
-              litelocNote: service.workDetails?.litelocNote || "",
-              // Air Pollution Data
-              airPollutionLevel: service.workDetails?.airPollutionLevel || "",
-              hcho: service.workDetails?.hcho || "",
-              tvoc: service.workDetails?.tvoc || "",
-              pm1: service.workDetails?.pm1 || "",
-              pm2_5: service.workDetails?.pm2_5 || "",
-              pm10: service.workDetails?.pm10 || "",
-              temperature: service.workDetails?.temperature || "",
-              humidity: service.workDetails?.humidity || "",
-              // Remarks
-              remarks: service.remarks || "",
-              photosDriveLink: service.workDetails?.photosDriveLink || "",
+          setLoading(true)
+          let data;
+          
+          if (initialData) {
+             data = initialData
+          } else if (serviceId) {
+             const res = await fetch(`/api/admin/service-records/${serviceId}`, {
+                credentials: "include",
+             })
+             if (res.ok) {
+                const json = await res.json()
+                data = json.service || json
+             }
+          }
+
+          if (data) {
+
+
+            // Parse images
+            const validImages = (imgs: any) => {
+               if (Array.isArray(imgs)) return imgs
+               try { return JSON.parse(imgs) } catch { return [] }
             }
-            setFormData(mapped)
+
+            
+            setBeforeImages(validImages(data.beforeImages || []))
+            setAfterImages(validImages(data.afterImages || []))
+            setBrokenImages(validImages(data.brokenImages || []))
+
+            
+            if (data.recommendedParts) {
+              try {
+                const parts = typeof data.recommendedParts === 'string' 
+                  ? JSON.parse(data.recommendedParts) 
+                  : data.recommendedParts
+                setRecommendedParts(parts)
+              } catch (e) {
+                console.error("Failed to parse recommended parts", e)
+              }
+            }
+
+            // Map data to form
+            const formData = createInitialFormData()
+            const formAny = formData as any
+
+            Object.keys(formData).forEach((key) => {
+              if (key in data) {
+                // Handle special cases
+                if (key === 'date' && data[key]) {
+                  formAny[key] = new Date(data[key]).toISOString().split('T')[0]
+                } else {
+                  formAny[key] = data[key] ?? ''
+                }
+              }
+            })
+             
+             // Also check for workDetails nesting which is common in some records
+            if (data.workDetails) {
+                 const details = typeof data.workDetails === 'string' ? JSON.parse(data.workDetails) : data.workDetails
+                 Object.keys(details).forEach(k => {
+                     if (k in formData) {
+                         formAny[k] = details[k]
+                     }
+                 })
+            }
+
+            // Explicitly map projectorSerial -> projectorSerialNumber if not already set or if data has it differently
+            if (!formAny.projectorSerialNumber && data.projectorSerial) {
+                formAny.projectorSerialNumber = data.projectorSerial
+            }
+             // Ensure projectorModel is set if it's top level
+            if (!formAny.projectorModel && data.projectorModel) {
+                 formAny.projectorModel = data.projectorModel
+            }
+
+            reset(formData)
           }
         } catch (error) {
           console.error("Failed to fetch service:", error)
+        } finally {
+          setLoading(false)
         }
       }
       fetchService()
+    } else {
+        // Reset form when dialog closes or no ID
+        reset(createInitialFormData())
+        setBeforeImages([])
+        setAfterImages([])
+        setBrokenImages([])
+        setRecommendedParts([])
     }
-  }, [open, serviceId])
+  }, [open, serviceId, initialData, reset])
 
-  const handleSave = async () => {
-    if (!serviceId) return
+  const handleImageUpload = async (type: 'before' | 'after' | 'broken', files: FileList | null) => {
+    if (!files || files.length === 0) return
+
+    try {
+      setUploading(true)
+      setImageError(null)
+      const newImages: UploadedImage[] = []
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        if (!file) continue
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const res = await fetch('/api/blob/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!res.ok) throw new Error(`Failed to upload ${file.name}`)
+
+        const data = await res.json()
+        newImages.push(data.url)
+      }
+
+      if (type === 'before') setBeforeImages((prev) => [...prev, ...newImages])
+      else if (type === 'after') setAfterImages((prev) => [...prev, ...newImages])
+      else setBrokenImages((prev) => [...prev, ...newImages])
+    } catch (err) {
+      console.error('Upload error:', err)
+      setImageError('Failed to upload one or more images.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleRemoveImage = (type: 'before' | 'after' | 'broken', index: number) => {
+    if (type === 'before') setBeforeImages((prev) => prev.filter((_, i) => i !== index))
+    else if (type === 'after') setAfterImages((prev) => prev.filter((_, i) => i !== index))
+    else setBrokenImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const onSubmit = async (values: RecordWorkForm) => {
     try {
       setLoading(true)
+      
+      const payload = {
+        ...values,
+        beforeImages, 
+        afterImages,
+        brokenImages,
+        recommendedParts
+      }
+
       const res = await fetch(`/api/admin/service-records/${serviceId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          workDetails: formData,
-          signatures: serviceData?.signatures,
-          images: serviceData?.images || [],
-          brokenImages: serviceData?.brokenImages || [],
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       })
-      if (res.ok) {
-        onSuccess()
-      } else {
-        const error = await res.json()
-        alert(`Failed to update: ${error.error || "Unknown error"}`)
+
+      if (!res.ok) {
+        throw new Error("Failed to update service record")
       }
+
+      onSave()
+      onOpenChange(false)
     } catch (error) {
-      console.error("Failed to update service:", error)
-      alert("Failed to update service record")
+      console.error("Failed to save:", error)
+      alert("Failed to save changes. Please try again.")
     } finally {
       setLoading(false)
     }
   }
-
-  const updateField = (field: string, value: any) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }))
+  
+  const isOutOfRange = (value: any, min: number, max: number) => {
+    if (value === '' || value === undefined || value === null) return false
+    const num = parseFloat(value)
+    if (isNaN(num)) return false
+    return num < min || num > max
   }
 
-  const FormSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="mb-6 pb-4 border-b-2 border-gray-300 last:border-b-0">
-      <h3 className="font-bold text-black mb-4 text-base">{title}</h3>
-      <div className="space-y-3">{children}</div>
-    </div>
-  )
+  const renderFieldsBySection = (sectionName: string) => {
+    const fields = formConfig.filter((f) => f.section === sectionName)
+    if (fields.length === 0) return <p className="text-sm text-gray-500 italic">No fields in this section.</p>
 
-  const FormField = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div>
-      <label className="block text-xs font-semibold text-black mb-1">{label}</label>
-      {children}
-    </div>
-  )
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {fields.map((field) => {
+          if (field.componentType === 'statusSelectWithNote') {
+            return (
+              <StatusSelectWithNote
+                key={field.key}
+                field={field.key as keyof RecordWorkForm}
+                label={field.label}
+                form={form}
+                required={field.required}
+                options={field.options?.map(opt => ({ value: opt, label: opt, description: field.optionDescriptions?.[opt] }))}
+                noteOptions={field.noteOptions}
+                noteDefault={field.noteDefault}
+                issueValues={field.issueValues}
+              />
+            )
+          }
+          
+          if (field.type === 'number' && (field.min !== undefined || field.max !== undefined)) {
+             const val = watch(field.key as keyof RecordWorkForm)
+             const isInvalid = isOutOfRange(val, field.min ?? -Infinity, field.max ?? Infinity)
+             return (
+               <FormField key={field.key} label={field.label} required={field.required}>
+                  <DynamicFormField
+                      field={field}
+                      register={register}
+                      className="border-2 border-black p-2 text-sm bg-white"
+                  />
+                  {isInvalid && (
+                    <p className="text-xs text-red-600 mt-1">
+                        {field.min !== undefined && field.max !== undefined
+                          ? `Enter between ${field.min} and ${field.max}.`
+                          : field.min !== undefined
+                          ? `Enter ${field.min} or greater.`
+                          : `Enter ${field.max} or less.`}
+                    </p>
+                  )}
+               </FormField>
+             )
+          }
 
-  const StatusField = ({ field, label }: { field: string; label: string }) => (
-    <FormField label={label}>
-      <div className="grid grid-cols-2 gap-2">
-        <select
-          value={formData[field] || ""}
-          onChange={(e) => updateField(field, e.target.value)}
-          className="border-2 border-black p-2 text-sm bg-white"
-        >
-          <option value="">Select</option>
-          <option value="OK">OK</option>
-          <option value="YES">YES</option>
-          <option value="NO">NO</option>
-          <option value="Concern">Concern</option>
-        </select>
-        <Input
-          value={formData[`${field}Note`] || ""}
-          onChange={(e) => updateField(`${field}Note`, e.target.value)}
-          placeholder="Note"
-          className="border-2 border-black text-sm"
-        />
+          return (
+            <FormField key={field.key} label={field.label} required={field.required}>
+                <DynamicFormField
+                    field={field}
+                    register={register}
+                    className="border-2 border-black p-2 text-sm bg-white"
+                 />
+            </FormField>
+          )
+        })}
       </div>
-    </FormField>
-  )
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="!w-[80vw] max-w-none max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Service Record</DialogTitle>
+          <DialogDescription>Modified fields will be saved to the database.</DialogDescription>
         </DialogHeader>
-        {serviceData ? (
-          <div className="space-y-4 mt-4">
-            {/* Cinema Details */}
-            <FormSection title="Cinema Details">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Cinema Name">
-                  <Input
-                    value={formData.cinemaName || ""}
-                    onChange={(e) => updateField("cinemaName", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Address">
-                  <Input
-                    value={formData.address || ""}
-                    onChange={(e) => updateField("address", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Contact Details">
-                  <Input
-                    value={formData.contactDetails || ""}
-                    onChange={(e) => updateField("contactDetails", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Location">
-                  <Input
-                    value={formData.location || ""}
-                    onChange={(e) => updateField("location", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Screen Number">
-                  <Input
-                    value={formData.screenNumber || ""}
-                    onChange={(e) => updateField("screenNumber", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+        
+        {!loading && !configLoading ? (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
+                <FormSection title="Cinema Details">
+                    {renderFieldsBySection("Cinema Details")}
+                </FormSection>
 
-            {/* Projector Information */}
-            <FormSection title="Projector Information">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Projector Running Hours">
-                  <Input
-                    type="number"
-                    value={formData.projectorRunningHours || ""}
-                    onChange={(e) => updateField("projectorRunningHours", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Projector Placement Environment">
-                  <Input
-                    value={formData.projectorPlacementEnvironment || ""}
-                    onChange={(e) => updateField("projectorPlacementEnvironment", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Software Version">
-                  <Input
-                    value={formData.softwareVersion || ""}
-                    onChange={(e) => updateField("softwareVersion", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Light Engine Serial Number">
-                  <Input
-                    value={formData.lightEngineSerialNumber || ""}
-                    onChange={(e) => updateField("lightEngineSerialNumber", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                <FormSection title="Projector Information">
+                    {renderFieldsBySection("Projector Information")}
+                </FormSection>
+                
+                <FormSection title="Opticals">
+                    {renderFieldsBySection("Opticals")}
+                </FormSection>
 
-            {/* Screen Information */}
-            <FormSection title="Screen Information">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField label="Screen Height">
-                  <Input
-                    type="number"
-                    value={formData.screenHeight || ""}
-                    onChange={(e) => updateField("screenHeight", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Screen Width">
-                  <Input
-                    type="number"
-                    value={formData.screenWidth || ""}
-                    onChange={(e) => updateField("screenWidth", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Screen Gain">
-                  <Input
-                    type="number"
-                    value={formData.screenGain || ""}
-                    onChange={(e) => updateField("screenGain", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Flat Height">
-                  <Input
-                    type="number"
-                    value={formData.flatHeight || ""}
-                    onChange={(e) => updateField("flatHeight", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Flat Width">
-                  <Input
-                    type="number"
-                    value={formData.flatWidth || ""}
-                    onChange={(e) => updateField("flatWidth", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Screen Make">
-                  <Input
-                    value={formData.screenMake || ""}
-                    onChange={(e) => updateField("screenMake", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Throw Distance">
-                  <Input
-                    type="number"
-                    value={formData.throwDistance || ""}
-                    onChange={(e) => updateField("throwDistance", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                <FormSection title="Electronics">
+                    {renderFieldsBySection("Electronics")}
+                </FormSection>
+                
+                <FormSection title="Serial Number Verified">
+                    {renderFieldsBySection("Serial Number Verified")}
+                </FormSection>
+                
+                <FormSection title="Disposable Consumables">
+                    {renderFieldsBySection("Disposable Consumables")}
+                </FormSection>
+                
+                <FormSection title="Coolant">
+                    {renderFieldsBySection("Coolant")}
+                </FormSection>
+                
+                <FormSection title="Light Engine Test Pattern">
+                    {renderFieldsBySection("Light Engine Test Pattern")}
+                </FormSection>
 
-            {/* Lamp Information */}
-            <FormSection title="Lamp Information">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField label="Lamp Make/Model">
-                  <Input
-                    value={formData.lampMakeModel || ""}
-                    onChange={(e) => updateField("lampMakeModel", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Lamp Total Running Hours">
-                  <Input
-                    type="number"
-                    value={formData.lampTotalRunningHours || ""}
-                    onChange={(e) => updateField("lampTotalRunningHours", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Lamp Current Running Hours">
-                  <Input
-                    type="number"
-                    value={formData.lampCurrentRunningHours || ""}
-                    onChange={(e) => updateField("lampCurrentRunningHours", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                <FormSection title="Mechanical">
+                    {renderFieldsBySection("Mechanical")}
+                </FormSection>
+                
+                <FormSection title="Software & Screen Information">
+                    {renderFieldsBySection("Software & Screen Information")}
+                    <div className="mt-4">
+                        <p className="text-xs font-semibold text-gray-700 mb-2">Scope Dimensions</p>
+                        <FormRow>
+                        <FormField label="Screen Height (m)">
+                            <Input type="number" step="0.01" {...register('screenHeight')} className="border-2 border-black text-sm" />
+                        </FormField>
+                        <FormField label="Screen Width (m)">
+                            <Input type="number" step="0.01" {...register('screenWidth')} className="border-2 border-black text-sm" />
+                        </FormField>
+                        </FormRow>
+                    </div>
+                </FormSection>
+                
+                <FormSection title="Lamp Information">
+                   {renderFieldsBySection("Lamp Information")}
+                </FormSection>
 
-            {/* Voltage Parameters */}
-            <FormSection title="Voltage Parameters">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField label="PV vs N">
-                  <Input
-                    type="number"
-                    value={formData.pvVsN || ""}
-                    onChange={(e) => updateField("pvVsN", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="PV vs E">
-                  <Input
-                    type="number"
-                    value={formData.pvVsE || ""}
-                    onChange={(e) => updateField("pvVsE", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="NV vs E">
-                  <Input
-                    type="number"
-                    value={formData.nvVsE || ""}
-                    onChange={(e) => updateField("nvVsE", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                <FormSection title="Voltage Parameters">
+                   {renderFieldsBySection("Voltage Parameters")}
+                </FormSection>
 
-            {/* fL Measurements */}
-            <FormSection title="fL Measurements">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="fL Left">
-                  <Input
-                    type="number"
-                    value={formData.flLeft || ""}
-                    onChange={(e) => updateField("flLeft", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="fL Right">
-                  <Input
-                    type="number"
-                    value={formData.flRight || ""}
-                    onChange={(e) => updateField("flRight", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                <FormSection title="fL Measurements">
+                   {renderFieldsBySection("fL Measurements")}
+                </FormSection>
 
-            {/* Content Player & AC Status */}
-            <FormSection title="Content Player & AC Status">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField label="Content Player Model">
-                  <Input
-                    value={formData.contentPlayerModel || ""}
-                    onChange={(e) => updateField("contentPlayerModel", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="AC Status">
-                  <Input
-                    value={formData.acStatus || ""}
-                    onChange={(e) => updateField("acStatus", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="LE Status">
-                  <Input
-                    value={formData.leStatus || ""}
-                    onChange={(e) => updateField("leStatus", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                <FormSection title="Content Player & AC Status">
+                   {renderFieldsBySection("Content Player & AC Status")}
+                </FormSection>
+                
+                <FormSection title="Color Accuracy - MCGD">
+                  {COLOR_ACCURACY.map(({ name, fields }) => (
+                    <div key={name} className="mb-4">
+                      <p className="font-semibold text-black text-sm mb-2">{name}</p>
+                        <div className="grid grid-cols-3 gap-4 mb-2">
+                             <Input type="number" step="0.001" placeholder="2K X" {...register(fields[0] as any)} className="border-2 border-black text-sm" />
+                             <Input type="number" step="0.001" placeholder="2K Y" {...register(fields[1] as any)} className="border-2 border-black text-sm" />
+                             <Input type="number" step="0.001" placeholder="2K fL" {...register(fields[2] as any)} className="border-2 border-black text-sm" />
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                             <Input type="number" step="0.001" placeholder="4K X" {...register(fields[3] as any)} className="border-2 border-black text-sm" />
+                             <Input type="number" step="0.001" placeholder="4K Y" {...register(fields[4] as any)} className="border-2 border-black text-sm" />
+                             <Input type="number" step="0.001" placeholder="4K fL" {...register(fields[5] as any)} className="border-2 border-black text-sm" />
+                        </div>
+                    </div>
+                  ))}
+                </FormSection>
 
-            {/* Optical Fields */}
-            <FormSection title="Optical Components">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <StatusField field="reflector" label="Reflector" />
-                <StatusField field="uvFilter" label="UV Filter" />
-                <StatusField field="integratorRod" label="Integrator Rod" />
-                <StatusField field="coldMirror" label="Cold Mirror" />
-                <StatusField field="foldMirror" label="Fold Mirror" />
-              </div>
-            </FormSection>
-
-            {/* Electronic Fields */}
-            <FormSection title="Electronic Components">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <StatusField field="touchPanel" label="Touch Panel" />
-                <StatusField field="evbBoard" label="EVB Board" />
-                <StatusField field="ImcbBoard" label="IMCB Board" />
-                <StatusField field="pibBoard" label="PIB Board" />
-                <StatusField field="IcpBoard" label="ICP Board" />
-                <StatusField field="imbSBoard" label="IMB S Board" />
-              </div>
-            </FormSection>
-
-            {/* Other Status Fields */}
-            <FormSection title="Other Status Fields">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <StatusField field="serialNumberVerified" label="Serial Number Verified" />
-                <StatusField field="AirIntakeLadRad" label="Air Intake LAD/RAD" />
-                <StatusField field="coolantLevelColor" label="Coolant Level Color" />
-              </div>
-            </FormSection>
-
-            {/* Light Engine Test */}
-            <FormSection title="Light Engine Test">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <StatusField field="lightEngineWhite" label="Light Engine White" />
-                <StatusField field="lightEngineRed" label="Light Engine Red" />
-                <StatusField field="lightEngineGreen" label="Light Engine Green" />
-                <StatusField field="lightEngineBlue" label="Light Engine Blue" />
-                <StatusField field="lightEngineBlack" label="Light Engine Black" />
-              </div>
-            </FormSection>
-
-            {/* Mechanical Fields */}
-            <FormSection title="Mechanical Components">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <StatusField field="acBlowerVane" label="AC Blower Vane" />
-                <StatusField field="extractorVane" label="Extractor Vane" />
-                <FormField label="Exhaust CFM">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      value={formData.exhaustCfm || ""}
-                      onChange={(e) => updateField("exhaustCfm", e.target.value)}
-                      placeholder="Value"
-                      className="border-2 border-black text-sm"
-                    />
-                    <Input
-                      value={formData.exhaustCfmNote || ""}
-                      onChange={(e) => updateField("exhaustCfmNote", e.target.value)}
-                      placeholder="Note"
-                      className="border-2 border-black text-sm"
-                    />
+                <FormSection title="Color Accuracy - CIE XYZ">
+                  <div className="mb-4">
+                    <p className="font-semibold text-black text-sm mb-2">BW Step 10</p>
+                    <div className="grid grid-cols-3 gap-4 mb-2">
+                         <Input type="number" step="0.001" placeholder="2K X" {...register('BW_Step_10_2Kx')} className="border-2 border-black text-sm" />
+                         <Input type="number" step="0.001" placeholder="2K Y" {...register('BW_Step_10_2Ky')} className="border-2 border-black text-sm" />
+                         <Input type="number" step="0.001" placeholder="2K fL" {...register('BW_Step_10_2Kfl')} className="border-2 border-black text-sm" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                         <Input type="number" step="0.001" placeholder="4K X" {...register('BW_Step_10_4Kx')} className="border-2 border-black text-sm" />
+                         <Input type="number" step="0.001" placeholder="4K Y" {...register('BW_Step_10_4Ky')} className="border-2 border-black text-sm" />
+                         <Input type="number" step="0.001" placeholder="4K fL" {...register('BW_Step_10_4Kfl')} className="border-2 border-black text-sm" />
+                    </div>
                   </div>
-                </FormField>
-                <StatusField field="lightEngineFans" label="Light Engine Fans" />
-                <StatusField field="cardCageFans" label="Card Cage Fans" />
-                <StatusField field="radiatorFanPump" label="Radiator Fan Pump" />
-                <StatusField field="pumpConnectorHose" label="Pump Connector Hose" />
-                <StatusField field="securityLampHouseLock" label="Security Lamp House Lock" />
-                <StatusField field="lampLocMechanism" label="Lamp LOC Mechanism" />
-              </div>
-            </FormSection>
+                </FormSection>
 
-            {/* Color Accuracy - White */}
-            <FormSection title="Color Accuracy - White (MCGD Data)">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                <FormField label="White 2K X">
-                  <Input
-                    type="number"
-                    value={formData.white2Kx || ""}
-                    onChange={(e) => updateField("white2Kx", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="White 2K Y">
-                  <Input
-                    type="number"
-                    value={formData.white2Ky || ""}
-                    onChange={(e) => updateField("white2Ky", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="White 2K fL">
-                  <Input
-                    type="number"
-                    value={formData.white2Kfl || ""}
-                    onChange={(e) => updateField("white2Kfl", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="White 4K X">
-                  <Input
-                    type="number"
-                    value={formData.white4Kx || ""}
-                    onChange={(e) => updateField("white4Kx", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="White 4K Y">
-                  <Input
-                    type="number"
-                    value={formData.white4Ky || ""}
-                    onChange={(e) => updateField("white4Ky", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="White 4K fL">
-                  <Input
-                    type="number"
-                    value={formData.white4Kfl || ""}
-                    onChange={(e) => updateField("white4Kfl", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                <FormSection title="Image Evaluation">
+                    {renderFieldsBySection("Image Evaluation")}
+                </FormSection>
 
-            {/* Color Accuracy - Red */}
-            <FormSection title="Color Accuracy - Red (MCGD Data)">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                <FormField label="Red 2K X">
-                  <Input
-                    type="number"
-                    value={formData.red2Kx || ""}
-                    onChange={(e) => updateField("red2Kx", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Red 2K Y">
-                  <Input
-                    type="number"
-                    value={formData.red2Ky || ""}
-                    onChange={(e) => updateField("red2Ky", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Red 2K fL">
-                  <Input
-                    type="number"
-                    value={formData.red2Kfl || ""}
-                    onChange={(e) => updateField("red2Kfl", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Red 4K X">
-                  <Input
-                    type="number"
-                    value={formData.red4Kx || ""}
-                    onChange={(e) => updateField("red4Kx", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Red 4K Y">
-                  <Input
-                    type="number"
-                    value={formData.red4Ky || ""}
-                    onChange={(e) => updateField("red4Ky", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Red 4K fL">
-                  <Input
-                    type="number"
-                    value={formData.red4Kfl || ""}
-                    onChange={(e) => updateField("red4Kfl", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                <FormSection title="Air Pollution Data">
+                    {renderFieldsBySection("Air Pollution Data")}
+                </FormSection>
+                
+                <FormSection title="Remarks & Other">
+                   <div className="space-y-4">
+                        <FormField label="Remarks">
+                         <textarea
+                            {...register('remarks')}
+                            className="w-full border-2 border-black p-2 min-h-[100px] text-sm"
+                            rows={4}
+                          />
+                        </FormField>
+                        <FormField label="Photos Drive Link">
+                           <Input {...register('photosDriveLink')} className="border-2 border-black text-sm" />
+                           <p className="text-xs text-gray-500 mt-1">Optional: Paste a link to a Google Drive folder or similar.</p>
+                        </FormField>
+                   </div>
+                </FormSection>
 
-            {/* Color Accuracy - Green */}
-            <FormSection title="Color Accuracy - Green (MCGD Data)">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                <FormField label="Green 2K X">
-                  <Input
-                    type="number"
-                    value={formData.green2Kx || ""}
-                    onChange={(e) => updateField("green2Kx", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Green 2K Y">
-                  <Input
-                    type="number"
-                    value={formData.green2Ky || ""}
-                    onChange={(e) => updateField("green2Ky", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Green 2K fL">
-                  <Input
-                    type="number"
-                    value={formData.green2Kfl || ""}
-                    onChange={(e) => updateField("green2Kfl", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Green 4K X">
-                  <Input
-                    type="number"
-                    value={formData.green4Kx || ""}
-                    onChange={(e) => updateField("green4Kx", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Green 4K Y">
-                  <Input
-                    type="number"
-                    value={formData.green4Ky || ""}
-                    onChange={(e) => updateField("green4Ky", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Green 4K fL">
-                  <Input
-                    type="number"
-                    value={formData.green4Kfl || ""}
-                    onChange={(e) => updateField("green4Kfl", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                <FormSection title="Recommended Parts">
+                  <div className="space-y-3">
+                    <Dialog open={partsDialogOpen} onOpenChange={setPartsDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border-2 border-black text-black hover:bg-gray-100"
+                          disabled={!projectorModel}
+                        >
+                          {recommendedParts.length > 0
+                            ? `Update Selected Parts (${recommendedParts.length})`
+                            : 'Select Recommended Parts'}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col z-[100]">
+                        <DialogHeader>
+                          <DialogTitle>
+                            Select Recommended Parts
+                            {projectorModel && (
+                              <span className="text-sm font-normal text-gray-600 ml-2">
+                                for {projectorModel}
+                              </span>
+                            )}
+                          </DialogTitle>
+                          <DialogDescription>
+                            {projectorModel
+                              ? `Select parts recommended for projector model ${projectorModel}`
+                              : 'Please enter a projector model first to view available parts'}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex-1 overflow-y-auto px-1">
+                          {!projectorModel ? (
+                            <p className="text-sm text-gray-600 py-4">
+                              Please enter a projector model in the form above to view available parts.
+                            </p>
+                          ) : filteredParts.length === 0 ? (
+                            <p className="text-sm text-gray-600 py-4">
+                              No parts found for projector model "{projectorModel}". Please check the model
+                              name.
+                            </p>
+                          ) : (
+                            <div className="space-y-3 py-2">
+                              {filteredParts.map((part) => {
+                                const isSelected = selectedPartIds.has(part.part_number)
+                                return (
+                                  <div
+                                    key={part.part_number}
+                                    className="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-md hover:border-black transition-colors"
+                                  >
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => handlePartToggle(part)}
+                                      id={part.part_number}
+                                      className="mt-1"
+                                    />
+                                    <Label
+                                      htmlFor={part.part_number}
+                                      className="flex-1 cursor-pointer text-sm"
+                                    >
+                                      <div className="font-semibold text-black">{part.description}</div>
+                                      <div className="text-xs text-gray-600 mt-1">
+                                        Part Number: {part.part_number}
+                                      </div>
+                                    </Label>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4 border-t">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setPartsDialogOpen(false)}
+                            className="border-2 border-black text-black hover:bg-gray-100"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={handleSaveSelectedParts}
+                            disabled={!projectorModel || filteredParts.length === 0}
+                            className="bg-black text-white hover:bg-gray-800 border-2 border-black"
+                          >
+                            Save Selected ({selectedPartIds.size})
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    {recommendedParts.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs sm:text-sm font-semibold text-black">Selected Parts:</p>
+                        <div className="space-y-2 max-h-48 overflow-y-auto border-2 border-gray-200 p-3 rounded-md">
+                          {recommendedParts.map((part, index) => (
+                            <div
+                              key={`${part.part_number}-${index}`}
+                              className="text-xs sm:text-sm border-b border-gray-200 pb-2 last:border-b-0 last:pb-0"
+                            >
+                              <div className="font-semibold text-black">{part.description}</div>
+                              <div className="text-gray-600">Part Number: {part.part_number}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {!projectorModel && (
+                      <p className="text-xs text-gray-600">
+                        Please enter a projector model above to select recommended parts.
+                      </p>
+                    )}
+                  </div>
+                </FormSection>
 
-            {/* Color Accuracy - Blue */}
-            <FormSection title="Color Accuracy - Blue (MCGD Data)">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                <FormField label="Blue 2K X">
-                  <Input
-                    type="number"
-                    value={formData.blue2Kx || ""}
-                    onChange={(e) => updateField("blue2Kx", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Blue 2K Y">
-                  <Input
-                    type="number"
-                    value={formData.blue2Ky || ""}
-                    onChange={(e) => updateField("blue2Ky", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Blue 2K fL">
-                  <Input
-                    type="number"
-                    value={formData.blue2Kfl || ""}
-                    onChange={(e) => updateField("blue2Kfl", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Blue 4K X">
-                  <Input
-                    type="number"
-                    value={formData.blue4Kx || ""}
-                    onChange={(e) => updateField("blue4Kx", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Blue 4K Y">
-                  <Input
-                    type="number"
-                    value={formData.blue4Ky || ""}
-                    onChange={(e) => updateField("blue4Ky", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Blue 4K fL">
-                  <Input
-                    type="number"
-                    value={formData.blue4Kfl || ""}
-                    onChange={(e) => updateField("blue4Kfl", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                <FormSection title="Service Images">
+                    {imageError && <p className="text-sm text-red-500 mb-2">{imageError}</p>}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {/* Before Images */}
+                        <div>
+                        <p className="font-semibold text-sm text-black mb-2">Before Images</p>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => handleImageUpload('before', e.target.files)}
+                            className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50 mb-2"
+                        />
+                        {beforeImages.length > 0 && (
+                            <div className="grid grid-cols-2 gap-2">
+                            {beforeImages.map((file, index) => (
+                                <div key={`before-${index}`} className="relative border border-gray-200 p-1 group bg-white">
+                                <img src={file} alt={"Before Image"} className="w-full h-24 object-cover" />
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveImage('before', index)}
+                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    ✕
+                                </button>
+                                </div>
+                            ))}
+                            </div>
+                        )}
+                        </div>
 
-            {/* CIE XYZ Data */}
-            <FormSection title="CIE XYZ Data (BW Step 10)">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                <FormField label="BW 2K X">
-                  <Input
-                    type="number"
-                    value={formData.BW_Step_10_2Kx || ""}
-                    onChange={(e) => updateField("BW_Step_10_2Kx", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="BW 2K Y">
-                  <Input
-                    type="number"
-                    value={formData.BW_Step_10_2Ky || ""}
-                    onChange={(e) => updateField("BW_Step_10_2Ky", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="BW 2K fL">
-                  <Input
-                    type="number"
-                    value={formData.BW_Step_10_2Kfl || ""}
-                    onChange={(e) => updateField("BW_Step_10_2Kfl", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="BW 4K X">
-                  <Input
-                    type="number"
-                    value={formData.BW_Step_10_4Kx || ""}
-                    onChange={(e) => updateField("BW_Step_10_4Kx", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="BW 4K Y">
-                  <Input
-                    type="number"
-                    value={formData.BW_Step_10_4Ky || ""}
-                    onChange={(e) => updateField("BW_Step_10_4Ky", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="BW 4K fL">
-                  <Input
-                    type="number"
-                    value={formData.BW_Step_10_4Kfl || ""}
-                    onChange={(e) => updateField("BW_Step_10_4Kfl", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
+                        {/* After Images */}
+                        <div>
+                        <p className="font-semibold text-sm text-black mb-2">After Images</p>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => handleImageUpload('after', e.target.files)}
+                            className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50 mb-2"
+                        />
+                        {afterImages.length > 0 && (
+                            <div className="grid grid-cols-2 gap-2">
+                            {afterImages.map((file, index) => (
+                                <div key={`after-${index}`} className="relative border border-gray-200 p-1 group bg-white">
+                                <img src={file} alt={'After Images'} className="w-full h-24 object-cover" />
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveImage('after', index)}
+                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    ✕
+                                </button>
+                                </div>
+                            ))}
+                            </div>
+                        )}
+                        </div>
+                        
+                        {/* Broken Images */}
+                        <div>
+                        <p className="font-semibold text-sm text-black mb-2">Broken Parts</p>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => handleImageUpload('broken', e.target.files)}
+                            className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50 mb-2"
+                        />
+                        {brokenImages.length > 0 && (
+                            <div className="grid grid-cols-2 gap-2">
+                            {brokenImages.map((file, index) => (
+                                <div key={`broken-${index}`} className="relative border border-gray-200 p-1 group bg-white">
+                                <img src={file} alt={"broken images"} className="w-full h-24 object-cover" />
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveImage('broken', index)}
+                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    ✕
+                                </button>
+                                </div>
+                            ))}
+                            </div>
+                        )}
+                        </div>
+                    </div>
+                </FormSection>
 
-            {/* Image Evaluation */}
-            <FormSection title="Image Evaluation">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <StatusField field="focusBoresight" label="Focus/Boresight" />
-                <StatusField field="integratorPosition" label="Integrator Position" />
-                <StatusField field="spotsOnScreen" label="Spots on Screen" />
-                <StatusField field="screenCroppingOk" label="Screen Cropping" />
-                <StatusField field="convergenceOk" label="Convergence" />
-                <StatusField field="channelsCheckedOk" label="Channels Checked" />
-                <StatusField field="pixelDefects" label="Pixel Defects" />
-                <StatusField field="imageVibration" label="Image Vibration" />
-                <StatusField field="liteloc" label="LiteLOC" />
-              </div>
-            </FormSection>
-
-            {/* Air Pollution Data */}
-            <FormSection title="Air Pollution Data">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField label="Air Pollution Level">
-                  <Input
-                    value={formData.airPollutionLevel || ""}
-                    onChange={(e) => updateField("airPollutionLevel", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="HCHO">
-                  <Input
-                    type="number"
-                    value={formData.hcho || ""}
-                    onChange={(e) => updateField("hcho", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="TVOC">
-                  <Input
-                    type="number"
-                    value={formData.tvoc || ""}
-                    onChange={(e) => updateField("tvoc", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="PM1">
-                  <Input
-                    type="number"
-                    value={formData.pm1 || ""}
-                    onChange={(e) => updateField("pm1", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="PM2.5">
-                  <Input
-                    type="number"
-                    value={formData.pm2_5 || ""}
-                    onChange={(e) => updateField("pm2_5", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="PM10">
-                  <Input
-                    type="number"
-                    value={formData.pm10 || ""}
-                    onChange={(e) => updateField("pm10", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Temperature">
-                  <Input
-                    type="number"
-                    value={formData.temperature || ""}
-                    onChange={(e) => updateField("temperature", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-                <FormField label="Humidity">
-                  <Input
-                    type="number"
-                    value={formData.humidity || ""}
-                    onChange={(e) => updateField("humidity", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
-
-            {/* Remarks & Other */}
-            <FormSection title="Remarks & Other">
-              <div className="grid grid-cols-1 gap-4">
-                <FormField label="Remarks">
-                  <textarea
-                    value={formData.remarks || ""}
-                    onChange={(e) => updateField("remarks", e.target.value)}
-                    className="w-full border-2 border-black p-2 min-h-[100px]"
-                    rows={4}
-                  />
-                </FormField>
-                <FormField label="Photos Drive Link">
-                  <Input
-                    value={formData.photosDriveLink || ""}
-                    onChange={(e) => updateField("photosDriveLink", e.target.value)}
-                    className="border-2 border-black"
-                  />
-                </FormField>
-              </div>
-            </FormSection>
-
-            <div className="flex justify-end gap-2 pt-4 border-t sticky bottom-0 bg-white">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={loading} className="bg-black text-white">
-                {loading ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          </div>
+                <div className="flex justify-end gap-2 pt-4 border-t sticky bottom-0 bg-white p-4">
+                <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={loading || uploading} className="bg-black text-white">
+                    {loading ? "Saving..." : "Save Changes"}
+                </Button>
+                </div>
+            </form>
         ) : (
-          <div className="flex items-center justify-center py-8">
-            <p className="text-gray-500">Loading service data...</p>
-          </div>
+             <div className="flex items-center justify-center py-16">
+                 <p className="text-gray-500">Loading service details...</p>
+             </div>
         )}
       </DialogContent>
     </Dialog>
   )
 }
-
-// Preview & Download Dialog Component
 function PreviewDownloadDialog({
   open,
   onOpenChange,
@@ -1292,6 +1405,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
   const [signatureUrls, setSignatureUrls] = useState<{ site?: string; engineer?: string }>({})
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null)
+  const [editingServiceData, setEditingServiceData] = useState<any | null>(null)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const [previewServiceId, setPreviewServiceId] = useState<string | null>(null)
 
@@ -1528,6 +1642,8 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         <button
           onClick={() => {
             setEditingServiceId(rowId)
+            const rowData = records.find(r => r.id === rowId)
+            setEditingServiceData(rowData || null)
             setEditDialogOpen(true)
           }}
           className="inline-flex gap-4 rounded-md items-center justify-center text-white bg-black p-2 w-full transition-colors"
@@ -1881,9 +1997,16 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
       {/* Edit Service Dialog */}
       <EditServiceDialog
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
+        onOpenChange={(open) => {
+            setEditDialogOpen(open)
+            if (!open) {
+                setEditingServiceData(null)
+                setEditingServiceId(null)
+            }
+        }}
         serviceId={editingServiceId}
-        onSuccess={() => {
+        initialData={editingServiceData}
+        onSave={() => {
           // Refresh records after successful edit
           const fetchRecords = async () => {
             try {
@@ -1933,6 +2056,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
           }
           fetchRecords()
           setEditDialogOpen(false)
+          setEditingServiceData(null)
           setEditingServiceId(null)
         }}
       />
