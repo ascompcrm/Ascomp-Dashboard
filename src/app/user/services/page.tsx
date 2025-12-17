@@ -20,7 +20,7 @@ import { ServiceDetailView, type Service } from "@/components/services/service-d
 import { ServiceCard } from "@/components/services/service-card"
 import { ServiceListSkeleton } from "@/components/services/service-list-skeleton"
 
-type ViewMode = "completed" | "pending"
+type ViewMode = "completed" | "allCompleted"
 
 // Simple hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -70,7 +70,7 @@ export default function ServicesPage() {
       const endpoint =
         mode === "completed"
           ? "/api/user/services/completed"
-          : "/api/user/services/pending"
+          : "/api/user/services/all-completed"
 
       const response = await fetch(endpoint, {
         credentials: "include",
@@ -110,8 +110,9 @@ export default function ServicesPage() {
 
     return matchesSearch && matchesDate
   }).sort((a, b) => {
-    const aDate = viewMode === "completed" ? a.completedAt : a.date
-    const bDate = viewMode === "completed" ? b.completedAt : b.date
+    // Both modes show completed services, so use completedAt for sorting
+    const aDate = a.completedAt || a.date
+    const bDate = b.completedAt || b.date
     return new Date(bDate || "").getTime() - new Date(aDate || "").getTime()
   })
 
@@ -157,7 +158,7 @@ export default function ServicesPage() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-black tracking-tight">
-                {viewMode === "completed" ? "Completed Services" : "Pending Services"}
+                {viewMode === "completed" ? "Completed Services" : "All Completed Services"}
               </h1>
               <p className="text-gray-600 mt-2 text-sm font-medium">
                 {filteredServices.length} service{filteredServices.length !== 1 ? "s" : ""} found
@@ -216,17 +217,17 @@ export default function ServicesPage() {
                 </Button>
                 <Button
                   type="button"
-                  variant={viewMode === "pending" ? "default" : "ghost"}
-                  className={`flex-1 rounded-none font-semibold ${viewMode === "pending" ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
+                  variant={viewMode === "allCompleted" ? "default" : "ghost"}
+                  className={`flex-1 rounded-none font-semibold ${viewMode === "allCompleted" ? "bg-black text-white" : "text-black hover:bg-gray-100"}`}
                   onClick={() => {
-                      if (viewMode !== "pending") {
+                      if (viewMode !== "allCompleted") {
                         setLoading(true)
-                        setViewMode("pending")
+                        setViewMode("allCompleted")
                         setSearchQuery("")
                       }
                   }}
                 >
-                  Pending
+                  All Completed
                 </Button>
               </div>
             </div>
@@ -246,7 +247,9 @@ export default function ServicesPage() {
               </p>
               <p className="text-sm text-gray-500 mt-1">
                  {services.length === 0
-                  ? `You don't have any ${viewMode} services yet.`
+                  ? viewMode === "completed" 
+                    ? "You don't have any completed services yet."
+                    : "No completed services found."
                   : "Try adjusting your search or date filter."}
               </p>
               {services.length > 0 && (
@@ -264,7 +267,7 @@ export default function ServicesPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             {filteredServices.map((service) => (
               <ServiceCard 
                 key={service.id} 

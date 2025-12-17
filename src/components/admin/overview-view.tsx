@@ -1252,6 +1252,288 @@ function EditServiceDialog({
     </Dialog>
   )
 }
+
+function UploadServiceRecordsDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess: () => void
+}) {
+  const [file, setFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<any[]>([])
+  const [validationErrors, setValidationErrors] = useState<Array<{
+    row: number
+    serialNo?: string
+    email?: string
+    errors: string[]
+  }>>([])
+  const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<{
+    type: "success" | "error" | null
+    message: string
+  }>({ type: null, message: "" })
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (!selectedFile) return
+
+    // Validate file type
+    const allowedTypes = [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+      "application/vnd.ms-excel", // .xls
+    ]
+    if (!allowedTypes.includes(selectedFile.type) && !selectedFile.name.endsWith(".xlsx") && !selectedFile.name.endsWith(".xls")) {
+      setUploadStatus({
+        type: "error",
+        message: "Invalid file type. Please upload an Excel file (.xlsx or .xls)",
+      })
+      return
+    }
+
+    setFile(selectedFile)
+    setValidationErrors([])
+    setUploadStatus({ type: null, message: "" })
+
+    // Read and preview file
+    try {
+      const xlsx = await import("xlsx")
+      const arrayBuffer = await selectedFile.arrayBuffer()
+      const workbook = xlsx.read(arrayBuffer, { type: "array" })
+      const sheet = workbook.Sheets["Data"]
+
+      if (!sheet) {
+        setUploadStatus({
+          type: "error",
+          message: 'Sheet "Data" not found in Excel file. Please ensure your Excel file has a sheet named "Data"',
+        })
+        setFile(null)
+        return
+      }
+
+      const rows: Record<string, any>[] = xlsx.utils.sheet_to_json(sheet, { defval: null })
+
+      // Show preview of first 10 rows
+      setFilePreview(rows.slice(0, 10))
+    } catch (error) {
+      setUploadStatus({
+        type: "error",
+        message: `Failed to read file: ${error instanceof Error ? error.message : String(error)}`,
+      })
+      setFile(null)
+    }
+  }
+
+  const handleValidate = async () => {
+    if (!file) return
+
+    try {
+      setUploading(true)
+      setUploadStatus({ type: null, message: "" })
+
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/admin/service-records/upload-excel", {
+        method: "POST",
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        if (result.validationErrors) {
+          setValidationErrors(result.validationErrors)
+          setUploadStatus({
+            type: "error",
+            message: `Validation failed: ${result.validationErrors.length} row(s) have errors. Please fix them before uploading.`,
+          })
+        } else {
+          setUploadStatus({
+            type: "error",
+            message: result.error || "Validation failed",
+          })
+        }
+        return
+      }
+
+      // Success
+      setUploadStatus({
+        type: "success",
+        message: `Successfully uploaded! Created: ${result.created}, Updated: ${result.updated}, Total rows: ${result.totalRows}`,
+      })
+      setFile(null)
+      setFilePreview([])
+      setValidationErrors([])
+
+      // Call onSuccess callback to refresh data
+      setTimeout(() => {
+        onSuccess()
+        onOpenChange(false)
+      }, 2000)
+    } catch (error) {
+      setUploadStatus({
+        type: "error",
+        message: `Upload failed: ${error instanceof Error ? error.message : String(error)}`,
+      })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleDownloadExample = async () => {
+    try {
+      const response = await fetch("/api/admin/service-records/download-example")
+      if (!response.ok) throw new Error("Failed to download example file")
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = "Service_Records_Template.xlsx"
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      setUploadStatus({
+        type: "error",
+        message: `Failed to download example file: ${error instanceof Error ? error.message : String(error)}`,
+      })
+    }
+  }
+
+  const hasErrors = validationErrors.length > 0
+  const canUpload = file && !hasErrors && !uploading
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Upload Service Records from Excel</DialogTitle>
+          <DialogDescription>
+            Upload service records from an Excel file. The file must match the required format.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Download Example Button */}
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={handleDownloadExample} className="text-sm">
+              <Download className="w-4 h-4 mr-2" />
+              Download Example Excel File
+            </Button>
+          </div>
+
+          {/* File Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="excel-file">Select Excel File (.xlsx or .xls)</Label>
+            <Input
+              id="excel-file"
+              type="file"
+              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              onChange={handleFileSelect}
+              disabled={uploading}
+            />
+            {file && (
+              <p className="text-sm text-gray-600">
+                Selected: <strong>{file.name}</strong> ({(file.size / 1024).toFixed(2)} KB)
+              </p>
+            )}
+          </div>
+
+          {/* File Preview */}
+          {filePreview.length > 0 && (
+            <div className="space-y-2">
+              <Label>File Preview (first 10 rows)</Label>
+              <div className="border rounded-md overflow-x-auto max-h-64">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-gray-100 sticky top-0">
+                    <tr>
+                      {Object.keys(filePreview[0] || {}).slice(0, 8).map((key) => (
+                        <th key={key} className="px-2 py-1 text-left border-b font-semibold">
+                          {key}
+                        </th>
+                      ))}
+                      {Object.keys(filePreview[0] || {}).length > 8 && (
+                        <th className="px-2 py-1 text-left border-b font-semibold">...</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filePreview.map((row, idx) => (
+                      <tr key={idx} className="border-b hover:bg-gray-50">
+                        {Object.values(row).slice(0, 8).map((val: any, valIdx) => (
+                          <td key={valIdx} className="px-2 py-1 border-r">
+                            {val != null ? String(val).substring(0, 30) : "-"}
+                          </td>
+                        ))}
+                        {Object.keys(row).length > 8 && (
+                          <td className="px-2 py-1 text-gray-400">...</td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Validation Errors */}
+          {hasErrors && (
+            <div className="space-y-2">
+              <Label className="text-red-600">Validation Errors ({validationErrors.length} rows)</Label>
+              <div className="border border-red-200 rounded-md bg-red-50 p-4 max-h-64 overflow-y-auto">
+                <div className="space-y-2 text-sm">
+                  {validationErrors.map((error, idx) => (
+                    <div key={idx} className="border-b border-red-200 pb-2">
+                      <div className="font-semibold text-red-800">
+                        Row {error.row}
+                        {error.serialNo && ` (Serial: ${error.serialNo})`}
+                        {error.email && ` (Email: ${error.email})`}
+                      </div>
+                      <ul className="list-disc list-inside text-red-700 mt-1">
+                        {error.errors.map((err, errIdx) => (
+                          <li key={errIdx}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Upload Status */}
+          {uploadStatus.type && (
+            <div
+              className={`p-4 rounded-md ${
+                uploadStatus.type === "success"
+                  ? "bg-green-50 text-green-800 border border-green-200"
+                  : "bg-red-50 text-red-800 border border-red-200"
+              }`}
+            >
+              {uploadStatus.message}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleValidate} disabled={!canUpload}>
+              {uploading ? "Uploading..." : "Upload"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function PreviewDownloadDialog({
   open,
   onOpenChange,
@@ -1408,6 +1690,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
   const [editingServiceData, setEditingServiceData] = useState<any | null>(null)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const [previewServiceId, setPreviewServiceId] = useState<string | null>(null)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
 
   useEffect(() => {
     const fetchRecords = async () => {
@@ -1857,6 +2140,12 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
               >
                 Reset filters
               </Button>
+              <Button
+                className=" text-sm"
+                onClick={() => setUploadDialogOpen(true)}
+              >
+                Upload
+              </Button>
             </div>
             </div>
             </div>
@@ -2069,6 +2358,82 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         onClose={() => {
           setPreviewDialogOpen(false)
           setPreviewServiceId(null)
+        }}
+      />
+
+      {/* Upload Service Records Dialog */}
+      <UploadServiceRecordsDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onSuccess={() => {
+          // Refresh records
+          const fetchRecords = async () => {
+            try {
+              setLoading(true)
+              setError(null)
+              const tryEndpoints = ["/api/admin/tasks"]
+              let json: any = null
+              let success = false
+
+              for (const endpoint of tryEndpoints) {
+                try {
+                  const res = await fetch(endpoint, { credentials: "include" })
+                  if (!res.ok) {
+                    continue
+                  }
+                  json = await res.json()
+                  success = true
+                  break
+                } catch (err) {
+                  continue
+                }
+              }
+
+              if (success && json) {
+                const tasks = Array.isArray(json) ? json : json.tasks || json.data || []
+                const items: ServiceRecord[] = tasks.map((item: any, idx: number) => {
+                  const projector = item.projector ?? {}
+                  const site = item.site ?? {}
+                  const flattened: ServiceRecord = {
+                    id: item.id ?? `row-${idx}`,
+                    ...item,
+                    action: item.id ?? `row-${idx}`,
+                    engineerVisited: item.engineerVisited ?? item.user?.name ?? "",
+                    projectorModel: item.modelNo ?? projector.modelNo ?? item.projectorModel ?? "",
+                    projectorSerial: item.serialNo ?? projector.serialNo ?? item.projectorSerial ?? "",
+                    projectorStatus: projector.status ?? "",
+                    projectorServices: projector.noOfservices ?? "",
+                    siteName: site.siteName ?? item.siteName ?? "",
+                    siteCode: site.siteCode ?? "",
+                    siteAddress: site.address ?? item.address ?? "",
+                    siteContactDetails: site.contactDetails ?? item.contactDetails ?? "",
+                  }
+                  Object.entries(NOTE_FIELD_MAP).forEach(([parentKey, noteKey]) => {
+                    const parentValue = flattened[parentKey]
+                    const noteValue = flattened[noteKey]
+                    if (parentValue || noteValue) {
+                      if (noteValue) {
+                        flattened[parentKey] = `${parentValue || ""}${parentValue && noteValue ? " - " : ""}${noteValue}`
+                      }
+                      EXCLUDED_KEYS.add(noteKey)
+                    }
+                  })
+                  delete flattened.projector
+                  delete flattened.site
+                  delete flattened.assignedToId
+                  delete flattened.createdAt
+                  delete flattened.userId
+                  return flattened
+                })
+                setRecords(items)
+              }
+            } catch (error) {
+              console.error("Failed to refresh records:", error)
+            } finally {
+              setLoading(false)
+            }
+          }
+          fetchRecords()
         }}
       />
     </div>
