@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, PDFString, PDFName } from 'pdf-lib';
 
 type StatusItem = {
   status: string;
@@ -131,6 +131,9 @@ export interface MaintenanceReportData {
   reportUrl?: string
   engineerSignatureUrl?: string
   siteSignatureUrl?: string
+  imagesUrl?: string
+  imagesLink?: string
+  serviceId?: string
 }
 
 // Normalize yes/no strings to consistent 'Yes' / 'No' for PDF display
@@ -786,6 +789,99 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
       ['None', '-'], [180, 75], 16);
     rightY -= 16
   }
+
+  // Images Link Section
+  if (data.imagesLink || data.imagesUrl) {
+    const imagesLink = data.imagesLink || data.imagesUrl || '';
+    const labelX = leftTableX;
+    const linkX = leftTableX + 50;
+    const cellWidth = width - 350;
+    const labelWidth = 50;
+    const linkWidth = cellWidth - labelWidth;
+    const cellHeight = 20;
+    const cellY = leftY - cellHeight;
+    
+    // Draw table cells manually to customize colors
+    // Label cell
+    page2.drawRectangle({
+      x: labelX,
+      y: cellY,
+      width: labelWidth,
+      height: cellHeight,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 0.5,
+    });
+    page2.drawText('Image Link', {
+      x: labelX + 3,
+      y: cellY + 7,
+      size: 8,
+      font: timesRomanBold,
+      color: rgb(0, 0, 1), // Blue color
+    });
+    
+    // Link cell
+    page2.drawRectangle({
+      x: linkX,
+      y: cellY,
+      width: linkWidth,
+      height: cellHeight,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 0.5,
+    });
+    const displayText = 'Images';
+    page2.drawText(displayText, {
+      x: linkX + 3,
+      y: cellY + 7,
+      size: 8,
+      font: timesRoman,
+      color: rgb(0, 0, 1), // Blue color for link
+      maxWidth: linkWidth - 6,
+    });
+    
+    // Make the "Images" text clickable with the actual URL
+    try {
+      // PDF coordinates: origin is at bottom-left
+      const linkBottom = cellY;
+      const linkTop = cellY + cellHeight;
+      const linkLeft = linkX;
+      const linkRight = linkX + linkWidth;
+      
+      // Create URI action - URI must be a PDFString
+      const uriAction = pdfDoc.context.obj({
+        Type: PDFName.of('Action'),
+        S: PDFName.of('URI'),
+        URI: PDFString.of(imagesLink),
+      });
+      
+      // Create link annotation
+      const linkAnnotation = pdfDoc.context.obj({
+        Type: PDFName.of('Annot'),
+        Subtype: PDFName.of('Link'),
+        Rect: [linkLeft, linkBottom, linkRight, linkTop],
+        Border: [0, 0, 0],
+        A: uriAction,
+      });
+
+      const annotationRef = pdfDoc.context.register(linkAnnotation);
+      
+      // Add annotation to page's Annots array
+      const annotsName = PDFName.of('Annots');
+      const existingAnnots = page2.node.lookup(annotsName);
+      
+      if (existingAnnots) {
+        const annotsArray = existingAnnots as any;
+        const currentAnnots = annotsArray.array || [];
+        page2.node.set(annotsName, pdfDoc.context.obj([...currentAnnots, annotationRef]));
+      } else {
+        page2.node.set(annotsName, pdfDoc.context.obj([annotationRef]));
+      }
+    } catch (error) {
+      console.warn('Could not add clickable link annotation:', error);
+    }
+    
+    leftY -= cellHeight;
+  }
+  
   rightY -= 10;
 
   leftY -= 60;

@@ -190,6 +190,27 @@ export async function constructAndGeneratePDF(serviceId: string) {
         engineerSignatureUrl:
             fullService.signatures?.engineer || (fullService.signatures as any)?.engineerSignatureUrl || "",
         siteSignatureUrl: fullService.signatures?.site || (fullService.signatures as any)?.siteSignatureUrl || "",
+        imagesLink: (() => {
+            // First check if photosDriveLink exists (it's in workDetails)
+            if (fullService.workDetails?.photosDriveLink) {
+                return fullService.workDetails.photosDriveLink;
+            }
+            
+            // Check if images arrays have any data
+            const hasImages = 
+                (Array.isArray(fullService.images) && fullService.images.length > 0) ||
+                (Array.isArray(fullService.afterImages) && fullService.afterImages.length > 0) ||
+                (Array.isArray(fullService.brokenImages) && fullService.brokenImages.length > 0);
+            
+            if (hasImages) {
+                // Generate link to images page with full domain from CORS_ORIGIN
+                const baseUrl = process.env.CORS_ORIGIN || '';
+                const imagesPath = `/admin/services/${serviceId}/images`;
+                return baseUrl ? `${baseUrl}${imagesPath}` : imagesPath;
+            }
+            
+            return undefined;
+        })(),
     }
 
     return generateMaintenanceReport(reportData)

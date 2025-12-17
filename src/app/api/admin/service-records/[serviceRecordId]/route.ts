@@ -73,6 +73,7 @@ export async function GET(
       projectorRunningHours: service.projectorRunningHours,
       remarks: service.remarks,
       images: service.images || [],
+      afterImages: service.afterImages || [],
       brokenImages: service.brokenImages || [],
       signatures: service.signatures,
       reportGenerated: service.reportGenerated,

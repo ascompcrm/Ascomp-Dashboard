@@ -118,6 +118,7 @@ cieXyz4K: { x: '0.3', y: '0.39', fl: '4' },
   reportUrl: 'https://ascompinc.in/mock-report',
   startTime: '09:30',
   endTime: '12:15',
+  imagesLink: 'https://drive.google.com/drive/folders/example-folder-id',
 };
 
 const FormPreviewPage = () => {

@@ -205,6 +205,31 @@ export default function PdfPreviewDialog({ open, onOpenChange, serviceRecordId }
         : [],
       engineerSignatureUrl: service.signatures?.engineer || (service.signatures as any)?.engineerSignatureUrl || "",
       siteSignatureUrl: service.signatures?.site || (service.signatures as any)?.siteSignatureUrl || "",
+      imagesLink: (() => {
+        // First check if photosDriveLink exists
+        if (service.workDetails?.photosDriveLink) {
+          return service.workDetails.photosDriveLink;
+        }
+        
+        // Check if images arrays have any data
+        const hasImages = 
+          (Array.isArray(service.images) && service.images.length > 0) ||
+          (Array.isArray(service.afterImages) && service.afterImages.length > 0) ||
+          (Array.isArray(service.brokenImages) && service.brokenImages.length > 0);
+        
+        if (hasImages) {
+          // Generate link to images page with full domain from CORS_ORIGIN or window.location.origin
+          if (typeof window !== 'undefined') {
+            // Try to use CORS_ORIGIN from environment (via public env var) or fallback to window.location.origin
+            const baseUrl = (process.env.NEXT_PUBLIC_CORS_ORIGIN as string) || window.location.origin;
+            return `${baseUrl}/admin/services/${service.id}/images`;
+          }
+          // Fallback for SSR - use relative URL (will be fixed by PDF viewer context)
+          return `/admin/services/${service.id}/images`;
+        }
+        
+        return undefined;
+      })(),
     }
   }, [])
 
