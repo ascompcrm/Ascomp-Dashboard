@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Command, Home, Projector, User, FileEdit, Database } from "lucide-react"
+import { Command, Home, Projector, User, FileEdit, Database, CalendarClock } from "lucide-react"
 import type { Route } from "next"
 
 import { NavMain, type NavMainItem } from "@/components/nav-main"
@@ -30,6 +30,11 @@ const navMainData: NavMainItem[] = [
     title: "Sites & Projectors",
     url: "/admin/dashboard/sites" as Route,
     icon: Projector,
+  },
+  {
+    title: "Scheduled Services",
+    url: "/admin/dashboard/scheduled-services" as Route,
+    icon: CalendarClock,
   },
   {
     title: "Field Workers",
