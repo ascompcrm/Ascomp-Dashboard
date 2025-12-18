@@ -847,6 +847,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
               // Special validation for running hours
               if (field.key === 'projectorRunningHours') {
                 const runningHours = watch('projectorRunningHours')
+                const min = field.min !== undefined ? field.min : -Infinity
+                const max = field.max !== undefined ? field.max : Infinity
+                const isInvalid = isOutOfRange(runningHours, min, max)
                 return (
                   <FormField key={field.key} label={field.label} required={field.required}>
                     <DynamicFormField
@@ -854,8 +857,14 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                       register={register}
                       className="border-2 border-black text-black text-sm"
                     />
-                    {isOutOfRange(runningHours, 1000, 120000) && (
-                      <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 120,000.</p>
+                    {isInvalid && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {field.min !== undefined && field.max !== undefined
+                          ? `Enter between ${field.min} and ${field.max}.`
+                          : field.min !== undefined
+                          ? `Enter ${field.min} or greater.`
+                          : `Enter ${field.max} or less.`}
+                      </p>
                     )}
                   </FormField>
                 )
@@ -863,6 +872,9 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
               if (field.key === 'lampTotalRunningHours' || field.key === 'lampCurrentRunningHours') {
                 const hours = watch(field.key as keyof RecordWorkForm)
+                const min = field.min !== undefined ? field.min : -Infinity
+                const max = field.max !== undefined ? field.max : Infinity
+                const isInvalid = isOutOfRange(hours, min, max)
                 return (
                   <FormField key={field.key} label={field.label} required={field.required}>
                     <DynamicFormField
@@ -870,8 +882,14 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                       register={register}
                       className="border-2 border-black text-sm"
                     />
-                    {isOutOfRange(hours, 1000, 100000) && (
-                      <p className="text-xs text-red-600 mt-1">Enter between 1,000 and 100,000.</p>
+                    {isInvalid && (
+                      <p className="text-xs text-red-600 mt-1">
+                        {field.min !== undefined && field.max !== undefined
+                          ? `Enter between ${field.min} and ${field.max}.`
+                          : field.min !== undefined
+                          ? `Enter ${field.min} or greater.`
+                          : `Enter ${field.max} or less.`}
+                      </p>
                     )}
                   </FormField>
                 )
