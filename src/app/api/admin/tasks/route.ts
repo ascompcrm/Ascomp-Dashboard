@@ -8,17 +8,26 @@ export async function GET() {
         projector: true,
         site: true,
         user: true,
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       }
     })
 
     const filtered = res.map((record: any) => {
-      const { assignedToId, createdAt, userId, projector, site, user, ...rest } = record
+      const { assignedToId, assignedTo, createdAt, userId, projector, site, user, ...rest } = record
       const { lastServiceAt, ...projectorRest } = projector || {}
+
+      // console.log("assigned to", assignedTo);
       return {
         ...rest,
         projector: projectorRest,
         site: site,
-        engineerVisited: user?.name || "",
+        engineerVisited: assignedTo?.name || null,
       }
     })
 
