@@ -675,15 +675,15 @@ function EditServiceDialog({
 
           if (data) {
 
-
             // Parse images
             const validImages = (imgs: any) => {
                if (Array.isArray(imgs)) return imgs
                try { return JSON.parse(imgs) } catch { return [] }
             }
 
-            
-            setBeforeImages(validImages(data.beforeImages || []))
+            // Map DB arrays to local state:
+            // images -> beforeImages, afterImages -> afterImages, brokenImages -> brokenImages
+            setBeforeImages(validImages(data.images || data.beforeImages || []))
             setAfterImages(validImages(data.afterImages || []))
             setBrokenImages(validImages(data.brokenImages || []))
 
@@ -799,11 +799,15 @@ function EditServiceDialog({
       setLoading(true)
       
       const payload = {
-        ...values,
-        beforeImages, 
+        workDetails: {
+          ...values,
+          // Ensure recommendedParts is saved with the rest of the work details
+          recommendedParts,
+        },
+        // Map local image state to Prisma arrays
+        images: beforeImages,
         afterImages,
         brokenImages,
-        recommendedParts
       }
 
       const res = await fetch(`/api/admin/service-records/${serviceId}`, {

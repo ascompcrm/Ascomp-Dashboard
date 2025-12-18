@@ -394,6 +394,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const [partsData, setPartsData] = useState<ProjectorPart[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedPartIds, setSelectedPartIds] = useState<Set<string>>(new Set())
+  const [partSearchQuery, setPartSearchQuery] = useState('')
   const [lampModelsData, setLampModelsData] = useState<Array<{ projector_model: string; Models: string[] }>>([])
   const [lampModels, setLampModels] = useState<string[]>([])
   const [softwareVersions, setSoftwareVersions] = useState<string[]>([])
@@ -602,6 +603,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
       } else {
         setSelectedPartIds(new Set())
       }
+      // Reset search query when dialog opens
+      setPartSearchQuery('')
     }
   }, [isDialogOpen, getValues])
 
@@ -685,11 +688,20 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
 
 
 
-  // Filter parts by projector model
+  // Filter parts by projector model and search query
   const projectorModel = watch('projectorModel')
-  const filteredParts = partsData.filter(
-    (part) => part.projector_model.toLowerCase() === projectorModel?.toLowerCase()
-  )
+  const filteredParts = partsData.filter((part) => {
+    const matchesModel = part.projector_model.toLowerCase() === projectorModel?.toLowerCase()
+    if (!matchesModel) return false
+    
+    if (!partSearchQuery) return true
+    
+    const searchLower = partSearchQuery.toLowerCase()
+    const matchesDescription = part.description.toLowerCase().includes(searchLower)
+    const matchesPartNumber = part.part_number.toLowerCase().includes(searchLower)
+    
+    return matchesDescription || matchesPartNumber
+  })
 
   const isOutOfRange = (value: unknown, min: number, max: number) => {
     if (value === undefined || value === null || value === '') return false
@@ -1272,6 +1284,17 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                       : 'Please enter a projector model first to view available parts'}
                   </DialogDescription>
                 </DialogHeader>
+                {projectorModel && (
+                  <div className="pb-2">
+                    <Input
+                      type="text"
+                      placeholder="Search by part name or number..."
+                      value={partSearchQuery}
+                      onChange={(e) => setPartSearchQuery(e.target.value)}
+                      className="border-2 border-gray-300 focus:border-black text-sm"
+                    />
+                  </div>
+                )}
                 <div className="flex-1 overflow-y-auto px-1">
                   {!projectorModel ? (
                     <p className="text-sm text-gray-600 py-4">

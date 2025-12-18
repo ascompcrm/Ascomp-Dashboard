@@ -54,3 +54,16 @@ Opticals options
 
 ac blower vane, security lamp lock, ( bypassed default ), exhaust cfm value correct
 update admin full, engineer name
+
+// pending 
+-- email work
+- email them credentials
+- assign send email
+- send pdf to client via email
+
+-- schedule service functionality
+- unassign means unassign change status to draft and show button to assign
+- cancel remove service record entry and based on date set status
+
+-- add data export functionality 
+-- confirm if import is correctly working or not with proper validations and all

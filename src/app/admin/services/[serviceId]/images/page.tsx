@@ -3,8 +3,9 @@
 import { use, useEffect, useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, Download } from "lucide-react"
 import Link from "next/link"
+import JSZip from "jszip"
 
 interface ImagesPageProps {
   params: Promise<{ serviceId: string }>
@@ -14,6 +15,7 @@ export default function ServiceImagesPage({ params }: ImagesPageProps) {
   const { serviceId } = use(params)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [downloadingSection, setDownloadingSection] = useState<string | null>(null)
   const [serviceData, setServiceData] = useState<{
     images: string[]
     afterImages: string[]
@@ -56,7 +58,54 @@ export default function ServiceImagesPage({ params }: ImagesPageProps) {
     fetchService()
   }, [serviceId])
 
-  const Section = ({ title, images, emptyMessage }: { title: string; images: string[]; emptyMessage?: string }) => {
+  const downloadImagesAsZip = async (images: string[], sectionName: string) => {
+    try {
+      setDownloadingSection(sectionName)
+      const zip = new JSZip()
+
+      // Fetch all images and add them to the zip
+      const imagePromises = images.map(async (imageUrl, index) => {
+        try {
+          const response = await fetch(imageUrl)
+          if (!response.ok) throw new Error(`Failed to fetch image ${index + 1}`)
+          
+          const blob = await response.blob()
+          const extension = imageUrl.split('.').pop()?.split('?')[0] || 'jpg'
+          const fileName = `${sectionName}_${index + 1}.${extension}`
+          
+          zip.file(fileName, blob)
+        } catch (err) {
+          console.error(`Error fetching image ${index + 1}:`, err)
+        }
+      })
+
+      await Promise.all(imagePromises)
+
+      // Generate ZIP file
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+
+      // Create download link
+      const url = URL.createObjectURL(zipBlob)
+      const link = document.createElement('a')
+      link.href = url
+      
+      const serviceName = serviceData?.cinemaName?.replace(/\s+/g, '_') || 'Service'
+      const serviceNum = serviceData?.serviceNumber || serviceId
+      link.download = `${serviceName}_${serviceNum}_${sectionName}.zip`
+      
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Error creating ZIP:', err)
+      setError('Failed to download images')
+    } finally {
+      setDownloadingSection(null)
+    }
+  }
+
+  const Section = ({ title, images, emptyMessage, sectionKey }: { title: string; images: string[]; emptyMessage?: string; sectionKey: string }) => {
     if (images.length === 0) {
       if (emptyMessage) {
         return (
@@ -73,10 +122,30 @@ export default function ServiceImagesPage({ params }: ImagesPageProps) {
       return null
     }
 
+    const isDownloading = downloadingSection === sectionKey
+
     return (
       <div className="border border-black mb-6 break-inside-avoid shadow-sm rounded-sm bg-white">
-        <div className="bg-gray-100 border-b border-black px-4 py-3 font-bold text-base text-black uppercase tracking-wide">
-          {title} ({images.length})
+        <div className="bg-gray-100 border-b border-black px-4 py-3 font-bold text-base text-black uppercase tracking-wide flex items-center justify-between">
+          <span>{title} ({images.length})</span>
+          <Button
+            onClick={() => downloadImagesAsZip(images, sectionKey)}
+            disabled={isDownloading}
+            size="sm"
+            className="bg-black text-white hover:bg-gray-800 border-2 border-black"
+          >
+            {isDownloading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Downloading...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Download ZIP
+              </>
+            )}
+          </Button>
         </div>
         <div className="p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -189,16 +258,19 @@ export default function ServiceImagesPage({ params }: ImagesPageProps) {
               title="Before Service Images"
               images={serviceData.images}
               emptyMessage="No before service images available"
+              sectionKey="before_service"
             />
             <Section
               title="After Service Images"
               images={serviceData.afterImages}
               emptyMessage="No after service images available"
+              sectionKey="after_service"
             />
             <Section
               title="Broken/Damaged Items"
               images={serviceData.brokenImages}
               emptyMessage="No broken/damaged item images available"
+              sectionKey="broken_damaged"
             />
           </>
         )}

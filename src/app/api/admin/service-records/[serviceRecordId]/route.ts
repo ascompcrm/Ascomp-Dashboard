@@ -231,7 +231,7 @@ export async function PUT(
 
     const { serviceRecordId } = await context.params
     const body = await request.json()
-    const { workDetails, signatures, images, brokenImages } = body
+    const { workDetails, signatures, images, afterImages, brokenImages } = body
 
     // Verify the service record exists
     const serviceRecord = await prisma.serviceRecord.findUnique({
@@ -326,7 +326,7 @@ export async function PUT(
       'convergence', 'channelsChecked', 'pixelDefects', 'imageVibration', 'liteloc',
       'hcho', 'tvoc', 'pm1', 'pm2_5', 'pm10', 'temperature', 'humidity',
       'remarks', 'lightEngineSerialNumber', 'signatures', 'recommendedParts',
-      'images', 'brokenImages', 'reportUrl', 'photosDriveLink',
+      'images', 'afterImages', 'brokenImages', 'reportUrl', 'photosDriveLink',
       'reflectorNote', 'uvFilterNote', 'integratorRodNote', 'coldMirrorNote', 'foldMirrorNote',
       'touchPanelNote', 'evbBoardNote', 'ImcbBoardNote', 'pibBoardNote', 'IcpBoardNote', 'imbSBoardNote',
       'serialNumberVerifiedNote', 'AirIntakeLadRadNote', 'coolantLevelColorNote',
@@ -390,6 +390,18 @@ export async function PUT(
       }
     }
 
+    if (afterImages !== undefined) {
+      if (Array.isArray(afterImages) && afterImages.length > 0) {
+        updateData.afterImages = afterImages.map((img: any) => {
+          if (typeof img === 'string') return img
+          if (img && typeof img === 'object') return img.url || img
+          return null
+        }).filter((url): url is string => Boolean(url) && typeof url === 'string')
+      } else {
+        updateData.afterImages = []
+      }
+    }
+
     if (brokenImages !== undefined) {
       if (Array.isArray(brokenImages) && brokenImages.length > 0) {
         updateData.brokenImages = brokenImages.map((img: any) => {
@@ -427,7 +439,7 @@ export async function PUT(
           return
         }
 
-        if (value === '' && key !== 'images' && key !== 'brokenImages') {
+        if (value === '' && key !== 'images' && key !== 'afterImages' && key !== 'brokenImages') {
           cleanedData[key] = null
         } else {
           cleanedData[key] = value

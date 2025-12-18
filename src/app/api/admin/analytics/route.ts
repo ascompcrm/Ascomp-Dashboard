@@ -126,7 +126,7 @@ export async function GET() {
       }),
     ])
 
-    // Calculate low fL projectors (fL < 10 in last service)
+    // Calculate low fL projectors (fL < 10 in last service - using Right fL only)
     const lowFlProjectors = lowFlCandidates
       .map((projector) => {
         const lastService = projector.serviceRecords[0]
@@ -138,9 +138,8 @@ export async function GET() {
         // Skip if both are 0 (no data)
         if (flLeft === 0 && flRight === 0) return null
 
-        const avgFl = (flLeft + flRight) / 2
-
-        if (avgFl > 0 && avgFl < 10) {
+        // Use only flRight for low fL check
+        if (flRight > 0 && flRight < 10) {
           return {
             id: projector.id,
             serialNo: projector.serialNo,
@@ -150,7 +149,6 @@ export async function GET() {
             siteAddress: projector.site?.address || "",
             flLeft: flLeft.toFixed(2),
             flRight: flRight.toFixed(2),
-            avgFl: avgFl.toFixed(2),
             lastServiceDate: formatDate(lastService.date),
           }
         }

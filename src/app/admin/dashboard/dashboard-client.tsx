@@ -69,7 +69,6 @@ type LowFlProjector = {
   siteAddress: string
   flLeft: string
   flRight: string
-  avgFl: string
   lastServiceDate: string | null
 }
 
@@ -363,16 +362,12 @@ export default function DashboardClient() {
                   <p className="font-semibold">{selectedLowFlProjector.modelNo}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">fL Left</p>
+                  <p className="text-xs text-muted-foreground">fL Before</p>
                   <p className="font-semibold text-red-600">{selectedLowFlProjector.flLeft}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">fL Right</p>
+                  <p className="text-xs text-muted-foreground">fL After</p>
                   <p className="font-semibold text-red-600">{selectedLowFlProjector.flRight}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-xs text-muted-foreground">Average fL</p>
-                  <p className="font-bold text-lg text-red-600">{selectedLowFlProjector.avgFl} fL</p>
                 </div>
               </div>
 
@@ -604,7 +599,7 @@ export default function DashboardClient() {
                   <TableRow className="bg-muted/30">
                     <TableHead className="text-xs font-semibold">Serial No</TableHead>
                     <TableHead className="text-xs font-semibold">Site</TableHead>
-                    <TableHead className="text-xs font-semibold text-right">Avg fL</TableHead>
+                    <TableHead className="text-xs font-semibold text-right">Right fL</TableHead>
                     <TableHead className="text-xs font-semibold text-center w-20">Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -614,7 +609,7 @@ export default function DashboardClient() {
                       <TableCell className="text-xs font-medium">{proj.serialNo}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{proj.siteName}</TableCell>
                       <TableCell className="text-xs text-right">
-                        <span className="text-red-600 font-semibold">{proj.avgFl}</span>
+                        <span className="text-red-600 font-semibold">{proj.flRight}</span>
                       </TableCell>
                       <TableCell className="text-center">
                         <Button

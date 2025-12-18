@@ -9,9 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import ScheduleServiceModal from "@/components/admin/modals/schedule-service-modal"
 
 interface ScheduledService {
   id: string
+  projectorId: string
+  siteId: string
   serviceNumber: string | null
   siteName: string
   siteAddress: string
@@ -30,6 +33,8 @@ export default function ScheduledServicesPage() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [selectedForAssign, setSelectedForAssign] = useState<{ siteId: string; projectorId: string } | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -82,6 +87,7 @@ export default function ScheduledServicesPage() {
         throw new Error(data.error || "Failed to unassign")
       }
       setRefreshKey((k) => k + 1)
+      // After unassign, service will come back as unassigned on next reload
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to unassign")
     }
@@ -260,31 +266,71 @@ export default function ScheduledServicesPage() {
                   </div>
 
                   <div className="flex gap-2 justify-end mt-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 text-[11px] border-border flex items-center gap-1"
-                      onClick={() => handleUnassign(service.id)}
-                      disabled={!service.assignedToName}
-                    >
-                      <X className="h-3 w-3" />
-                      Unassign
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 text-[11px] border-destructive text-destructive flex items-center gap-1 hover:bg-destructive/10"
-                      onClick={() => handleCancel(service.id)}
-                    >
-                      <Ban className="h-3 w-3" />
-                      Cancel
-                    </Button>
+                    {service.assignedToName ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-[11px] border-border flex items-center gap-1"
+                          onClick={() => handleUnassign(service.id)}
+                        >
+                          <X className="h-3 w-3" />
+                          Unassign
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-[11px] border-destructive text-destructive flex items-center gap-1 hover:bg-destructive/10"
+                          onClick={() => handleCancel(service.id)}
+                        >
+                          <Ban className="h-3 w-3" />
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          className="h-7 px-3 text-[11px] flex items-center gap-1"
+                          onClick={() => {
+                            setSelectedForAssign({ siteId: service.siteId, projectorId: service.projectorId })
+                            setAssignModalOpen(true)
+                          }}
+                        >
+                          Assign
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-[11px] border-destructive text-destructive flex items-center gap-1 hover:bg-destructive/10"
+                          onClick={() => handleCancel(service.id)}
+                        >
+                          <Ban className="h-3 w-3" />
+                          Cancel
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             )
           })}
         </div>
+      )}
+      {assignModalOpen && selectedForAssign && (
+        <ScheduleServiceModal
+          siteId={selectedForAssign.siteId}
+          projectorId={selectedForAssign.projectorId}
+          onClose={() => {
+            setAssignModalOpen(false)
+            setSelectedForAssign(null)
+          }}
+          onSuccess={() => {
+            setRefreshKey((k) => k + 1)
+            setAssignModalOpen(false)
+            setSelectedForAssign(null)
+          }}
+        />
       )}
     </div>
   )

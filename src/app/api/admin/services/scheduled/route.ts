@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
 
       return {
         id: sr.id,
+        projectorId: p.id,
+        siteId: p.siteId,
         serviceNumber: sr.serviceNumber,
         siteName: p.site?.siteName || "",
         siteAddress: p.site?.address || "",

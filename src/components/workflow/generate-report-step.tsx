@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 export default function GenerateReportStep({ data, onBack }: any) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
 
 
   const getIssueEntries = () => {
@@ -60,20 +61,27 @@ export default function GenerateReportStep({ data, onBack }: any) {
 
   const saveReportToLocalStorage = (issues: { label: string; value: string }[]) => {
     const reports = JSON.parse(localStorage.getItem('serviceReports') || '[]')
+
     const summarizeImages = () => {
       if (!data.workImages) {
-        return { broken: [], other: [] }
+        return { before: [], after: [], broken: [] }
       }
+
+      // Legacy shape: array of images (treat as generic \"before\")
       if (Array.isArray(data.workImages)) {
         return {
+          before: data.workImages,
+          after: [],
           broken: [],
-          other: data.workImages,
         }
       }
-      return {
-        broken: data.workImages.broken || [],
-        other: data.workImages.other || [],
-      }
+
+      // Current workflow shape coming from RecordWorkStep
+      const before = data.workImages.images || data.workImages.before || []
+      const after = data.workImages.afterImages || data.workImages.after || []
+      const broken = data.workImages.brokenImages || data.workImages.broken || []
+
+      return { before, after, broken }
     }
 
     reports.push({
@@ -102,18 +110,22 @@ export default function GenerateReportStep({ data, onBack }: any) {
 
     const summarizeImages = () => {
       if (!data.workImages) {
-        return { broken: [], other: [] }
+        return { before: [], after: [], broken: [] }
       }
+
       if (Array.isArray(data.workImages)) {
         return {
+          before: data.workImages,
+          after: [],
           broken: [],
-          other: data.workImages,
         }
       }
-      return {
-        broken: data.workImages.broken || [],
-        other: data.workImages.other || [],
-      }
+
+      const before = data.workImages.images || data.workImages.before || []
+      const after = data.workImages.afterImages || data.workImages.after || []
+      const broken = data.workImages.brokenImages || data.workImages.broken || []
+
+      return { before, after, broken }
     }
 
     const images = summarizeImages()
@@ -130,7 +142,9 @@ export default function GenerateReportStep({ data, onBack }: any) {
           engineer: data.engineerSignatureUrl,
           site: data.siteSignatureUrl,
         },
-        images: images.other,
+        // Map to Prisma arrays: before -> images, after -> afterImages, broken -> brokenImages
+        images: images.before,
+        afterImages: images.after,
         brokenImages: images.broken,
       }),
     })
@@ -147,11 +161,12 @@ export default function GenerateReportStep({ data, onBack }: any) {
     if (isSubmitting) return
 
     setIsSubmitting(true)
+    setProgress(10)
     setSubmitError(null)
     try {
       // Submit to database
       await submitServiceRecord()
-      
+      setProgress(100)
       setIsSubmitted(true)
     } catch (error) {
       console.error('Error submitting report:', error)
@@ -215,6 +230,21 @@ export default function GenerateReportStep({ data, onBack }: any) {
           ? "Report submitted successfully! Please download the PDF to finish." 
           : "Review the details and submit the report."}
       </p>
+
+      {(isSubmitting || progress > 0 || isSubmitted) && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1 text-xs text-gray-600">
+            <span>{isSubmitted ? "Save complete" : "Saving data & images..."}</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-2 bg-black transition-all"
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       <Card className="border-2 border-black p-4 mb-4 space-y-4">
         <div>
