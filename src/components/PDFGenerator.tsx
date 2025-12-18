@@ -792,7 +792,15 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 
   // Images Link Section
   if (data.imagesLink || data.imagesUrl) {
-    const imagesLink = data.imagesLink || data.imagesUrl || '';
+    console.log("imagesLink", data.imagesLink, data.imagesUrl);
+    let imagesLink = data.imagesLink || data.imagesUrl || '';
+
+    // Ensure the link is absolute (so PDF viewers don't treat it as file://)
+    if (imagesLink && !/^https?:\/\//i.test(imagesLink)) {
+      if (typeof window !== 'undefined' && window.location?.origin) {
+        imagesLink = `${window.location.origin}${imagesLink.startsWith('/') ? '' : '/'}${imagesLink}`;
+      }
+    }
     const labelX = leftTableX;
     const linkX = leftTableX + 50;
     const cellWidth = width - 350;

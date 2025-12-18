@@ -206,6 +206,7 @@ export async function constructAndGeneratePDF(serviceId: string) {
                 // Generate link to images page with full domain from CORS_ORIGIN
                 const baseUrl = process.env.CORS_ORIGIN || '';
                 const imagesPath = `/admin/services/${serviceId}/images`;
+
                 return baseUrl ? `${baseUrl}${imagesPath}` : imagesPath;
             }
             

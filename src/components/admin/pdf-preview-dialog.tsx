@@ -250,6 +250,9 @@ export default function PdfPreviewDialog({ open, onOpenChange, serviceRecordId }
       // Build PDF payload
       const pdfData = buildPdfPayloadFromService(service)
 
+      console.log("pdfData", pdfData);
+      console.log("pdfData.imagesLink", pdfData.imagesLink);
+
       // Generate PDF
       const pdfBytes = await generateMaintenanceReport(pdfData)
       const blob = new Blob([pdfBytes as any], { type: "application/pdf" })
