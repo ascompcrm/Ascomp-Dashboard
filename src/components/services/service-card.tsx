@@ -38,7 +38,7 @@ export function ServiceCard({ service, onClick, viewMode }: ServiceCardProps) {
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
             <h3 className="text-xl font-bold text-black">
-              Service #{service.serviceNumber}
+              Service #{service.serviceNumber} - <span className="text-base text-gray-800">{service.engineerName}</span>
             </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
