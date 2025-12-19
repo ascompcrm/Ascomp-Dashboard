@@ -249,11 +249,11 @@ www.ascompinc.co.in`)
               <>
                 {/* Email Preview & Edit */}
                 <div className="space-y-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                    <p className="text-sm text-blue-900">
+                  {/* <div className="bg-blue-50 border border-blue-200 rounded-md p-3"> */}
+                    {/* <p className="text-sm text-blue-900">
                       <strong>✉️ Email Preview</strong> - Review and edit the email content below before sending.
-                    </p>
-                  </div>
+                    </p> */}
+                  {/* </div> */}
 
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold">To:</label>

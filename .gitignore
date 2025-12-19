@@ -115,3 +115,5 @@ FORM_DATA_COMPARISON.md
 .gitignore
 VERIFICATION_REPORT.md
 /excel
+/scripts
+scripts

@@ -130,7 +130,7 @@ const LABEL_OVERRIDES: Record<string, string> = {
   serviceNumber: "Service #",
   siteName: "Site",
   siteCode: "Site Code",
-  siteAddress: "Site Address",
+  siteAddress: "Cinema Name",
   siteContactDetails: "Site Contact",
   projectorName: "Projector",
   projectorModel: "Model #",
@@ -1590,7 +1590,7 @@ function PreviewDownloadDialog({
   }, [open, serviceId])
 
   const generateDefaultEmailContent = (service: any) => {
-    const cinema = service.cinemaName || service.siteName || "Valued Client"
+    const cinema = service.site.name || service.location || "Valued Client"
     const serviceNum = service.serviceNumber || "N/A"
     const date = service.date ? new Date(service.date).toLocaleDateString("en-US", {
       year: "numeric",
@@ -1729,10 +1729,10 @@ www.ascompinc.co.in`)
                       {serviceData.date ? new Date(serviceData.date).toLocaleDateString() : "N/A"}
                     </div>
                     <div>
-                      <span className="font-medium">Cinema:</span> {serviceData.cinemaName || "N/A"}
+                      <span className="font-medium">Cinema:</span> {serviceData.site.name || "N/A"}
                     </div>
                     <div>
-                      <span className="font-medium">Projector Model:</span> {serviceData.projectorModel || serviceData.modelNo || "N/A"}
+                      <span className="font-medium">Projector Model:</span> {serviceData.projector.model || serviceData.modelNo || "N/A"}
                     </div>
                   </div>
                 </div>
@@ -1781,11 +1781,11 @@ www.ascompinc.co.in`)
               <>
                 {/* Email Preview & Edit */}
                 <div className="space-y-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  {/* <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
                     <p className="text-sm text-blue-900">
                       <strong>✉️ Email Preview</strong> - Review and edit the email content below before sending.
                     </p>
-                  </div>
+                  </div> */}
 
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold">To:</label>

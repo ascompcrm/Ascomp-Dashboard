@@ -6,7 +6,6 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { useRouter } from 'next/navigation'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('')
@@ -17,7 +16,6 @@ export default function LoginForm() {
   const [passwordError, setPasswordError] = useState('')
   const [touched, setTouched] = useState({ email: false, password: false })
   const { login } = useAuth()
-  const router = useRouter()
 
   const validateEmail = (emailValue: string): string => {
     if (!emailValue.trim()) {
@@ -82,16 +80,12 @@ export default function LoginForm() {
     setIsLoading(true)
     
     try {
-      const res = await login(email, password)
-      console.log("Role i guess:", (res as any).role)
-      if ((res as any).role === "ADMIN") {
-        router.push("/admin/dashboard")
-      } else {
-        router.push("/user/workflow")
-      }
+      await login(email, password)
+      // Middleware will handle redirect based on role
+      // Just trigger a page reload to let middleware take over
+      window.location.href = "/"
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.')
-    } finally {
       setIsLoading(false)
     }
   }
@@ -175,15 +169,6 @@ export default function LoginForm() {
                 {isLoading ? 'Logging in...' : 'Login'}
               </Button>
             </form>
-            {/* <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t-2 border-gray-200">
-              <p className="text-xs sm:text-sm text-gray-500 text-center mb-2">
-                Test Credentials
-              </p>
-              <div className="text-xs text-gray-600 space-y-1 text-center">
-                <p><strong>User:</strong> user@test.com / pass123</p>
-                <p><strong>Admin:</strong> admin@test.com / pass123</p>
-              </div>
-            </div> */}
           </div>
         </Card>
       </div>

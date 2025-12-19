@@ -1,5 +1,4 @@
 "use client"
-import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import Image from 'next/image'
@@ -8,17 +7,9 @@ import { Card } from '@/components/ui/card'
 
 export default function Home() {
   const router = useRouter()
-  const { user, isLoading } = useAuth()
+  const { isLoading } = useAuth()
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      if (user.role === 'ADMIN') {
-        router.push('/admin/dashboard')
-      } else {
-        router.push('/user/workflow')
-      }
-    }
-  }, [user, isLoading, router])
+  // Middleware handles redirects - no client-side redirect logic needed
 
   const handleGoToLogin = () => {
     router.push('/login')
@@ -28,10 +19,8 @@ export default function Home() {
     return <div className="flex items-center justify-center h-screen">Loading...</div>
   }
 
-  // If user is logged in, redirect will happen via useEffect
-  if (user) {
-    return <div className="flex items-center justify-center h-screen">Redirecting...</div>
-  }
+  // If user is logged in, middleware will redirect automatically
+  // This page only renders for unauthenticated users
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center w-full p-4 sm:p-6 lg:p-10">

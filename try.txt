@@ -65,7 +65,18 @@ update admin full, engineer name
 - unassign means unassign change status to draft and show button to assign -- Done
 - cancel remove service record entry and based on date set status -- Done
 
--- special going to forth by default fix it 
+-- special going to forth by default fix it - probably it's correct
 
 -- add data export functionality  -- Done
 -- confirm if import is correctly working or not with proper validations and all
+
+
+--- routing
+--- completed schedule
+
+
+////
+exhause cfm value
+mail on assign
+update last service date on /services not updating in db
+authentication

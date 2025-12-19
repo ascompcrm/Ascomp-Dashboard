@@ -35,7 +35,15 @@ export default function ProjectorDetails({ site: _site, projector, onSchedule, o
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h4 className="text-base font-semibold text-foreground truncate mb-1">{projector.name}</h4>
-            {/* Serial and Model aligned in a neat row */}
+          </div>
+          <Badge
+            className={`${statusColor} text-[11px] px-2.5 py-0.5 rounded-full shrink-0 whitespace-nowrap`}
+          >
+            {projector.status.charAt(0).toUpperCase() + projector.status.slice(1)}
+          </Badge>
+        </div>
+
+        {/* Serial and Model aligned in a neat row */}
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 mt-0.5">
               <div className="flex items-center min-w-0">
                 <span className="text-xs text-muted-foreground font-medium">Serial:</span>
@@ -46,23 +54,17 @@ export default function ProjectorDetails({ site: _site, projector, onSchedule, o
                 <span className="ml-1.5 text-xs font-medium text-foreground truncate">{projector.model}</span>
               </div>
             </div>
-          </div>
-          <Badge
-            className={`${statusColor} text-[11px] px-2.5 py-0.5 rounded-full shrink-0 whitespace-nowrap`}
-          >
-            {projector.status.charAt(0).toUpperCase() + projector.status.slice(1)}
-          </Badge>
-        </div>
+            
         {/* Metrics Row: only Last Service and Completed Services */}
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
           <div className="flex flex-col items-start">
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground/90 font-medium mb-0.5">Last Service</span>
             <span className="text-sm font-semibold text-foreground">{formattedLastService}</span>
           </div>
-          <div className="flex flex-col items-start">
+          {/* <div className="flex flex-col items-start">
             <span className="text-[10px] uppercase tracking-wide text-muted-foreground/90 font-medium mb-0.5">Completed Services</span>
             <span className="text-sm font-semibold text-foreground">{serviceHistoryCount}</span>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -71,7 +73,6 @@ export default function ProjectorDetails({ site: _site, projector, onSchedule, o
         className="flex items-center justify-between gap-3 border-t border-border px-4 py-3"
         onClick={(e) => e.stopPropagation()}
       >
-        {projector.status === "pending" && (
           <Button
             size="sm"
             onClick={onSchedule}
@@ -79,7 +80,6 @@ export default function ProjectorDetails({ site: _site, projector, onSchedule, o
           >
             Schedule
           </Button>
-        )}
       </div>
     </div>
   )

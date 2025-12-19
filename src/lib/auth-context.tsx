@@ -1,7 +1,6 @@
 "use client"
 
-import { createContext, useContext, type ReactNode, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { createContext, useContext, type ReactNode } from "react"
 import { authClient } from "./auth-client"
 
 interface User {
@@ -23,7 +22,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const router = useRouter()
   const { data: session, isPending } = authClient.useSession()
 
   const login = async (email: string, password: string) => {
@@ -52,7 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               resolve(role as any);
             } catch (error) {
               console.error("Failed to fetch session after login:", error)
-              router.replace("/user/workflow")
               resolve()
             }
           },
@@ -71,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await authClient.signOut()
-      router.push("/login")
+      window.location.href = "/login"
     } catch (error) {
       console.error("Logout failed:", error)
     }
@@ -87,20 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     : null
 
-  // Handle redirect after login based on role
-  useEffect(() => {
-    if (user && !isPending) {
-      const currentPath = window.location.pathname
-      // Only redirect if we're on login or home page
-      if (currentPath === '/login' || currentPath === '/') {
-        if (user.role === 'ADMIN') {
-          router.push('/admin/dashboard')
-        } else {
-          router.push('/user/workflow')
-        }
-      }
-    }
-  }, [user, isPending, router])
+  // Middleware handles redirects - no client-side redirect logic needed
 
   return (
     <AuthContext.Provider

@@ -108,6 +108,8 @@ export default function ServicesPage() {
       ? service.date?.startsWith(format(dateFilter, "yyyy-MM-dd")) 
       : true
 
+      // console.log("service dets here", service)
+
     return matchesSearch && matchesDate
   }).sort((a, b) => {
     // Both modes show completed services, so use completedAt for sorting
