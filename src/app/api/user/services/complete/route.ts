@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare update data
     const updateData: any = {
+      date: new Date(),  // Record completion date
       reportGenerated: true,
       endTime: new Date(),
     }
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
 
     // Fields that should not be updated (read-only or set on creation)
     const readonlyFields = new Set([
-      'id', 'createdAt', 'updatedAt', 'userId', 'projectorId', 'siteId', 'serviceNumber', 'assignedToId', 'date'
+      'id', 'createdAt', 'updatedAt', 'userId', 'projectorId', 'siteId', 'serviceNumber', 'assignedToId'
     ])
 
     // Handle recommendedParts as JSON

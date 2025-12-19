@@ -57,13 +57,15 @@ update admin full, engineer name
 
 // pending 
 -- email work
-- email them credentials
-- assign send email
-- send pdf to client via email
+- email them credentials -- done
+- assign send email -- done
+- send pdf to client via email -- done
 
 -- schedule service functionality
-- unassign means unassign change status to draft and show button to assign
-- cancel remove service record entry and based on date set status
+- unassign means unassign change status to draft and show button to assign -- Done
+- cancel remove service record entry and based on date set status -- Done
 
--- add data export functionality 
+-- special going to forth by default fix it 
+
+-- add data export functionality  -- Done
 -- confirm if import is correctly working or not with proper validations and all

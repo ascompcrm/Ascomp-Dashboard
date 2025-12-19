@@ -19,9 +19,7 @@ export async function GET(request: NextRequest) {
         },
         serviceRecords: {
           where: {
-            OR: [
-              { endTime: null },
-            ],
+            date: null,  // Only uncompleted services
           },
           include: {
             assignedTo: {
@@ -32,8 +30,9 @@ export async function GET(request: NextRequest) {
             },
           },
           orderBy: {
-            date: "asc",
+            createdAt: "desc",  // Latest scheduled service first
           },
+          take: 1,  // Only get the latest one per projector
         },
       },
     })
@@ -56,23 +55,23 @@ export async function GET(request: NextRequest) {
         assignedToName: sr.assignedTo?.name || null,
         assignedToEmail: sr.assignedTo?.email || null,
         status: sr.startTime !== null ? "in_progress" : "scheduled",
-        scheduledDate: sr.date ? sr.date.toISOString() : null,
+        scheduledDate: sr.createdAt ? sr.createdAt.toISOString() : null,
       }
     })
 
     const filtered = q
       ? mapped.filter((s) => {
-          const haystack = [
-            s.siteName,
-            s.siteAddress,
-            s.projectorModel || "",
-            s.projectorSerial || "",
-            s.assignedToName || "",
-          ]
-            .join(" ")
-            .toLowerCase()
-          return haystack.includes(q)
-        })
+        const haystack = [
+          s.siteName,
+          s.siteAddress,
+          s.projectorModel || "",
+          s.projectorSerial || "",
+          s.assignedToName || "",
+        ]
+          .join(" ")
+          .toLowerCase()
+        return haystack.includes(q)
+      })
       : mapped
 
     return NextResponse.json({ services: filtered })

@@ -5,6 +5,8 @@ import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Mail } from "lucide-react"
+import { toast } from "sonner"
 import SearchBar from "../search-bar"
 import AddFieldWorkerModal from "./modals/add-field-worker-modal"
 
@@ -26,6 +28,7 @@ export default function FieldWorkersView() {
   const [loading, setLoading] = useState(true)
   const [showAddWorker, setShowAddWorker] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [sendingCredentialsFor, setSendingCredentialsFor] = useState<string | null>(null)
 
   const fetchWorkers = async () => {
     try {
@@ -41,6 +44,39 @@ export default function FieldWorkersView() {
       setWorkers([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSendCredentials = async (e: React.MouseEvent, workerId: string, workerEmail: string) => {
+    e.stopPropagation() // Prevent card click navigation
+    
+    setSendingCredentialsFor(workerId)
+    
+    try {
+      const response = await fetch("/api/admin/field-workers/send-credentials", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: workerId }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to send credentials")
+      }
+
+      toast.success("Credentials sent successfully", {
+        description: `Login credentials have been sent to ${workerEmail}`,
+      })
+    } catch (error) {
+      console.error("Error sending credentials:", error)
+      toast.error("Failed to send credentials", {
+        description: error instanceof Error ? error.message : "An error occurred while sending credentials",
+      })
+    } finally {
+      setSendingCredentialsFor(null)
     }
   }
 
@@ -76,11 +112,6 @@ export default function FieldWorkersView() {
         onChange={setSearchQuery}
       />
 
-      {/* <div className="space-y-3">
-        <p className="text-sm font-medium text-foreground">Worker Status</p>
-        <FilterTabs tabs={["all", "active", "idle"]} activeTab={workerFilter} onTabChange={setWorkerFilter} />
-      </div> */}
-
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -112,7 +143,19 @@ export default function FieldWorkersView() {
                 onClick={() => router.push(`/admin/dashboard/field-workers/${worker.id}`)}
               >
                 <CardHeader className="">
+                  <div className="flex w-full justify-between items-center">
                   <CardTitle className="text-lg font-semibold mb-1">{worker.name}</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-fit border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    onClick={(e) => handleSendCredentials(e, worker.id, worker.email)}
+                    disabled={sendingCredentialsFor === worker.id}
+                  >
+                   
+                    {sendingCredentialsFor === worker.id ? "Sending..." :  <Mail className="h-4 w-4" />}
+                  </Button>
+                  </div>
                   <p className="text-sm text-muted-foreground">{worker.email}</p>
                 </CardHeader>
                 <CardContent className="space-y-4">

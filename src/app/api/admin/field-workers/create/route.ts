@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { Resend } from "resend"
+import { sendEmail } from "@/lib/email"
 import prisma, { Role } from "@/lib/db"
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,9 +20,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User with this email already exists" }, { status: 400 })
     }
 
-    // Generate password: Ascomp + random 4 digits
-    const randomDigits = Math.floor(1000 + Math.random() * 9000)
-    const password = `Ascomp${randomDigits}`
+    const password = `Ascomp123`
 
     // Create user using better-auth sign-up
     const origin = request.headers.get("origin") || process.env.CORS_ORIGIN || "http://localhost:3000"
@@ -66,33 +62,29 @@ export async function POST(request: NextRequest) {
       data: { role: Role.FIELD_WORKER },
     })
 
-    // Send email with login credentials
-    if (resend) {
-      try {
-        await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
-          to: email,
-          subject: "Welcome to Ascomp CRM - Your Login Credentials",
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #333;">Welcome to Ascomp CRM!</h2>
-              <p>Hello ${name},</p>
-              <p>Your account has been created. Please use the following credentials to log in:</p>
-              <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
-                <p style="margin: 5px 0;"><strong>Password:</strong> ${password}</p>
-              </div>
-              <p>Please log in at: <a href="${origin}/login">${origin}/login</a></p>
-              <p style="color: #666; font-size: 12px; margin-top: 30px;">For security reasons, please change your password after your first login.</p>
+    // Send email with login credentials using Gmail OAuth
+    try {
+      await sendEmail({
+        to: email,
+        subject: "Welcome to Ascomp CRM - Your Login Credentials",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">Welcome to Ascomp CRM!</h2>
+            <p>Hello ${name},</p>
+            <p>Your account has been created. Please use the following credentials to log in:</p>
+            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
+              <p style="margin: 5px 0;"><strong>Password:</strong> ${password}</p>
             </div>
-          `,
-        })
-      } catch (emailError) {
-        console.error("Failed to send email:", emailError)
-        // Don't fail the request if email fails, but log it
-      }
-    } else {
-      console.warn("RESEND_API_KEY not configured. Email not sent. Password:", password)
+            <p>Please log in at: <a href="${origin}/login">${origin}/login</a></p>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">For security reasons, please change your password after your first login.</p>
+          </div>
+        `,
+      })
+      console.log("Welcome email sent successfully to:", email)
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError)
+      // Don't fail the request if email fails, but log it
     }
 
     return NextResponse.json({

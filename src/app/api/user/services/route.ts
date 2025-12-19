@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // Format services for the frontend
     const formattedServices = services.map((service) => {
-      const serviceDate = service.date ? new Date(service.date) : null
+      const serviceDate = service.createdAt ? new Date(service.createdAt) : null
       const formattedDate = serviceDate
         ? `${String(serviceDate.getDate()).padStart(2, "0")}/${String(serviceDate.getMonth() + 1).padStart(2, "0")}/${serviceDate.getFullYear()}`
         : "Not scheduled"
