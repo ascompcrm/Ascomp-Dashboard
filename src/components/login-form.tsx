@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
 export default function LoginForm() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -15,7 +17,18 @@ export default function LoginForm() {
   const [emailError, setEmailError] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [touched, setTouched] = useState({ email: false, password: false })
-  const { login } = useAuth()
+  const { login, user, isLoading: authLoading } = useAuth()
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (user.role === 'ADMIN') {
+        router.push('/admin/dashboard')
+      } else if (user.role === 'FIELD_WORKER') {
+        router.push('/user/workflow')
+      }
+    }
+  }, [user, authLoading, router])
 
   const validateEmail = (emailValue: string): string => {
     if (!emailValue.trim()) {
