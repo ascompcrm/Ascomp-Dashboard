@@ -25,45 +25,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, isPending } = authClient.useSession()
 
   const login = async (email: string, password: string) => {
-    return new Promise<void>((resolve, reject) => {
-      authClient.signIn.email(
-        {
-          email,
-          password,
-        },
-        {
-          onSuccess: async () => {
-            try {
-              // Fetch session to get the role (sign-in response doesn't include it)
-              const sessionResponse = await fetch("/api/session", {
-                credentials: "include",
-              })
-              if (!sessionResponse.ok) {
-                throw new Error("Unable to fetch active session")
-              }
-              const sessionData = await sessionResponse.json()
-              const role = (sessionData?.user as User | undefined)?.role
-              console.log("Role:", role)
-              if (!role) {
-                throw new Error("Role not found")
-              }
-              resolve(role as any);
-            } catch (error) {
-              console.error("Failed to fetch session after login:", error)
-              resolve()
-            }
-          },
-          onError: (error) => {
-            const message =
-              error?.error?.message ||
-              error?.error?.statusText ||
-              "Login failed. Please check your credentials."
-            reject(new Error(message))
-          },
-        },
-      )
+    const { data, error } = await authClient.signIn.email({
+      email,
+      password,
+      callbackURL: user?.role === "ADMIN" ? "/admin/dashboard" : "/user/workflow",
     })
+
+    if (error) {
+      throw error
+    }
   }
+
+
+
+    console.log("session here", session)
 
   const logout = async () => {
     try {
@@ -83,8 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: (session.user as any).role as 'ADMIN' | 'FIELD_WORKER' | undefined,
       }
     : null
-
-  // Middleware handles redirects - no client-side redirect logic needed
 
   return (
     <AuthContext.Provider

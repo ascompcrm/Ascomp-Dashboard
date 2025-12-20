@@ -80,10 +80,15 @@ export default function LoginForm() {
     setIsLoading(true)
     
     try {
-      await login(email, password)
-      // Middleware will handle redirect based on role
-      // Just trigger a page reload to let middleware take over
-      window.location.href = "/"
+      const res = await login(email, password)
+      // @ts-ignore
+      if (res.user?.role === "ADMIN") {
+        window.location.href = "/admin/dashboard"
+      }
+      // @ts-ignore 
+      else if (res.user?.role === "FIELD_WORKER") {
+        window.location.href = "/user/workflow"
+      }
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.')
       setIsLoading(false)
