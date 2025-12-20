@@ -383,7 +383,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
               <ul className="list-disc list-inside text-sm text-black space-y-1">
                 {service.workDetails.recommendedParts.map((part: any, idx: number) => (
                   <li key={idx}>
-                    <span className="font-semibold">{part.partNumber || (part as any).part_number}</span> - {part.description}
+                    <span className="font-semibold">{part.partNumber || (part as any).part_number}</span> - {part.name}
                   </li>
                 ))}
               </ul>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma, { ServiceStatus } from "@/lib/db"
+import { sendEmail } from "@/lib/email"
 
 // Helper to generate Mongo-style IDs (since schema uses string IDs)
 const generateObjectId = () => [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join("")
@@ -54,6 +55,12 @@ export async function POST(request: NextRequest) {
 
     const projector = await prisma.projector.findUnique({
       where: { id: projectorId },
+      select: {
+        id: true,
+        siteId: true,
+        serialNo: true,
+        modelNo: true,
+      },
     })
     if (!projector || projector.siteId !== siteId) {
       return NextResponse.json({ error: "Projector not found for this site." }, { status: 404 })
@@ -61,9 +68,9 @@ export async function POST(request: NextRequest) {
 
     const fieldWorker = await prisma.user.findFirst({
       where: { id: fieldWorkerId, role: "FIELD_WORKER" },
-      select: { id: true },
+      select: { id: true, email: true, name: true },
     })
-    if (!fieldWorker) {
+    if (!fieldWorker || !fieldWorker.email) {
       return NextResponse.json({ error: "Field worker not found." }, { status: 404 })
     }
 
@@ -164,6 +171,130 @@ export async function POST(request: NextRequest) {
         status: ServiceStatus.SCHEDULED,
       },
     })
+
+    // Send email notification to field worker
+    try {
+      const formattedDate = new Date(scheduledDate).toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+
+      // fieldWorker.email
+
+      await sendEmail({
+        to: "fahad.khan2216@gmail.com",
+        subject: `New Service Assignment - ${site.siteName}`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Service Assignment</title>
+          </head>
+          <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+              <!-- Header -->
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">
+                  New Service Assignment
+                </h1>
+                <p style="margin: 10px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 16px;">
+                  A new service has been assigned to you
+                </p>
+              </div>
+
+              <!-- Content -->
+              <div style="padding: 40px 30px;">
+                <!-- Greeting -->
+                <p style="margin: 0 0 25px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                  Hello <strong>${fieldWorker.name}</strong>,
+                </p>
+                
+                <p style="margin: 0 0 30px 0; color: #555555; font-size: 15px; line-height: 1.6;">
+                  You have been assigned a new projector service. Please review the details below:
+                </p>
+
+                <!-- Site Information Card -->
+                <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin-bottom: 25px; border-radius: 4px;">
+                  <h2 style="margin: 0 0 15px 0; color: #667eea; font-size: 18px; font-weight: 600;">
+                    Site Information
+                  </h2>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 8px 0; color: #666666; font-size: 14px; font-weight: 500;">Site Name:</td>
+                      <td style="padding: 8px 0; color: #333333; font-size: 14px; font-weight: 600; text-align: right;">${site.siteName}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #666666; font-size: 14px; font-weight: 500;">Address:</td>
+                      <td style="padding: 8px 0; color: #333333; font-size: 14px; text-align: right;">${site.address}</td>
+                    </tr>
+                    ${site.contactDetails ? `
+                    <tr>
+                      <td style="padding: 8px 0; color: #666666; font-size: 14px; font-weight: 500;">Contact:</td>
+                      <td style="padding: 8px 0; color: #333333; font-size: 14px; text-align: right;">${site.contactDetails}</td>
+                    </tr>
+                    ` : ''}
+                  </table>
+                </div>
+
+                <!-- Projector Information Card -->
+                <div style="background-color: #f8f9fa; border-left: 4px solid #764ba2; padding: 20px; margin-bottom: 25px; border-radius: 4px;">
+                  <h2 style="margin: 0 0 15px 0; color: #764ba2; font-size: 18px; font-weight: 600;">
+                    Projector Information
+                  </h2>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 8px 0; color: #666666; font-size: 14px; font-weight: 500;">Model:</td>
+                      <td style="padding: 8px 0; color: #333333; font-size: 14px; font-weight: 600; text-align: right;">${projector.modelNo}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #666666; font-size: 14px; font-weight: 500;">Serial Number:</td>
+                      <td style="padding: 8px 0; color: #333333; font-size: 14px; font-family: monospace; text-align: right;">${projector.serialNo}</td>
+                    </tr>
+                  </table>
+                </div>
+
+                <!-- Schedule Information Card -->
+                <div style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 20px; margin-bottom: 30px; border-radius: 4px;">
+                  <h2 style="margin: 0 0 15px 0; color: #4caf50; font-size: 18px; font-weight: 600;">
+                    Scheduled Date
+                  </h2>
+                  <p style="margin: 0; color: #333333; font-size: 16px; font-weight: 600;">
+                    ${formattedDate}
+                  </p>
+                </div>
+
+                <!-- Call to Action -->
+                <div style="text-align: center; margin: 35px 0;">
+                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/user/workflow" 
+                     style="display: inline-block; background: #28C5CC">
+                    View in Dashboard
+                  </a>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div style="background-color: #f8f9fa; padding: 25px 30px; text-align: center; border-top: 1px solid #e9ecef;">
+                <p style="margin: 0 0 8px 0; color: #6c757d; font-size: 13px;">
+                  This is an automated notification from Ascomp CRM
+                </p>
+                <p style="margin: 0; color: #6c757d; font-size: 13px;">
+                  © ${new Date().getFullYear()} Ascomp. All rights reserved.
+                </p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `,
+      })
+      console.log("Service assignment email sent successfully to:", fieldWorker.email)
+    } catch (emailError) {
+      console.error("Failed to send service assignment email:", emailError)
+      // Don't fail the request if email fails, but log it
+    }
 
     return NextResponse.json({
       success: true,

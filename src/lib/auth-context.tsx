@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, isPending } = authClient.useSession()
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await authClient.signIn.email({
+    const { error } = await authClient.signIn.email({
       email,
       password,
       callbackURL: user?.role === "ADMIN" ? "/admin/dashboard" : "/user/workflow",
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
 
-    console.log("session here", session)
+    // console.log("session here", session)
 
   const logout = async () => {
     try {

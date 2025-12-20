@@ -76,7 +76,7 @@ update admin full, engineer name
 
 
 ////
-exhause cfm value
-mail on assign
-update last service date on /services not updating in db
-authentication
+exhause cfm value -- done
+mail on assign -- done
+update last service date on /services not updating in db -- done
+authentication -- done

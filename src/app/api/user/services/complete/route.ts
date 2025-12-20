@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     // Valid fields from Prisma schema (whitelist approach)
     const validSchemaFields = new Set([
-      'reportGenerated', 'endTime', 'startTime',
+      'date', 'reportGenerated', 'endTime', 'startTime',
       'cinemaName', 'address', 'contactDetails', 'location', 'screenNumber',
       'projectorRunningHours', 'replacementRequired',
       'reflector', 'uvFilter', 'integratorRod', 'coldMirror', 'foldMirror',
@@ -307,27 +307,43 @@ export async function POST(request: NextRequest) {
       data: cleanedData,
     })
 
+    // console.log(`✅ Service record updated successfully:`)
+    // console.log(`   - ID: ${updatedRecord.id}`)
+    // console.log(`   - Date: ${updatedRecord.date?.toISOString() || 'NOT SET'}`)
+    // console.log(`   - EndTime: ${updatedRecord.endTime?.toISOString() || 'NOT SET'}`)
+    // console.log(`   - ReportGenerated: ${updatedRecord.reportGenerated}`)
+
+
     // === PROJECTOR STATUS UPDATE ===
     // Always update the projector's lastServiceAt and status when a service is completed
-    const projectorId = serviceRecord.projectorId
-    const serviceDate = updatedRecord.date || updatedRecord.endTime || new Date()
+    try {
+      const projectorId = serviceRecord.projectorId
+      const serviceDate = updatedRecord.date || updatedRecord.endTime || new Date()
 
-    // Calculate if the service date puts the projector in COMPLETED status
-    // (within 6 months from now)
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+      // console.log(`🔄 Updating projector ${projectorId} status...`)
 
-    const newStatus = serviceDate >= sixMonthsAgo ? 'COMPLETED' : 'PENDING'
+      // Calculate if the service date puts the projector in COMPLETED status
+      // (within 6 months from now)
+      const sixMonthsAgo = new Date()
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
 
-    await prisma.projector.update({
-      where: { id: projectorId },
-      data: {
-        lastServiceAt: serviceDate,
-        status: newStatus,
-      }
-    })
+      const newStatus = serviceDate >= sixMonthsAgo ? 'COMPLETED' : 'PENDING'
 
-    console.log(`✅ Updated projector ${projectorId}: lastServiceAt=${serviceDate.toISOString()}, status=${newStatus}`)
+      await prisma.projector.update({
+        where: { id: projectorId },
+        data: {
+          lastServiceAt: serviceDate,
+          status: newStatus,
+        }
+      })
+
+      // console.log(`✅ Successfully updated projector ${projectorId}:`)
+      // console.log(`   - lastServiceAt: ${serviceDate.toISOString()}`)
+      // console.log(`   - status: ${newStatus}`)
+    } catch (projectorError) {
+      console.error(`❌ Failed to update projector status:`, projectorError)
+      // Log but don't fail the request - service record was already updated
+    }
 
     return NextResponse.json({
       success: true,

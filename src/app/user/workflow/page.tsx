@@ -169,6 +169,9 @@ export default function WorkflowPage() {
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 cursor-pointer font-medium">
                   Log out
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 cursor-pointer font-medium">
+                  Admin Dashboard
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
