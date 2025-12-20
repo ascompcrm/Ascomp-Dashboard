@@ -170,11 +170,13 @@ export default function WorkflowPage() {
                    History / Services
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {user?.role == "ADMIN" ? (
+                  <DropdownMenuItem onClick={handleRedirect} className="cursor-pointer font-medium">
+                    Admin Dashboard
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 cursor-pointer font-medium">
                   Log out
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleRedirect} className="text-red-600 focus:text-red-600 cursor-pointer font-medium">
-                  Admin Dashboard
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
