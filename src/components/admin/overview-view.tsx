@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { useFormConfig } from "@/hooks/use-form-config"
 import { DynamicFormField } from "../workflow/dynamic-form-field"
@@ -355,54 +355,38 @@ const StatusSelectWithNote = ({
   form: any 
   required?: boolean
 }) => {
-  const { watch, register, setValue, getValues } = form
+  const { watch, register, setValue } = form
   const statusVal = (watch(field as keyof RecordWorkForm) as string)
   const status = statusVal || (options ? '' : 'OK')
   const noteField = `${field}Note` as keyof RecordWorkForm
   const currentNoteValue = (watch(noteField) as string) || ''
   
-  // Parse note value to split reasoning and custom text
-  // Doing this only once on mount or when noteDefault changes isn't enough if the form is reset dynamically
-  // We need an effect that runs when the form value changes externally (like from reset)
-  
   const initialChoice = noteDefault || noteOptions?.[0] || ''
   const [noteChoice, setNoteChoice] = useState<string>(initialChoice)
   const [noteText, setNoteText] = useState<string>('')
   
+  // Use ref to track if we've initialized from currentNoteValue
+  const initializedRef = useRef(false)
+  const prevStatusRef = useRef(status)
+  
+  // Parse currentNoteValue once on mount or when it changes externally (e.g., from form.reset)
+  // But only if we haven't manually set it ourselves
   useEffect(() => {
-    if (currentNoteValue) {
-        // Try to match with known options
-        if (noteOptions?.length) {
-            const matchedOption = noteOptions.find(opt => currentNoteValue.startsWith(opt) || currentNoteValue === opt)
-            if (matchedOption) {
-                setNoteChoice(matchedOption)
-                // Extract text part: "Option - Text" -> "Text"
-                // Or just "Option" -> ""
-                if (currentNoteValue.length > matchedOption.length) {
-                    // Check for separator
-                    const separator = " - "
-                    const idx = currentNoteValue.indexOf(separator)
-                    if (idx !== -1 && currentNoteValue.substring(0, idx) === matchedOption) {
-                        setNoteText(currentNoteValue.substring(idx + separator.length))
-                    } else if (currentNoteValue.startsWith(matchedOption + " ")) {
-                        // Maybe just space separated?
-                         setNoteText(currentNoteValue.substring(matchedOption.length + 1))
-                    } else {
-                        // Fallback
-                        setNoteText('') 
-                    }
-                } else {
-                    setNoteText('')
-                }
-            } else {
-                // If value exists but doesn't match an option, likely custom or legacy
-                // We might default to "Other" if available, or just keep as is
-                // For now, let's assume if it doesn't match, we might put it in text if "Other" is selected?
-                // Or just leave it be.
-            }
+    if (!initializedRef.current && currentNoteValue && noteOptions?.length) {
+      const matchedOption = noteOptions.find(opt => currentNoteValue.startsWith(opt) || currentNoteValue === opt)
+      if (matchedOption) {
+        setNoteChoice(matchedOption)
+        const separator = " - "
+        const idx = currentNoteValue.indexOf(separator)
+        if (idx !== -1 && currentNoteValue.substring(0, idx) === matchedOption) {
+          setNoteText(currentNoteValue.substring(idx + separator.length))
+        } else {
+          setNoteText('')
         }
+      }
+      initializedRef.current = true
     }
-  }, [currentNoteValue, noteOptions]) // Depend on the form value
+  }, [currentNoteValue, noteOptions])
 
   const statusRegister = register(field as keyof RecordWorkForm)
 
@@ -441,32 +425,17 @@ const StatusSelectWithNote = ({
     }
   }
 
-  // Clear on status change away from Issue
+  // Clear note when status changes from Issue to non-Issue
   useEffect(() => {
-    if (!isIssue) {
-      const currentNote = getValues(noteField)
-      const shouldResetChoice = noteChoice !== initialChoice
-      const shouldClearValue = Boolean(currentNote)
-
-      if (shouldResetChoice) setNoteChoice(initialChoice)
-      if (noteText) setNoteText('')
-      if (shouldClearValue) setValue(noteField, '', { shouldDirty: true })
-    }
-  }, [status, initialChoice, noteField, noteChoice, noteText, getValues, setValue, isIssue])
-
-  // Keep note field in sync when status is Issue
-  useEffect(() => {
-    if (isIssue && noteOptions?.length) {
-      setValue(noteField, formatNote(noteChoice, noteText), { shouldDirty: true })
-    }
-  }, [status, noteChoice, noteText, noteField, setValue, isIssue, noteOptions])
-
-  // Initialize choice on first render if missing
-  useEffect(() => {
-    if (!noteChoice && initialChoice) {
+    const statusChanged = prevStatusRef.current !== status
+    prevStatusRef.current = status
+    
+    if (statusChanged && !isIssue) {
       setNoteChoice(initialChoice)
+      setNoteText('')
+      setValue(noteField, '', { shouldDirty: true })
     }
-  }, [noteChoice, initialChoice])
+  }, [status, isIssue, noteField, setValue, initialChoice])
 
   return (
     <div>
