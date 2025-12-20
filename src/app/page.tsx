@@ -10,10 +10,8 @@ export default function Home() {
   const router = useRouter()
   const { user, isLoading } = useAuth()
 
-  // Client-side redirect based on user role if session exists
   useEffect(() => {
     if (!isLoading && user) {
-      // User is logged in, redirect based on role
       if (user.role === 'ADMIN') {
         router.push('/admin/dashboard')
       } else if (user.role === 'FIELD_WORKER') {
@@ -29,9 +27,7 @@ export default function Home() {
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>
   }
-
-  // Only render the landing page if user is not logged in
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center w-full p-4 sm:p-6 lg:p-10">
       <div className="w-full max-w-4xl">

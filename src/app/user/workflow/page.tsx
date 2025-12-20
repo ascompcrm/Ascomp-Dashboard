@@ -95,6 +95,10 @@ export default function WorkflowPage() {
     router.push(path as any)
   }
 
+  const handleRedirect = () => {
+    router.push("/admin/dashboard")
+  }
+
   const userInitials = useMemo(() => {
     if (!user) return "U"
     const base = user.name || user.email || "U"
@@ -169,7 +173,7 @@ export default function WorkflowPage() {
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 cursor-pointer font-medium">
                   Log out
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 cursor-pointer font-medium">
+                <DropdownMenuItem onClick={handleRedirect} className="text-red-600 focus:text-red-600 cursor-pointer font-medium">
                   Admin Dashboard
                 </DropdownMenuItem>
               </DropdownMenuContent>

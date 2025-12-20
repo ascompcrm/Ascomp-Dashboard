@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
 
         const safe = (val: any) => val ? String(val) : ''
 
+        // console.log("fullservice here", fullService)
+
         const reportData: any = {
             cinemaName: fullService.cinemaName || fullService.site?.name || "",
             date: fullService.date ? new Date(fullService.date).toLocaleDateString() : "",
@@ -87,8 +89,8 @@ export async function POST(request: NextRequest) {
                 acBlower: mapStatus(fullService.workDetails?.acBlowerVane, fullService.workDetails?.acBlowerVaneNote),
                 extractor: mapStatus(fullService.workDetails?.extractorVane, fullService.workDetails?.extractorVaneNote),
                 exhaustCFM: {
-                    status: safe(fullService.workDetails?.exhaustCfm),
-                    yesNo: fullService.workDetails?.exhaustCfm ? 'OK' : '',
+                    status: fullService.workDetails?.exhaustCfm,
+                    yesNo: fullService.workDetails?.exhaustCfmNote == null ? 'OK' : '',
                 },
                 lightEngine4Fans: mapStatus(fullService.workDetails?.lightEngineFans, fullService.workDetails?.lightEngineFansNote),
                 cardCageFans: mapStatus(fullService.workDetails?.cardCageFans, fullService.workDetails?.cardCageFansNote),
