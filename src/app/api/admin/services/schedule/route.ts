@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
       // fieldWorker.email
 
       await sendEmail({
-        to: "fahad.khan2216@gmail.com",
+        to: fieldWorker.email,
         subject: `New Service Assignment - ${site.siteName}`,
         html: `
           <!DOCTYPE html>

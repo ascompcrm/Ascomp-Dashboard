@@ -544,7 +544,8 @@ function EditServiceDialog({
   onSave: () => void
   initialData?: any
 }) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(false) // For save operation
+  const [isFetching, setIsFetching] = useState(false) // For initial data fetch
   
   // Image states
   const [beforeImages, setBeforeImages] = useState<UploadedImage[]>([])
@@ -630,7 +631,7 @@ function EditServiceDialog({
     if (open && (serviceId || initialData)) {
       const fetchService = async () => {
         try {
-          setLoading(true)
+          setIsFetching(true)
           let data;
           
           if (initialData) {
@@ -710,7 +711,7 @@ function EditServiceDialog({
         } catch (error) {
           console.error("Failed to fetch service:", error)
         } finally {
-          setLoading(false)
+          setIsFetching(false)
         }
       }
       fetchService()
@@ -794,11 +795,17 @@ function EditServiceDialog({
         throw new Error("Failed to update service record")
       }
 
-      onSave()
+      // Refresh parent data first (while dialog still shows "Saving...")
+      await onSave()
+      
+      // Show success toast (will be visible even after dialog closes)
+      toast.success("Service record updated successfully!")
+      
+      // Close dialog
       onOpenChange(false)
     } catch (error) {
       console.error("Failed to save:", error)
-      alert("Failed to save changes. Please try again.")
+      toast.error("Failed to save changes. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -879,7 +886,7 @@ function EditServiceDialog({
           <DialogDescription>Modified fields will be saved to the database.</DialogDescription>
         </DialogHeader>
         
-        {!loading && !configLoading ? (
+        {!isFetching && !configLoading ? (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
                 <FormSection title="Cinema Details">
                     {renderFieldsBySection("Cinema Details")}
@@ -1219,11 +1226,11 @@ function EditServiceDialog({
                 </Button>
                 </div>
             </form>
-        ) : (
+        ) : isFetching ? (
              <div className="flex items-center justify-center py-16">
                  <p className="text-gray-500">Loading service details...</p>
              </div>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   )
@@ -2466,7 +2473,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         }}
         serviceId={editingServiceId}
         initialData={editingServiceData}
-        onSave={() => {
+        onSave={async () => {
           // Refresh records after successful edit
           const fetchRecords = async () => {
             try {
@@ -2514,10 +2521,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
               console.error("Failed to refresh records:", error)
             }
           }
-          fetchRecords()
-          setEditDialogOpen(false)
-          setEditingServiceData(null)
-          setEditingServiceId(null)
+          await fetchRecords()
         }}
       />
 

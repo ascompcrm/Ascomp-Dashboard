@@ -166,14 +166,14 @@ export default function FieldWorkersView() {
                   </div>
 
                   {/* Additional Info */}
-                  <div className="space-y-2 pt-2 border-t border-border">
+                  {/* <div className="space-y-2 pt-2 border-t border-border">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-muted-foreground">Last Active</span>
                       <span className="text-foreground font-medium">
                         {new Date(worker.lastActiveDate).toLocaleDateString()}
                       </span>
                     </div>
-                  </div>
+                  </div> */}
                 </CardContent>
               </Card>
             ))

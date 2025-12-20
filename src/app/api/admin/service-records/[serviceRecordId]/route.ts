@@ -274,9 +274,7 @@ export async function PUT(
       }
 
       const boolFields = [
-        'reportGenerated', 'replacementRequired', 'focusBoresight',
-        'integratorPosition', 'spotsOnScreen', 'screenCropping',
-        'convergence', 'channelsChecked'
+        'reportGenerated', 'replacementRequired'
       ]
       if (boolFields.includes(key)) {
         if (typeof value === 'boolean') return value
@@ -425,9 +423,7 @@ export async function PUT(
         }
 
         const boolFields = [
-          'reportGenerated', 'replacementRequired', 'focusBoresight',
-          'integratorPosition', 'spotsOnScreen', 'screenCropping',
-          'convergence', 'channelsChecked'
+          'reportGenerated', 'replacementRequired'
         ]
         if (boolFields.includes(key)) {
           if (typeof value === 'string') {
