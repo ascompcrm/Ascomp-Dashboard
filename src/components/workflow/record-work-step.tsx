@@ -619,8 +619,19 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   }
 
   const uploadToBlob = async (file: File, category: 'before' | 'after' | 'broken'): Promise<UploadedImage> => {
+    // Compress image before upload (resize to max 1200x1200, JPEG 80% quality)
+    const { compressImage } = await import('@/lib/image-compression')
+    const compressedBlob = await compressImage(file, 1200, 1200, 0.8)
+    
+    // Create a new File from the compressed blob
+    const compressedFile = new File(
+      [compressedBlob], 
+      file.name.replace(/\.[^/.]+$/, '.jpg'), // Change extension to .jpg
+      { type: 'image/jpeg' }
+    )
+    
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', compressedFile)
     formData.append('folder', `${category}-images`)
 
     const response = await fetch('/api/blob/upload', {

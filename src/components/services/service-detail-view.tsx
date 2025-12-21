@@ -105,22 +105,32 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
     </div>
   )
 
-  const StatusTable = ({ items }: { items: { label: string; status: string }[] }) => (
-    <div className="w-full text-sm">
-      <div className="grid grid-cols-2 gap-4 border-b border-gray-200 pb-2 mb-2 font-semibold text-gray-600 uppercase text-xs tracking-wider">
-        <div>Item</div>
-        <div>Status</div>
+  const StatusTable = ({ items }: { items: { label: string; status: string | undefined }[] }) => {
+    // Extract the first word before parentheses (e.g., "OK (Part is Ok)" -> "OK")
+    const extractStatus = (status: string | undefined): string => {
+      if (!status) return ""
+      const safeStatus = status as string
+      const match = safeStatus.match(/^([^\s(]+)/)
+      return match ? (match[1] ?? safeStatus) : safeStatus
+    }
+
+    return (
+      <div className="w-full text-sm">
+        <div className="grid grid-cols-2 gap-4 border-b border-gray-200 pb-2 mb-2 font-semibold text-gray-600 uppercase text-xs tracking-wider">
+          <div>Item</div>
+          <div>Status</div>
+        </div>
+        {items.map((item, idx) => (
+          item.status ? (
+            <div key={idx} className="grid grid-cols-2 gap-4 py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors px-1 -mx-1 rounded">
+              <div className="text-gray-700">{item.label}</div>
+              <div className="font-medium text-black">{extractStatus(item.status)}</div>
+            </div>
+          ) : null
+        ))}
       </div>
-      {items.map((item, idx) => (
-        item.status ? (
-          <div key={idx} className="grid grid-cols-2 gap-4 py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors px-1 -mx-1 rounded">
-            <div className="text-gray-700">{item.label}</div>
-            <div className="font-medium text-black">{item.status}</div>
-          </div>
-        ) : null
-      ))}
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white w-full pb-12">
@@ -383,7 +393,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
               <ul className="list-disc list-inside text-sm text-black space-y-1">
                 {service.workDetails.recommendedParts.map((part: any, idx: number) => (
                   <li key={idx}>
-                    <span className="font-semibold">{part.partNumber || (part as any).part_number}</span> - {part.name}
+                    <span className="font-semibold">{part.partNumber || (part as any).part_number}</span> - {part.name ? part.name : part.description}
                   </li>
                 ))}
               </ul>

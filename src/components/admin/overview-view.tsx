@@ -556,6 +556,15 @@ function EditServiceDialog({
   
   // Recommended Parts states (simplified for Admin view)
   const [recommendedParts, setRecommendedParts] = useState<RecommendedPart[]>([])
+  
+  // Signature states
+  const [siteSignature, setSiteSignature] = useState<string | null>(null)
+  const [engineerSignature, setEngineerSignature] = useState<string | null>(null)
+  const [isDrawingSignature, setIsDrawingSignature] = useState(false)
+  const [currentSignatureType, setCurrentSignatureType] = useState<'site' | 'engineer' | null>(null)
+  const siteCanvasRef = useRef<HTMLCanvasElement>(null)
+  const engineerCanvasRef = useRef<HTMLCanvasElement>(null)
+  const [isDrawing, setIsDrawing] = useState(false)
 
   const { config: formConfig, loading: configLoading } = useFormConfig()
   
@@ -672,6 +681,19 @@ function EditServiceDialog({
               }
             }
 
+            // Parse and load signatures
+            if (data.signatures) {
+              try {
+                const sigs = typeof data.signatures === 'string' 
+                  ? JSON.parse(data.signatures) 
+                  : data.signatures
+                setSiteSignature(sigs?.site || sigs?.siteSignatureUrl || null)
+                setEngineerSignature(sigs?.engineer || sigs?.engineerSignatureUrl || null)
+              } catch (e) {
+                console.error("Failed to parse signatures", e)
+              }
+            }
+
             // Map data to form
             const formData = createInitialFormData()
             const formAny = formData as any
@@ -722,8 +744,140 @@ function EditServiceDialog({
         setAfterImages([])
         setBrokenImages([])
         setRecommendedParts([])
+        setSiteSignature(null)
+        setEngineerSignature(null)
     }
   }, [open, serviceId, initialData, reset])
+
+  // Canvas drawing functions
+  const startDrawing = (canvas: HTMLCanvasElement, e: React.MouseEvent | React.TouchEvent) => {
+    setIsDrawing(true)
+    const rect = canvas.getBoundingClientRect()
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    ctx.strokeStyle = '#000000'
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+
+    const x = 'touches' in e ? (e.touches[0]?.clientX ?? 0) - rect.left : e.clientX - rect.left
+    const y = 'touches' in e ? (e.touches[0]?.clientY ?? 0) - rect.top : e.clientY - rect.top
+
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+  }
+
+  const draw = (canvas: HTMLCanvasElement, e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing) return
+    e.preventDefault()
+
+    const rect = canvas.getBoundingClientRect()
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const x = 'touches' in e ? (e.touches[0]?.clientX ?? 0) - rect.left : e.clientX - rect.left
+    const y = 'touches' in e ? (e.touches[0]?.clientY ?? 0) - rect.top : e.clientY - rect.top
+
+    ctx.lineTo(x, y)
+    ctx.stroke()
+  }
+
+  const stopDrawing = () => {
+    setIsDrawing(false)
+  }
+
+  const clearCanvas = (canvas: HTMLCanvasElement | null) => {
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+  }
+
+  const saveSignature = async (type: 'site' | 'engineer') => {
+    const canvas = type === 'site' ? siteCanvasRef.current : engineerCanvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Check if canvas is empty
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const isEmpty = imageData.data.every(pixel => pixel === 0 || pixel === 255)
+    
+    if (isEmpty) {
+      toast.error('Please draw a signature first')
+      return
+    }
+
+    try {
+      setUploading(true)
+      
+      // Create a smaller canvas to reduce file size (50% of original)
+      const scaleFactor = 0.5
+      const tempCanvas = document.createElement('canvas')
+      tempCanvas.width = canvas.width * scaleFactor
+      tempCanvas.height = canvas.height * scaleFactor
+      const tempCtx = tempCanvas.getContext('2d')
+      
+      if (!tempCtx) {
+        throw new Error('Failed to create temporary canvas context')
+      }
+      
+      // Draw the signature scaled down
+      tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height)
+      
+      // Convert to PNG blob (keeps transparency, no black box)
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        tempCanvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob)
+            else reject(new Error('Failed to create blob'))
+          },
+          'image/png'
+        )
+      })
+
+      // Upload to blob storage with folder parameter
+      const formData = new FormData()
+      formData.append('file', blob, `signature-${type}-${Date.now()}.png`)
+      formData.append('folder', 'signatures')
+
+      const res = await fetch('/api/blob/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) throw new Error('Failed to upload signature')
+
+      const data = await res.json()
+      
+      // Update state with new signature URL
+      if (type === 'site') {
+        setSiteSignature(data.url)
+      } else {
+        setEngineerSignature(data.url)
+      }
+
+      toast.success(`${type === 'site' ? 'Site' : 'Engineer'} signature saved`)
+      setIsDrawingSignature(false)
+      setCurrentSignatureType(null)
+    } catch (error) {
+      console.error('Failed to save signature:', error)
+      toast.error('Failed to save signature')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeSignature = (type: 'site' | 'engineer') => {
+    if (type === 'site') {
+      setSiteSignature(null)
+    } else {
+      setEngineerSignature(null)
+    }
+    toast.success(`${type === 'site' ? 'Site' : 'Engineer'} signature removed`)
+  }
 
   const handleImageUpload = async (type: 'before' | 'after' | 'broken', files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -733,11 +887,26 @@ function EditServiceDialog({
       setImageError(null)
       const newImages: UploadedImage[] = []
 
+      // Import compression utility
+      const { compressImage } = await import('@/lib/image-compression')
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         if (!file) continue
+        
+        // Compress image before upload (resize to max 1200x1200, JPEG 80% quality)
+        const compressedBlob = await compressImage(file, 1200, 1200, 0.8)
+        
+        // Create a new File from the compressed blob
+        const compressedFile = new File(
+          [compressedBlob], 
+          file.name.replace(/\.[^/.]+$/, '.jpg'), // Change extension to .jpg
+          { type: 'image/jpeg' }
+        )
+        
         const formData = new FormData()
-        formData.append('file', file)
+        formData.append('file', compressedFile)
+        formData.append('folder', `${type}-images`)
 
         const res = await fetch('/api/blob/upload', {
           method: 'POST',
@@ -781,6 +950,11 @@ function EditServiceDialog({
         images: beforeImages,
         afterImages,
         brokenImages,
+        // Include signatures
+        signatures: {
+          site: siteSignature,
+          engineer: engineerSignature,
+        },
       }
 
       const res = await fetch(`/api/admin/service-records/${serviceId}`, {
@@ -1213,6 +1387,180 @@ function EditServiceDialog({
                             ))}
                             </div>
                         )}
+                        </div>
+                    </div>
+                </FormSection>
+
+                <FormSection title="Signatures">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Site Signature */}
+                        <div className="space-y-3">
+                            <p className="font-semibold text-sm text-black">Site Signature</p>
+                            {siteSignature ? (
+                                <div className="relative">
+                                    <div className="border-2 border-black p-4 bg-gray-50 rounded-md">
+                                        <img
+                                            src={siteSignature}
+                                            alt="Site Signature"
+                                            className="w-full h-32 object-contain"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeSignature('site')}
+                                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
+                                        title="Remove signature"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ) : isDrawingSignature && currentSignatureType === 'site' ? (
+                                <div className="space-y-2">
+                                    <canvas
+                                        ref={siteCanvasRef}
+                                        width={400}
+                                        height={150}
+                                        className="w-full border-2 border-black bg-white cursor-crosshair rounded-md"
+                                        onMouseDown={(e) => startDrawing(e.currentTarget, e)}
+                                        onMouseMove={(e) => draw(e.currentTarget, e)}
+                                        onMouseUp={stopDrawing}
+                                        onMouseLeave={stopDrawing}
+                                        onTouchStart={(e) => startDrawing(e.currentTarget, e)}
+                                        onTouchMove={(e) => draw(e.currentTarget, e)}
+                                        onTouchEnd={stopDrawing}
+                                    />
+                                    <div className="flex gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => clearCanvas(siteCanvasRef.current)}
+                                            className="border-2 border-black"
+                                        >
+                                            Clear
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={() => saveSignature('site')}
+                                            disabled={uploading}
+                                            className="bg-black text-white"
+                                        >
+                                            {uploading ? 'Saving...' : 'Save Signature'}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setIsDrawingSignature(false)
+                                                setCurrentSignatureType(null)
+                                                clearCanvas(siteCanvasRef.current)
+                                            }}
+                                            className="border-2 border-black"
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsDrawingSignature(true)
+                                        setCurrentSignatureType('site')
+                                    }}
+                                    className="w-full border-2 border-dashed border-black p-6 hover:bg-gray-50"
+                                >
+                                    + Add Site Signature
+                                </Button>
+                            )}
+                        </div>
+
+                        {/* Engineer Signature */}
+                        <div className="space-y-3">
+                            <p className="font-semibold text-sm text-black">Engineer Signature</p>
+                            {engineerSignature ? (
+                                <div className="relative">
+                                    <div className="border-2 border-black p-4 bg-gray-50 rounded-md">
+                                        <img
+                                            src={engineerSignature}
+                                            alt="Engineer Signature"
+                                            className="w-full h-32 object-contain"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeSignature('engineer')}
+                                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
+                                        title="Remove signature"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ) : isDrawingSignature && currentSignatureType === 'engineer' ? (
+                                <div className="space-y-2">
+                                    <canvas
+                                        ref={engineerCanvasRef}
+                                        width={400}
+                                        height={150}
+                                        className="w-full border-2 border-black bg-white cursor-crosshair rounded-md"
+                                        onMouseDown={(e) => startDrawing(e.currentTarget, e)}
+                                        onMouseMove={(e) => draw(e.currentTarget, e)}
+                                        onMouseUp={stopDrawing}
+                                        onMouseLeave={stopDrawing}
+                                        onTouchStart={(e) => startDrawing(e.currentTarget, e)}
+                                        onTouchMove={(e) => draw(e.currentTarget, e)}
+                                        onTouchEnd={stopDrawing}
+                                    />
+                                    <div className="flex gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => clearCanvas(engineerCanvasRef.current)}
+                                            className="border-2 border-black"
+                                        >
+                                            Clear
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={() => saveSignature('engineer')}
+                                            disabled={uploading}
+                                            className="bg-black text-white"
+                                        >
+                                            {uploading ? 'Saving...' : 'Save Signature'}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setIsDrawingSignature(false)
+                                                setCurrentSignatureType(null)
+                                                clearCanvas(engineerCanvasRef.current)
+                                            }}
+                                            className="border-2 border-black"
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsDrawingSignature(true)
+                                        setCurrentSignatureType('engineer')
+                                    }}
+                                    className="w-full border-2 border-dashed border-black p-6 hover:bg-gray-50"
+                                >
+                                    + Add Engineer Signature
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </FormSection>

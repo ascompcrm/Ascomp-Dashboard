@@ -5,38 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Maximize2, X } from 'lucide-react'
 
-const uploadSignature = async (dataUrl: string, role: 'engineer' | 'site') => {
-  const formData = new FormData()
-  formData.append('file', dataUrlToFile(dataUrl, `${role}-signature.png`))
-  formData.append('folder', 'signatures')
-
-  const res = await fetch('/api/blob/upload', {
-    method: 'POST',
-    body: formData,
-  })
-  if (!res.ok) {
-    const detail = await res.json().catch(() => ({ error: 'Upload failed' }))
-    throw new Error(detail.error || 'Upload failed')
-  }
-  return res.json()
-}
-
-const dataUrlToFile = (dataUrl: string, filename: string) => {
-  const [metaPart, dataPart] = dataUrl.split(',')
-  if (!metaPart || !dataPart) {
-    throw new Error('Invalid data URL')
-  }
-  const mimeMatch = metaPart.match(/:(.*?);/)
-  const mime = mimeMatch ? mimeMatch[1] : 'image/png'
-  const bstr = atob(dataPart)
-  let n = bstr.length
-  const u8arr = new Uint8Array(n)
-  while (n--) {
-    u8arr[n] = bstr.charCodeAt(n)
-  }
-  return new File([u8arr], filename, { type: mime })
-}
-
 export default function SignatureStep({ data, onNext, onBack }: any) {
   const [siteInChargeSignature, setSiteInChargeSignature] = useState<string | null>(null)
   const [engineerSignature, setEngineerSignature] = useState<string | null>(null)
@@ -196,13 +164,62 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
         ? engineerCanvasRef.current
         : siteInChargeCanvasRef.current
     if (canvas) {
-      const signature = canvas.toDataURL()
       try {
         setUploading(true)
         if (fromFullscreen) {
           copyFullscreenToMain(isEngineer)
         }
-        const uploaded = await uploadSignature(signature, isEngineer ? 'engineer' : 'site')
+        
+        // Create a smaller canvas to reduce file size (50% of original)
+        const scaleFactor = 0.5
+        const tempCanvas = document.createElement('canvas')
+        tempCanvas.width = canvas.width * scaleFactor
+        tempCanvas.height = canvas.height * scaleFactor
+        const tempCtx = tempCanvas.getContext('2d')
+        
+        if (!tempCtx) {
+          throw new Error('Failed to create temporary canvas context')
+        }
+        
+        // Draw the signature scaled down
+        tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height)
+        
+        // Convert to PNG blob (keeps transparency, no black box)
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          tempCanvas.toBlob(
+            (blob) => {
+              if (blob) resolve(blob)
+              else reject(new Error('Failed to create blob'))
+            },
+            'image/png'
+          )
+        })
+
+        // Create data URL for local storage
+        const reader = new FileReader()
+        const signature = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(blob)
+        })
+
+        // Upload signature
+        const formData = new FormData()
+        formData.append('file', blob, `signature-${isEngineer ? 'engineer' : 'site'}-${Date.now()}.png`)
+        formData.append('folder', 'signatures')
+
+        const res = await fetch('/api/blob/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({ error: 'Upload failed' }))
+          throw new Error(detail.error || 'Upload failed')
+        }
+
+        const uploaded = await res.json()
+
         if (isEngineer) {
           setEngineerSignature(signature)
           setEngineerSignatureUrl(uploaded.url)
@@ -212,6 +229,7 @@ export default function SignatureStep({ data, onNext, onBack }: any) {
           setSiteSignatureUrl(uploaded.url)
           localStorage.setItem('siteInChargeSignature', signature)
         }
+        
         if (fromFullscreen) {
           setFullscreenCanvas(null)
         }
