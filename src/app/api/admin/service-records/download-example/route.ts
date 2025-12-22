@@ -8,12 +8,50 @@ export async function GET() {
     // Path to the example Excel file
     const excelPath = path.join(process.cwd(), "excel", "Project_dets.xlsx")
 
+    // Check if file exists
     if (!fs.existsSync(excelPath)) {
-      return NextResponse.json({ error: "Example Excel file not found" }, { status: 404 })
+      console.error(`Excel file not found at path: ${excelPath}`)
+      return NextResponse.json({
+        error: "Example Excel file not found",
+        path: excelPath
+      }, { status: 404 })
     }
 
-    // Read the Excel file
-    const workbook = xlsx.readFile(excelPath)
+    // Check file permissions
+    try {
+      fs.accessSync(excelPath, fs.constants.R_OK)
+    } catch (accessError) {
+      console.error(`Cannot read Excel file at ${excelPath}:`, accessError)
+      return NextResponse.json({
+        error: "Cannot read Excel file - permission denied",
+        path: excelPath
+      }, { status: 403 })
+    }
+
+    // Read the Excel file as buffer
+    let fileBuffer: Buffer
+    try {
+      fileBuffer = fs.readFileSync(excelPath)
+    } catch (readError) {
+      console.error(`Error reading Excel file:`, readError)
+      return NextResponse.json({
+        error: "Failed to read Excel file",
+        details: readError instanceof Error ? readError.message : String(readError)
+      }, { status: 500 })
+    }
+
+    // Parse the buffer with xlsx
+    let workbook: xlsx.WorkBook
+    try {
+      workbook = xlsx.read(fileBuffer, { type: 'buffer' })
+    } catch (parseError) {
+      console.error(`Error parsing Excel file:`, parseError)
+      return NextResponse.json({
+        error: "Failed to parse Excel file",
+        details: parseError instanceof Error ? parseError.message : String(parseError)
+      }, { status: 500 })
+    }
+
     const sheet = workbook.Sheets["Data"]
 
     if (!sheet) {
@@ -23,7 +61,7 @@ export async function GET() {
     // Create a new workbook with just the headers (first row)
     const headerRow: any = {}
     const range = xlsx.utils.decode_range(sheet["!ref"] || "A1")
-    
+
     // Get headers from first row
     for (let col = range.s.c; col <= range.e.c; col++) {
       const cellAddress = xlsx.utils.encode_cell({ r: 0, c: col })
