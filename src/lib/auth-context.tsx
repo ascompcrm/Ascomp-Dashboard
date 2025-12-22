@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<any>
   logout: () => Promise<void>
   isAuthenticated: boolean
 }
@@ -25,38 +25,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, isPending } = authClient.useSession()
 
   const login = async (email: string, password: string) => {
-    const { error } = await authClient.signIn.email({
+    const result = await authClient.signIn.email({
       email,
       password,
-      callbackURL: user?.role === "ADMIN" ? "/admin/dashboard" : "/user/workflow",
     })
 
-    if (error) {
-      throw error
+    if (result.error) {
+      throw result.error
     }
+
+    return result.data
   }
 
 
 
-    // console.log("session here", session)
+  // console.log("session here", session)
 
   const logout = async () => {
-    try {
-      await authClient.signOut()
-      window.location.href = "/login"
-    } catch (error) {
-      console.error("Logout failed:", error)
-    }
+    // Sign out from better-auth FIRST (clears cookies properly)
+    await authClient.signOut()
+
+    // Clear specific localStorage items (not all, to avoid interfering with auth)
+    localStorage.removeItem('workflowData')
+    localStorage.removeItem('workflowStep')
+    localStorage.removeItem('siteInChargeSignature')
+    localStorage.removeItem('engineerSignature')
+    localStorage.removeItem('serviceReports')
+
+    // Redirect to login page with full page refresh
+    window.location.href = "/login"
   }
 
   const user: User | null = session?.user
     ? {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-        role: (session.user as any).role as 'ADMIN' | 'FIELD_WORKER' | undefined,
-      }
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      image: session.user.image,
+      role: (session.user as any).role as 'ADMIN' | 'FIELD_WORKER' | undefined,
+    }
     : null
 
   return (

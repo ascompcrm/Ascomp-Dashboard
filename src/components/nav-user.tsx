@@ -24,9 +24,11 @@ export function NavUser({
 
   const handleLogout = () => {
     if (onLogout) {
+      // Call the provided logout function (from auth-context)
+      // which handles all cleanup and redirect
       onLogout()
     } else {
-      localStorage.removeItem('user')
+      // Fallback: just navigate to home
       router.push('/')
     }
   }

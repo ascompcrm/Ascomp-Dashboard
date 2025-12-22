@@ -22,11 +22,8 @@ export default function LoginForm() {
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      if (user.role === 'ADMIN') {
-        router.push('/admin/dashboard')
-      } else if (user.role === 'FIELD_WORKER') {
-        router.push('/user/workflow')
-      }
+      const redirectPath = user.role === 'ADMIN' ? '/admin/dashboard' : '/user/workflow'
+      router.replace(redirectPath)
     }
   }, [user, authLoading, router])
 
@@ -91,16 +88,16 @@ export default function LoginForm() {
       return
     }
     setIsLoading(true)
-    
+
     try {
-      const res = await login(email, password)
-      // @ts-ignore
-      if (res.user?.role === "ADMIN") {
-        window.location.href = "/admin/dashboard"
-      }
-      // @ts-ignore 
-      else if (res.user?.role === "FIELD_WORKER") {
-        window.location.href = "/user/workflow"
+      // Perform login and get the session data
+      const data = await login(email, password)
+
+      // Redirect based on user role from the returned data
+      if (data?.user?.role === 'ADMIN') {
+        router.replace('/admin/dashboard')
+      } else {
+        router.replace('/user/workflow')
       }
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.')
@@ -140,13 +137,12 @@ export default function LoginForm() {
                   onChange={handleEmailChange}
                   onBlur={handleEmailBlur}
                   placeholder="Enter your email"
-                  className={`border-2 w-full text-black transition-colors ${
-                    emailError && touched.email
-                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                      : touched.email && !emailError && email
+                  className={`border-2 w-full text-black transition-colors ${emailError && touched.email
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                    : touched.email && !emailError && email
                       ? 'border-green-500 focus:border-green-500'
                       : 'border-black focus:border-black'
-                  }`}
+                    }`}
                 />
                 {emailError && touched.email && (
                   <p className="mt-1 text-xs text-red-600">{emailError}</p>
@@ -162,13 +158,12 @@ export default function LoginForm() {
                   onChange={handlePasswordChange}
                   onBlur={handlePasswordBlur}
                   placeholder="Enter your password"
-                  className={`border-2 w-full text-black transition-colors ${
-                    passwordError && touched.password
-                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                      : touched.password && !passwordError && password
+                  className={`border-2 w-full text-black transition-colors ${passwordError && touched.password
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                    : touched.password && !passwordError && password
                       ? 'border-green-500 focus:border-green-500'
                       : 'border-black focus:border-black'
-                  }`}
+                    }`}
                 />
                 {passwordError && touched.password && (
                   <p className="mt-1 text-xs text-red-600">{passwordError}</p>

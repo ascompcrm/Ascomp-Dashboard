@@ -17,6 +17,7 @@ export const auth: any = betterAuth<BetterAuthOptions>({
 			role: {
 				type: "string",
 				required: false,
+				returned: true,
 			},
 		},
 	},

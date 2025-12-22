@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
 
 export default function GenerateReportStep({ data, onBack }: any) {
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
@@ -182,13 +184,13 @@ export default function GenerateReportStep({ data, onBack }: any) {
     try {
       // Import the helper dynamically
       const { constructAndGeneratePDF } = await import('@/lib/pdf-helper')
-      
+
       const serviceId = data.selectedService?.id
       if (!serviceId) throw new Error("Service ID missing")
 
       // Use the global helper to fetch data and generate PDF
       const pdfBytes = await constructAndGeneratePDF(serviceId)
-      
+
       const blob = new Blob([pdfBytes as any], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -198,20 +200,20 @@ export default function GenerateReportStep({ data, onBack }: any) {
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
-      
+
       // Save summary to local storage (keep existing logic)
       const issues = getIssueEntries()
       saveReportToLocalStorage(issues)
-      
+
       // Clear workflow data and reset to first step BEFORE redirecting
       localStorage.removeItem('workflowData')
       localStorage.removeItem('workflowStep')
       localStorage.removeItem('siteInChargeSignature')
       localStorage.removeItem('engineerSignature')
-      
-      // Small delay to ensure PDF download starts, then redirect immediately
+
+      // Small delay to ensure PDF download starts, then navigate smoothly
       setTimeout(() => {
-        window.location.href = '/user/workflow'
+        router.replace('/user/workflow')
       }, 500)
     } catch (error) {
       console.error('Error generating PDF:', error)
@@ -226,8 +228,8 @@ export default function GenerateReportStep({ data, onBack }: any) {
     <div>
       <h2 className="text-lg sm:text-xl font-bold text-black mb-2">Generate Report</h2>
       <p className="text-sm text-gray-700 mb-4">
-        {isSubmitted 
-          ? "Report submitted successfully! Please download the PDF to finish." 
+        {isSubmitted
+          ? "Report submitted successfully! Please download the PDF to finish."
           : "Review the details and submit the report."}
       </p>
 
@@ -251,12 +253,12 @@ export default function GenerateReportStep({ data, onBack }: any) {
           <h3 className="font-bold text-black mb-3 text-sm sm:text-base">Site Summary</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
             <div>
-            <span className="font-semibold">Site:</span>{' '}
-            <span className="wrap-break-word">{data.selectedService?.site || '—'}</span>
+              <span className="font-semibold">Site:</span>{' '}
+              <span className="wrap-break-word">{data.selectedService?.site || '—'}</span>
             </div>
             <div>
-            <span className="font-semibold">Address:</span>{' '}
-            <span className="wrap-break-word">{data.selectedService?.address || data.workDetails?.address || '—'}</span>
+              <span className="font-semibold">Address:</span>{' '}
+              <span className="wrap-break-word">{data.selectedService?.address || data.workDetails?.address || '—'}</span>
             </div>
             <div>
               <span className="font-semibold">Contact:</span> {data.selectedService?.contactDetails || data.workDetails?.contactDetails || '—'}

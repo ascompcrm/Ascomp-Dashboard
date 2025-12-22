@@ -12,11 +12,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      if (user.role === 'ADMIN') {
-        router.push('/admin/dashboard')
-      } else if (user.role === 'FIELD_WORKER') {
-        router.push('/user/workflow')
-      }
+      const redirectPath = user.role === 'ADMIN' ? '/admin/dashboard' : '/user/workflow'
+      router.replace(redirectPath)
     }
   }, [user, isLoading, router])
 
@@ -27,7 +24,7 @@ export default function Home() {
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>
   }
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center w-full p-4 sm:p-6 lg:p-10">
       <div className="w-full max-w-4xl">
