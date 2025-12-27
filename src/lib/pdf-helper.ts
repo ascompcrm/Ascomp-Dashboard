@@ -195,21 +195,21 @@ export async function constructAndGeneratePDF(serviceId: string) {
             if (fullService.workDetails?.photosDriveLink) {
                 return fullService.workDetails.photosDriveLink;
             }
-            
+
             // Check if images arrays have any data
-            const hasImages = 
+            const hasImages =
                 (Array.isArray(fullService.images) && fullService.images.length > 0) ||
                 (Array.isArray(fullService.afterImages) && fullService.afterImages.length > 0) ||
                 (Array.isArray(fullService.brokenImages) && fullService.brokenImages.length > 0);
-            
+
             if (hasImages) {
                 // Generate link to images page with full domain from CORS_ORIGIN
                 const baseUrl = process.env.CORS_ORIGIN || '';
-                const imagesPath = `/admin/services/${serviceId}/images`;
+                const imagesPath = `/share/service-images/${serviceId}`;
 
                 return baseUrl ? `${baseUrl}${imagesPath}` : imagesPath;
             }
-            
+
             return undefined;
         })(),
     }

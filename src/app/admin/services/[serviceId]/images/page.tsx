@@ -68,11 +68,11 @@ export default function ServiceImagesPage({ params }: ImagesPageProps) {
         try {
           const response = await fetch(imageUrl)
           if (!response.ok) throw new Error(`Failed to fetch image ${index + 1}`)
-          
+
           const blob = await response.blob()
           const extension = imageUrl.split('.').pop()?.split('?')[0] || 'jpg'
           const fileName = `${sectionName}_${index + 1}.${extension}`
-          
+
           zip.file(fileName, blob)
         } catch (err) {
           console.error(`Error fetching image ${index + 1}:`, err)
@@ -88,11 +88,11 @@ export default function ServiceImagesPage({ params }: ImagesPageProps) {
       const url = URL.createObjectURL(zipBlob)
       const link = document.createElement('a')
       link.href = url
-      
+
       const serviceName = serviceData?.cinemaName?.replace(/\s+/g, '_') || 'Service'
       const serviceNum = serviceData?.serviceNumber || serviceId
       link.download = `${serviceName}_${serviceNum}_${sectionName}.zip`
-      
+
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
