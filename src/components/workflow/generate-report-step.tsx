@@ -195,7 +195,7 @@ export default function GenerateReportStep({ data, onBack }: any) {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `Service_Report_${data.workDetails?.projectorModel?.replace(/\s+/g, '_') || 'Report'}_${Date.now()}.pdf`
+      link.download = `${data.workDetails?.projectorSerialNumber || 'Service_Report'}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

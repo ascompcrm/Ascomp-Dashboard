@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
             html: emailContent.body,
             attachments: [
                 {
-                    filename: `Service_Report_${fullService.serviceNumber || serviceId}.pdf`,
+                    filename: `${fullService.projector?.serialNo || 'Service_Report'}.pdf`,
                     content: pdfBase64,
                     encoding: 'base64',
                     contentType: 'application/pdf',

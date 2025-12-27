@@ -53,21 +53,21 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
     try {
       setIsGeneratingPdf(true)
       const { constructAndGeneratePDF } = await import('@/lib/pdf-helper')
-      
+
       if (!service.id) {
-          console.error("Service ID missing for PDF generation")
-          toast.error("Service ID missing for PDF generation")
-          setIsGeneratingPdf(false)
-          return
+        console.error("Service ID missing for PDF generation")
+        toast.error("Service ID missing for PDF generation")
+        setIsGeneratingPdf(false)
+        return
       }
 
       const pdfBytes = await constructAndGeneratePDF(service.id)
-      
+
       const blob = new Blob([pdfBytes as any], { type: 'application/pdf' })
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `Service_Report_${service.serviceNumber}.pdf`
+      link.download = `${service.projector?.serialNo || 'Service_Report'}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -206,7 +206,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
           </Section>
 
           <Section title="Environment & Lamp">
-             <GridRow items={[
+            <GridRow items={[
               { label: "Environment", value: service.workDetails?.projectorPlacementEnvironment },
               { label: "Lamp Make", value: service.workDetails?.lampMakeModel },
               { label: "Lamp Total Hrs", value: service.workDetails?.lampTotalRunningHours },
@@ -258,7 +258,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
           </Section>
 
           <Section title="Light Engine & Color">
-             <StatusTable items={[
+            <StatusTable items={[
               { label: "White", status: service.workDetails?.lightEngineWhite },
               { label: "Red", status: service.workDetails?.lightEngineRed },
               { label: "Green", status: service.workDetails?.lightEngineGreen },
@@ -271,7 +271,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
         {/* Consumables & Coolant */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <Section title="Consumables">
-             <StatusTable items={[
+            <StatusTable items={[
               { label: "Air Intake/Rad", status: service.workDetails?.AirIntakeLadRad },
             ]} />
           </Section>
@@ -285,7 +285,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
         {/* Measurements & Calibration */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Section title="Screen & Image">
-             <GridRow items={[
+            <GridRow items={[
               { label: "Throw Dist", value: service.workDetails?.throwDistance },
               { label: "Screen Make", value: service.workDetails?.screenMake },
               { label: "Scope H", value: service.workDetails?.screenHeight },
@@ -297,7 +297,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
               { label: "fL Right", value: service.workDetails?.flRight },
             ]} />
             <div className="mt-4 pt-4 border-t border-gray-200">
-               <StatusTable items={[
+              <StatusTable items={[
                 { label: "Focus/Boresight", status: service.workDetails?.focusBoresight ? "Yes" : "No" },
                 { label: "Integrator Pos", status: service.workDetails?.integratorPosition ? "Yes" : "No" },
                 { label: "Spots", status: service.workDetails?.spotsOnScreen ? "Yes" : "No" },
@@ -359,7 +359,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
           </Section>
 
           <Section title="Air & Voltage">
-             <GridRow items={[
+            <GridRow items={[
               { label: "Pollution Lvl", value: service.workDetails?.airPollutionLevel },
               { label: "Temp", value: service.workDetails?.temperature },
               { label: "Humidity", value: service.workDetails?.humidity },
@@ -369,14 +369,14 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
               { label: "PM2.5", value: service.workDetails?.pm2_5 },
               { label: "PM10", value: service.workDetails?.pm10 },
             ]} />
-             <div className="mt-4 pt-4 border-t border-gray-200">
-               <h4 className="font-bold text-xs mb-2 uppercase tracking-wide">Voltage</h4>
-               <GridRow items={[
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <h4 className="font-bold text-xs mb-2 uppercase tracking-wide">Voltage</h4>
+              <GridRow items={[
                 { label: "P vs N", value: service.workDetails?.pvVsN },
                 { label: "P vs E", value: service.workDetails?.pvVsE },
                 { label: "N vs E", value: service.workDetails?.nvVsE },
               ]} />
-             </div>
+            </div>
           </Section>
         </div>
 
@@ -387,7 +387,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
               <p className="text-sm text-black whitespace-pre-wrap leading-relaxed">{service.remarks}</p>
             </Section>
           )}
-          
+
           {service.workDetails?.recommendedParts && service.workDetails.recommendedParts.length > 0 && (
             <Section title="Recommended Parts">
               <ul className="list-disc list-inside text-sm text-black space-y-1">
@@ -421,7 +421,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
               </div>
             </Section>
           )}
-          
+
           {service.afterImages && service.afterImages.length > 0 && (
             <Section title={`After Images (${service.afterImages.length})`}>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
@@ -460,36 +460,36 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
             </Section>
           )}
         </div>
-        
+
         {/* Signatures */}
         <div className="flex justify-between items-end border-t-2 border-dashed border-gray-300 pt-8 mt-12 pb-8">
-           <div className="text-center">
-              {service.signatures?.site || (service.signatures as any)?.siteSignatureUrl ? (
-                <div className="relative w-40 h-20 mb-3 mx-auto">
-                   <Image 
-                     src={service.signatures?.site || (service.signatures as any)?.siteSignatureUrl} 
-                     alt="Site Signature" 
-                     fill 
-                     className="object-contain" 
-                   />
-                </div>
-              ) : <div className="h-20 w-40 mb-3 bg-gray-50 border border-dashed border-gray-300 mx-auto rounded flex items-center justify-center text-gray-400 text-xs">No Signature</div>}
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-600">Client Signature</p>
-           </div>
-           
-           <div className="text-center">
-              {service.signatures?.engineer || (service.signatures as any)?.engineerSignatureUrl ? (
-                <div className="relative w-40 h-20 mb-3 mx-auto">
-                   <Image 
-                     src={service.signatures?.engineer || (service.signatures as any)?.engineerSignatureUrl} 
-                     alt="Engineer Signature" 
-                     fill 
-                     className="object-contain" 
-                   />
-                </div>
-              ) : <div className="h-20 w-40 mb-3 bg-gray-50 border border-dashed border-gray-300 mx-auto rounded flex items-center justify-center text-gray-400 text-xs">No Signature</div>}
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-600">Engineer Signature</p>
-           </div>
+          <div className="text-center">
+            {service.signatures?.site || (service.signatures as any)?.siteSignatureUrl ? (
+              <div className="relative w-40 h-20 mb-3 mx-auto">
+                <Image
+                  src={service.signatures?.site || (service.signatures as any)?.siteSignatureUrl}
+                  alt="Site Signature"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            ) : <div className="h-20 w-40 mb-3 bg-gray-50 border border-dashed border-gray-300 mx-auto rounded flex items-center justify-center text-gray-400 text-xs">No Signature</div>}
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-600">Client Signature</p>
+          </div>
+
+          <div className="text-center">
+            {service.signatures?.engineer || (service.signatures as any)?.engineerSignatureUrl ? (
+              <div className="relative w-40 h-20 mb-3 mx-auto">
+                <Image
+                  src={service.signatures?.engineer || (service.signatures as any)?.engineerSignatureUrl}
+                  alt="Engineer Signature"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            ) : <div className="h-20 w-40 mb-3 bg-gray-50 border border-dashed border-gray-300 mx-auto rounded flex items-center justify-center text-gray-400 text-xs">No Signature</div>}
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-600">Engineer Signature</p>
+          </div>
         </div>
       </div>
     </div>

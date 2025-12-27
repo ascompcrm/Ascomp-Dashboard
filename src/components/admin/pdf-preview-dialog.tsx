@@ -17,6 +17,7 @@ export default function PdfPreviewDialog({ open, onOpenChange, serviceRecordId }
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null)
+  const [serviceData, setServiceData] = useState<any>(null)
 
   const buildPdfPayloadFromService = useCallback((service: any): MaintenanceReportData => {
     const mapStatus = (value: string | undefined | null, note?: string | undefined | null) => {
@@ -246,6 +247,7 @@ export default function PdfPreviewDialog({ open, onOpenChange, serviceRecordId }
         throw new Error("Failed to fetch service record")
       }
       const { service } = await response.json()
+      setServiceData(service)
 
       // Build PDF payload
       const pdfData = buildPdfPayloadFromService(service)
@@ -291,7 +293,7 @@ export default function PdfPreviewDialog({ open, onOpenChange, serviceRecordId }
     const url = URL.createObjectURL(pdfBlob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `Service_Report_${serviceRecordId}.pdf`
+    link.download = `${serviceData?.projector?.serialNo || serviceData?.projectorSerial || 'Service_Report'}.pdf`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)

@@ -40,12 +40,12 @@ function PreviewDownloadDialog({
             const json = await res.json()
             const service = json.service || json
             setServiceData(service)
-            
+
             // Set default email if site has contact email
             if (service.contactDetails && service.contactDetails.includes("@")) {
               setEmail(service.contactDetails)
             }
-            
+
             // Generate default email content
             generateDefaultEmailContent(service)
           }
@@ -65,7 +65,7 @@ function PreviewDownloadDialog({
       month: "long",
       day: "numeric"
     }) : "N/A"
-    
+
     setEmailSubject(`Projector Service Report - ${cinema} - ${serviceNum}`)
     setEmailBody(`Dear Team,
 
@@ -96,15 +96,15 @@ www.ascompinc.co.in`)
       setLoading(true)
       const { constructAndGeneratePDF } = await import('@/lib/pdf-helper')
       const pdfBytes = await constructAndGeneratePDF(serviceId)
-      
+
       const blob = new Blob([pdfBytes as any], { type: "application/pdf" })
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `Service_Report_${serviceData?.serviceNumber ?? serviceId}.pdf`
+      link.download = `${serviceData?.projector?.serialNo || serviceData?.projectorSerial || 'Service_Report'}.pdf`
       link.click()
       window.URL.revokeObjectURL(url)
-      
+
       toast.success("PDF downloaded successfully")
     } catch (error) {
       console.error("Failed to generate PDF:", error)
@@ -116,12 +116,12 @@ www.ascompinc.co.in`)
 
   const handleShowEmailPreview = () => {
     setEmailError("")
-    
+
     if (!email || !validateEmail(email)) {
       setEmailError("Please enter a valid email address")
       return
     }
-    
+
     setShowEmailPreview(true)
   }
 
@@ -162,7 +162,7 @@ www.ascompinc.co.in`)
       toast.success("Email sent successfully", {
         description: `Service report has been sent to ${email}`,
       })
-      
+
       // Reset email preview
       setShowEmailPreview(false)
     } catch (error) {
@@ -250,7 +250,7 @@ www.ascompinc.co.in`)
                 {/* Email Preview & Edit */}
                 <div className="space-y-4">
                   {/* <div className="bg-blue-50 border border-blue-200 rounded-md p-3"> */}
-                    {/* <p className="text-sm text-blue-900">
+                  {/* <p className="text-sm text-blue-900">
                       <strong>✉️ Email Preview</strong> - Review and edit the email content below before sending.
                     </p> */}
                   {/* </div> */}
@@ -288,15 +288,15 @@ www.ascompinc.co.in`)
 
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
                     <p className="text-xs text-gray-600">
-                      <strong>📎 Attachment:</strong> Service_Report_{serviceData.serviceNumber}.pdf
+                      <strong>📎 Attachment:</strong> {serviceData?.projector?.serialNo || serviceData?.projectorSerial || 'Service_Report'}.pdf
                     </p>
                   </div>
                 </div>
 
                 {/* Preview Action Buttons */}
                 <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setShowEmailPreview(false)}
                     disabled={sendingEmail}
                   >

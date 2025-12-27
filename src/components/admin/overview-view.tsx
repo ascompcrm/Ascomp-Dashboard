@@ -352,7 +352,7 @@ const StatusSelectWithNote = ({
   noteOptions?: string[]
   noteDefault?: string
   issueValues?: string[]
-  form: any 
+  form: any
   required?: boolean
 }) => {
   const { watch, register, setValue } = form
@@ -360,15 +360,15 @@ const StatusSelectWithNote = ({
   const status = statusVal || (options ? '' : 'OK')
   const noteField = `${field}Note` as keyof RecordWorkForm
   const currentNoteValue = (watch(noteField) as string) || ''
-  
+
   const initialChoice = noteDefault || noteOptions?.[0] || ''
   const [noteChoice, setNoteChoice] = useState<string>(initialChoice)
   const [noteText, setNoteText] = useState<string>('')
-  
+
   // Use ref to track if we've initialized from currentNoteValue
   const initializedRef = useRef(false)
   const prevStatusRef = useRef(status)
-  
+
   // Parse currentNoteValue once on mount or when it changes externally (e.g., from form.reset)
   // But only if we haven't manually set it ourselves
   useEffect(() => {
@@ -394,12 +394,12 @@ const StatusSelectWithNote = ({
     options && options.length
       ? options
       : [
-          { value: 'OK', label: 'OK', description: 'Part is OK' },
-          { value: 'YES', label: 'YES', description: 'Needs replacement' },
-        ]
+        { value: 'OK', label: 'OK', description: 'Part is OK' },
+        { value: 'YES', label: 'YES', description: 'Needs replacement' },
+      ]
 
   const isIssue = (issueValues && issueValues.length > 0)
-    ? issueValues.includes(status) 
+    ? issueValues.includes(status)
     : (status === 'YES' || status === 'Concern' || status.startsWith('YES') || status.includes('Concern'))
 
   const formatNote = (choice: string, text: string) => {
@@ -429,7 +429,7 @@ const StatusSelectWithNote = ({
   useEffect(() => {
     const statusChanged = prevStatusRef.current !== status
     prevStatusRef.current = status
-    
+
     if (statusChanged && !isIssue) {
       setNoteChoice(initialChoice)
       setNoteText('')
@@ -536,7 +536,7 @@ function EditServiceDialog({
   onOpenChange,
   serviceId,
   onSave,
-  initialData, 
+  initialData,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -546,17 +546,17 @@ function EditServiceDialog({
 }) {
   const [loading, setLoading] = useState(false) // For save operation
   const [isFetching, setIsFetching] = useState(false) // For initial data fetch
-  
+
   // Image states
   const [beforeImages, setBeforeImages] = useState<UploadedImage[]>([])
   const [afterImages, setAfterImages] = useState<UploadedImage[]>([])
   const [brokenImages, setBrokenImages] = useState<UploadedImage[]>([])
   const [uploading, setUploading] = useState(false)
   const [imageError, setImageError] = useState<string | null>(null)
-  
+
   // Recommended Parts states (simplified for Admin view)
   const [recommendedParts, setRecommendedParts] = useState<RecommendedPart[]>([])
-  
+
   // Signature states
   const [siteSignature, setSiteSignature] = useState<string | null>(null)
   const [engineerSignature, setEngineerSignature] = useState<string | null>(null)
@@ -567,11 +567,11 @@ function EditServiceDialog({
   const [isDrawing, setIsDrawing] = useState(false)
 
   const { config: formConfig, loading: configLoading } = useFormConfig()
-  
+
   const form = useForm<RecordWorkForm>({
     defaultValues: createInitialFormData(),
   })
-  
+
   const { register, handleSubmit, reset, watch } = form
 
   // Recommended Parts selection Logic
@@ -594,6 +594,81 @@ function EditServiceDialog({
     }
     loadPartsData()
   }, [])
+
+  // State for dropdown options
+  const [softwareVersions, setSoftwareVersions] = useState<string[]>([])
+  const [lampModelsData, setLampModelsData] = useState<Array<{ projector_model: string; Models: string[] }>>([])
+  const [lampModels, setLampModels] = useState<string[]>([])
+  const [contentPlayers, setContentPlayers] = useState<string[]>([])
+
+  // Load software versions
+  useEffect(() => {
+    const loadSoftwareVersions = async () => {
+      try {
+        const response = await fetch('/api/admin/data-files/software')
+        if (!response.ok) return
+        const data = await response.json()
+        setSoftwareVersions(data.values || [])
+      } catch (error) {
+        console.error('Failed to load software versions:', error)
+      }
+    }
+    loadSoftwareVersions()
+  }, [])
+
+  // Load lamp models data structure
+  useEffect(() => {
+    const loadLampModelsData = async () => {
+      try {
+        const response = await fetch('/api/admin/data-files/lamp-models')
+        if (!response.ok) return
+        const data = await response.json()
+        setLampModelsData(data.data || [])
+      } catch (error) {
+        console.error('Failed to load lamp models data:', error)
+      }
+    }
+    loadLampModelsData()
+  }, [])
+
+  // Load content players
+  useEffect(() => {
+    const loadContentPlayers = async () => {
+      try {
+        const response = await fetch('/api/admin/data-files/content-player')
+        if (!response.ok) return
+        const data = await response.json()
+        setContentPlayers(data.values || [])
+      } catch (error) {
+        console.error('Failed to load content players:', error)
+      }
+    }
+    loadContentPlayers()
+  }, [])
+
+  // Filter lamp models based on selected projector model
+  useEffect(() => {
+    const currentProjectorModel = watch('projectorModel')
+    if (!currentProjectorModel || lampModelsData.length === 0) {
+      setLampModels([])
+      return
+    }
+
+    // Find matching projector model (case-insensitive)
+    const matchingProjector = lampModelsData.find(
+      (item) => item.projector_model?.toLowerCase() === currentProjectorModel.toLowerCase()
+    )
+
+    if (matchingProjector && Array.isArray(matchingProjector.Models)) {
+      // Filter out invalid values and get unique models
+      const cleaned = matchingProjector.Models.filter(
+        (model): model is string => typeof model === 'string' && model.trim().length > 0 && model.toUpperCase() !== 'NA'
+      )
+      setLampModels(cleaned)
+    } else {
+      setLampModels([])
+    }
+  }, [watch('projectorModel'), lampModelsData, watch])
 
   // Sync selected parts when dialog opens
   useEffect(() => {
@@ -642,25 +717,25 @@ function EditServiceDialog({
         try {
           setIsFetching(true)
           let data;
-          
+
           if (initialData) {
-             data = initialData
+            data = initialData
           } else if (serviceId) {
-             const res = await fetch(`/api/admin/service-records/${serviceId}`, {
-                credentials: "include",
-             })
-             if (res.ok) {
-                const json = await res.json()
-                data = json.service || json
-             }
+            const res = await fetch(`/api/admin/service-records/${serviceId}`, {
+              credentials: "include",
+            })
+            if (res.ok) {
+              const json = await res.json()
+              data = json.service || json
+            }
           }
 
           if (data) {
 
             // Parse images
             const validImages = (imgs: any) => {
-               if (Array.isArray(imgs)) return imgs
-               try { return JSON.parse(imgs) } catch { return [] }
+              if (Array.isArray(imgs)) return imgs
+              try { return JSON.parse(imgs) } catch { return [] }
             }
 
             // Map DB arrays to local state:
@@ -669,11 +744,11 @@ function EditServiceDialog({
             setAfterImages(validImages(data.afterImages || []))
             setBrokenImages(validImages(data.brokenImages || []))
 
-            
+
             if (data.recommendedParts) {
               try {
-                const parts = typeof data.recommendedParts === 'string' 
-                  ? JSON.parse(data.recommendedParts) 
+                const parts = typeof data.recommendedParts === 'string'
+                  ? JSON.parse(data.recommendedParts)
                   : data.recommendedParts
                 setRecommendedParts(parts)
               } catch (e) {
@@ -684,8 +759,8 @@ function EditServiceDialog({
             // Parse and load signatures
             if (data.signatures) {
               try {
-                const sigs = typeof data.signatures === 'string' 
-                  ? JSON.parse(data.signatures) 
+                const sigs = typeof data.signatures === 'string'
+                  ? JSON.parse(data.signatures)
                   : data.signatures
                 setSiteSignature(sigs?.site || sigs?.siteSignatureUrl || null)
                 setEngineerSignature(sigs?.engineer || sigs?.engineerSignatureUrl || null)
@@ -708,24 +783,24 @@ function EditServiceDialog({
                 }
               }
             })
-             
-             // Also check for workDetails nesting which is common in some records
+
+            // Also check for workDetails nesting which is common in some records
             if (data.workDetails) {
-                 const details = typeof data.workDetails === 'string' ? JSON.parse(data.workDetails) : data.workDetails
-                 Object.keys(details).forEach(k => {
-                     if (k in formData) {
-                         formAny[k] = details[k]
-                     }
-                 })
+              const details = typeof data.workDetails === 'string' ? JSON.parse(data.workDetails) : data.workDetails
+              Object.keys(details).forEach(k => {
+                if (k in formData) {
+                  formAny[k] = details[k]
+                }
+              })
             }
 
             // Explicitly map projectorSerial -> projectorSerialNumber if not already set or if data has it differently
             if (!formAny.projectorSerialNumber && data.projectorSerial) {
-                formAny.projectorSerialNumber = data.projectorSerial
+              formAny.projectorSerialNumber = data.projectorSerial
             }
-             // Ensure projectorModel is set if it's top level
+            // Ensure projectorModel is set if it's top level
             if (!formAny.projectorModel && data.projectorModel) {
-                 formAny.projectorModel = data.projectorModel
+              formAny.projectorModel = data.projectorModel
             }
 
             reset(formData)
@@ -738,14 +813,14 @@ function EditServiceDialog({
       }
       fetchService()
     } else {
-        // Reset form when dialog closes or no ID
-        reset(createInitialFormData())
-        setBeforeImages([])
-        setAfterImages([])
-        setBrokenImages([])
-        setRecommendedParts([])
-        setSiteSignature(null)
-        setEngineerSignature(null)
+      // Reset form when dialog closes or no ID
+      reset(createInitialFormData())
+      setBeforeImages([])
+      setAfterImages([])
+      setBrokenImages([])
+      setRecommendedParts([])
+      setSiteSignature(null)
+      setEngineerSignature(null)
     }
   }, [open, serviceId, initialData, reset])
 
@@ -804,7 +879,7 @@ function EditServiceDialog({
     // Check if canvas is empty
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
     const isEmpty = imageData.data.every(pixel => pixel === 0 || pixel === 255)
-    
+
     if (isEmpty) {
       toast.error('Please draw a signature first')
       return
@@ -812,21 +887,21 @@ function EditServiceDialog({
 
     try {
       setUploading(true)
-      
+
       // Create a smaller canvas to reduce file size (50% of original)
       const scaleFactor = 0.5
       const tempCanvas = document.createElement('canvas')
       tempCanvas.width = canvas.width * scaleFactor
       tempCanvas.height = canvas.height * scaleFactor
       const tempCtx = tempCanvas.getContext('2d')
-      
+
       if (!tempCtx) {
         throw new Error('Failed to create temporary canvas context')
       }
-      
+
       // Draw the signature scaled down
       tempCtx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height)
-      
+
       // Convert to PNG blob (keeps transparency, no black box)
       const blob = await new Promise<Blob>((resolve, reject) => {
         tempCanvas.toBlob(
@@ -851,7 +926,7 @@ function EditServiceDialog({
       if (!res.ok) throw new Error('Failed to upload signature')
 
       const data = await res.json()
-      
+
       // Update state with new signature URL
       if (type === 'site') {
         setSiteSignature(data.url)
@@ -893,17 +968,17 @@ function EditServiceDialog({
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         if (!file) continue
-        
+
         // Compress image before upload (resize to max 1200x1200, JPEG 80% quality)
         const compressedBlob = await compressImage(file, 1200, 1200, 0.8)
-        
+
         // Create a new File from the compressed blob
         const compressedFile = new File(
-          [compressedBlob], 
+          [compressedBlob],
           file.name.replace(/\.[^/.]+$/, '.jpg'), // Change extension to .jpg
           { type: 'image/jpeg' }
         )
-        
+
         const formData = new FormData()
         formData.append('file', compressedFile)
         formData.append('folder', `${type}-images`)
@@ -939,7 +1014,7 @@ function EditServiceDialog({
   const onSubmit = async (values: RecordWorkForm) => {
     try {
       setLoading(true)
-      
+
       const payload = {
         workDetails: {
           ...values,
@@ -971,10 +1046,10 @@ function EditServiceDialog({
 
       // Refresh parent data first (while dialog still shows "Saving...")
       await onSave()
-      
+
       // Show success toast (will be visible even after dialog closes)
       toast.success("Service record updated successfully!")
-      
+
       // Close dialog
       onOpenChange(false)
     } catch (error) {
@@ -984,7 +1059,7 @@ function EditServiceDialog({
       setLoading(false)
     }
   }
-  
+
   const isOutOfRange = (value: any, min: number, max: number) => {
     if (value === '' || value === undefined || value === null) return false
     const num = parseFloat(value)
@@ -1014,37 +1089,91 @@ function EditServiceDialog({
               />
             )
           }
-          
+
+          // Special handling for softwareVersion dropdown
+          if (field.key === 'softwareVersion' && softwareVersions.length > 0) {
+            return (
+              <FormField key={field.key} label={field.label} required={field.required}>
+                <select
+                  {...register(field.key as keyof RecordWorkForm)}
+                  className="w-full border-2 border-black p-2 text-sm bg-white"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select software version</option>
+                  {softwareVersions.map((version) => (
+                    <option key={version} value={version}>{version}</option>
+                  ))}
+                </select>
+              </FormField>
+            )
+          }
+
+          // Special handling for lampMakeModel dropdown
+          if (field.key === 'lampMakeModel' && lampModels.length > 0) {
+            return (
+              <FormField key={field.key} label={field.label} required={field.required}>
+                <select
+                  {...register(field.key as keyof RecordWorkForm)}
+                  className="w-full border-2 border-black p-2 text-sm bg-white"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select lamp model</option>
+                  {lampModels.map((model) => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+              </FormField>
+            )
+          }
+
+          // Special handling for contentPlayerModel dropdown
+          if (field.key === 'contentPlayerModel' && contentPlayers.length > 0) {
+            return (
+              <FormField key={field.key} label={field.label} required={field.required}>
+                <select
+                  {...register(field.key as keyof RecordWorkForm)}
+                  className="w-full border-2 border-black p-2 text-sm bg-white"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select content player</option>
+                  {contentPlayers.map((player) => (
+                    <option key={player} value={player}>{player}</option>
+                  ))}
+                </select>
+              </FormField>
+            )
+          }
+
           if (field.type === 'number' && (field.min !== undefined || field.max !== undefined)) {
-             const val = watch(field.key as keyof RecordWorkForm)
-             const isInvalid = isOutOfRange(val, field.min ?? -Infinity, field.max ?? Infinity)
-             return (
-               <FormField key={field.key} label={field.label} required={field.required}>
-                  <DynamicFormField
-                      field={field}
-                      register={register}
-                      className="border-2 border-black p-2 text-sm bg-white"
-                  />
-                  {isInvalid && (
-                    <p className="text-xs text-red-600 mt-1">
-                        {field.min !== undefined && field.max !== undefined
-                          ? `Enter between ${field.min} and ${field.max}.`
-                          : field.min !== undefined
-                          ? `Enter ${field.min} or greater.`
-                          : `Enter ${field.max} or less.`}
-                    </p>
-                  )}
-               </FormField>
-             )
+            const val = watch(field.key as keyof RecordWorkForm)
+            const isInvalid = isOutOfRange(val, field.min ?? -Infinity, field.max ?? Infinity)
+            return (
+              <FormField key={field.key} label={field.label} required={field.required}>
+                <DynamicFormField
+                  field={field}
+                  register={register}
+                  className="border-2 border-black p-2 text-sm bg-white"
+                />
+                {isInvalid && (
+                  <p className="text-xs text-red-600 mt-1">
+                    {field.min !== undefined && field.max !== undefined
+                      ? `Enter between ${field.min} and ${field.max}.`
+                      : field.min !== undefined
+                        ? `Enter ${field.min} or greater.`
+                        : `Enter ${field.max} or less.`}
+                  </p>
+                )}
+              </FormField>
+            )
           }
 
           return (
             <FormField key={field.key} label={field.label} required={field.required}>
-                <DynamicFormField
-                    field={field}
-                    register={register}
-                    className="border-2 border-black p-2 text-sm bg-white"
-                 />
+              <DynamicFormField
+                field={field}
+                register={register}
+                className="border-2 border-black p-2 text-sm bg-white"
+              />
             </FormField>
           )
         })}
@@ -1059,525 +1188,525 @@ function EditServiceDialog({
           <DialogTitle>Edit Service Record</DialogTitle>
           <DialogDescription>Modified fields will be saved to the database.</DialogDescription>
         </DialogHeader>
-        
+
         {!isFetching && !configLoading ? (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
-                <FormSection title="Cinema Details">
-                    {renderFieldsBySection("Cinema Details")}
-                </FormSection>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
+            <FormSection title="Cinema Details">
+              {renderFieldsBySection("Cinema Details")}
+            </FormSection>
 
-                <FormSection title="Projector Information">
-                    {renderFieldsBySection("Projector Information")}
-                </FormSection>
-                
-                <FormSection title="Opticals">
-                    {renderFieldsBySection("Opticals")}
-                </FormSection>
+            <FormSection title="Projector Information">
+              {renderFieldsBySection("Projector Information")}
+            </FormSection>
 
-                <FormSection title="Electronics">
-                    {renderFieldsBySection("Electronics")}
-                </FormSection>
-                
-                <FormSection title="Serial Number Verified">
-                    {renderFieldsBySection("Serial Number Verified")}
-                </FormSection>
-                
-                <FormSection title="Disposable Consumables">
-                    {renderFieldsBySection("Disposable Consumables")}
-                </FormSection>
-                
-                <FormSection title="Coolant">
-                    {renderFieldsBySection("Coolant")}
-                </FormSection>
-                
-                <FormSection title="Light Engine Test Pattern">
-                    {renderFieldsBySection("Light Engine Test Pattern")}
-                </FormSection>
+            <FormSection title="Opticals">
+              {renderFieldsBySection("Opticals")}
+            </FormSection>
 
-                <FormSection title="Mechanical">
-                    {renderFieldsBySection("Mechanical")}
-                </FormSection>
-                
-                <FormSection title="Software & Screen Information">
-                    {renderFieldsBySection("Software & Screen Information")}
-                    <div className="mt-4">
-                        <p className="text-xs font-semibold text-gray-700 mb-2">Scope Dimensions</p>
-                        <FormRow>
-                        <FormField label="Screen Height (m)">
-                            <Input type="number" step="0.01" {...register('screenHeight')} className="border-2 border-black text-sm" />
-                        </FormField>
-                        <FormField label="Screen Width (m)">
-                            <Input type="number" step="0.01" {...register('screenWidth')} className="border-2 border-black text-sm" />
-                        </FormField>
-                        </FormRow>
-                    </div>
-                </FormSection>
-                
-                <FormSection title="Lamp Information">
-                   {renderFieldsBySection("Lamp Information")}
-                </FormSection>
+            <FormSection title="Electronics">
+              {renderFieldsBySection("Electronics")}
+            </FormSection>
 
-                <FormSection title="Voltage Parameters">
-                   {renderFieldsBySection("Voltage Parameters")}
-                </FormSection>
+            <FormSection title="Serial Number Verified">
+              {renderFieldsBySection("Serial Number Verified")}
+            </FormSection>
 
-                <FormSection title="fL Measurements">
-                   {renderFieldsBySection("fL Measurements")}
-                </FormSection>
+            <FormSection title="Disposable Consumables">
+              {renderFieldsBySection("Disposable Consumables")}
+            </FormSection>
 
-                <FormSection title="Content Player & AC Status">
-                   {renderFieldsBySection("Content Player & AC Status")}
-                </FormSection>
-                
-                <FormSection title="Color Accuracy - MCGD">
-                  {COLOR_ACCURACY.map(({ name, fields }) => (
-                    <div key={name} className="mb-4">
-                      <p className="font-semibold text-black text-sm mb-2">{name}</p>
-                        <div className="grid grid-cols-3 gap-4 mb-2">
-                             <Input type="number" step="0.001" placeholder="2K X" {...register(fields[0] as any)} className="border-2 border-black text-sm" />
-                             <Input type="number" step="0.001" placeholder="2K Y" {...register(fields[1] as any)} className="border-2 border-black text-sm" />
-                             <Input type="number" step="0.001" placeholder="2K fL" {...register(fields[2] as any)} className="border-2 border-black text-sm" />
+            <FormSection title="Coolant">
+              {renderFieldsBySection("Coolant")}
+            </FormSection>
+
+            <FormSection title="Light Engine Test Pattern">
+              {renderFieldsBySection("Light Engine Test Pattern")}
+            </FormSection>
+
+            <FormSection title="Mechanical">
+              {renderFieldsBySection("Mechanical")}
+            </FormSection>
+
+            <FormSection title="Software & Screen Information">
+              {renderFieldsBySection("Software & Screen Information")}
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Scope Dimensions</p>
+                <FormRow>
+                  <FormField label="Screen Height (m)">
+                    <Input type="number" step="0.01" {...register('screenHeight')} className="border-2 border-black text-sm" />
+                  </FormField>
+                  <FormField label="Screen Width (m)">
+                    <Input type="number" step="0.01" {...register('screenWidth')} className="border-2 border-black text-sm" />
+                  </FormField>
+                </FormRow>
+              </div>
+            </FormSection>
+
+            <FormSection title="Lamp Information">
+              {renderFieldsBySection("Lamp Information")}
+            </FormSection>
+
+            <FormSection title="Voltage Parameters">
+              {renderFieldsBySection("Voltage Parameters")}
+            </FormSection>
+
+            <FormSection title="fL Measurements">
+              {renderFieldsBySection("fL Measurements")}
+            </FormSection>
+
+            <FormSection title="Content Player & AC Status">
+              {renderFieldsBySection("Content Player & AC Status")}
+            </FormSection>
+
+            <FormSection title="Color Accuracy - MCGD">
+              {COLOR_ACCURACY.map(({ name, fields }) => (
+                <div key={name} className="mb-4">
+                  <p className="font-semibold text-black text-sm mb-2">{name}</p>
+                  <div className="grid grid-cols-3 gap-4 mb-2">
+                    <Input type="number" step="0.001" placeholder="2K X" {...register(fields[0] as any)} className="border-2 border-black text-sm" />
+                    <Input type="number" step="0.001" placeholder="2K Y" {...register(fields[1] as any)} className="border-2 border-black text-sm" />
+                    <Input type="number" step="0.001" placeholder="2K fL" {...register(fields[2] as any)} className="border-2 border-black text-sm" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <Input type="number" step="0.001" placeholder="4K X" {...register(fields[3] as any)} className="border-2 border-black text-sm" />
+                    <Input type="number" step="0.001" placeholder="4K Y" {...register(fields[4] as any)} className="border-2 border-black text-sm" />
+                    <Input type="number" step="0.001" placeholder="4K fL" {...register(fields[5] as any)} className="border-2 border-black text-sm" />
+                  </div>
+                </div>
+              ))}
+            </FormSection>
+
+            <FormSection title="Color Accuracy - CIE XYZ">
+              <div className="mb-4">
+                <p className="font-semibold text-black text-sm mb-2">BW Step 10</p>
+                <div className="grid grid-cols-3 gap-4 mb-2">
+                  <Input type="number" step="0.001" placeholder="2K X" {...register('BW_Step_10_2Kx')} className="border-2 border-black text-sm" />
+                  <Input type="number" step="0.001" placeholder="2K Y" {...register('BW_Step_10_2Ky')} className="border-2 border-black text-sm" />
+                  <Input type="number" step="0.001" placeholder="2K fL" {...register('BW_Step_10_2Kfl')} className="border-2 border-black text-sm" />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <Input type="number" step="0.001" placeholder="4K X" {...register('BW_Step_10_4Kx')} className="border-2 border-black text-sm" />
+                  <Input type="number" step="0.001" placeholder="4K Y" {...register('BW_Step_10_4Ky')} className="border-2 border-black text-sm" />
+                  <Input type="number" step="0.001" placeholder="4K fL" {...register('BW_Step_10_4Kfl')} className="border-2 border-black text-sm" />
+                </div>
+              </div>
+            </FormSection>
+
+            <FormSection title="Image Evaluation">
+              {renderFieldsBySection("Image Evaluation")}
+            </FormSection>
+
+            <FormSection title="Air Pollution Data">
+              {renderFieldsBySection("Air Pollution Data")}
+            </FormSection>
+
+            <FormSection title="Remarks & Other">
+              <div className="space-y-4">
+                <FormField label="Remarks">
+                  <textarea
+                    {...register('remarks')}
+                    className="w-full border-2 border-black p-2 min-h-[100px] text-sm"
+                    rows={4}
+                  />
+                </FormField>
+                <FormField label="Photos Drive Link">
+                  <Input {...register('photosDriveLink')} className="border-2 border-black text-sm" />
+                  <p className="text-xs text-gray-500 mt-1">Optional: Paste a link to a Google Drive folder or similar.</p>
+                </FormField>
+              </div>
+            </FormSection>
+
+            <FormSection title="Recommended Parts">
+              <div className="space-y-3">
+                <Dialog open={partsDialogOpen} onOpenChange={setPartsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-2 border-black text-black hover:bg-gray-100"
+                      disabled={!projectorModel}
+                    >
+                      {recommendedParts.length > 0
+                        ? `Update Selected Parts (${recommendedParts.length})`
+                        : 'Select Recommended Parts'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col z-[100]">
+                    <DialogHeader>
+                      <DialogTitle>
+                        Select Recommended Parts
+                        {projectorModel && (
+                          <span className="text-sm font-normal text-gray-600 ml-2">
+                            for {projectorModel}
+                          </span>
+                        )}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {projectorModel
+                          ? `Select parts recommended for projector model ${projectorModel}`
+                          : 'Please enter a projector model first to view available parts'}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto px-1">
+                      {!projectorModel ? (
+                        <p className="text-sm text-gray-600 py-4">
+                          Please enter a projector model in the form above to view available parts.
+                        </p>
+                      ) : filteredParts.length === 0 ? (
+                        <p className="text-sm text-gray-600 py-4">
+                          No parts found for projector model "{projectorModel}". Please check the model
+                          name.
+                        </p>
+                      ) : (
+                        <div className="space-y-3 py-2">
+                          {filteredParts.map((part) => {
+                            const isSelected = selectedPartIds.has(part.part_number)
+                            return (
+                              <div
+                                key={part.part_number}
+                                className="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-md hover:border-black transition-colors"
+                              >
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => handlePartToggle(part)}
+                                  id={part.part_number}
+                                  className="mt-1"
+                                />
+                                <Label
+                                  htmlFor={part.part_number}
+                                  className="flex-1 cursor-pointer text-sm"
+                                >
+                                  <div className="font-semibold text-black">{part.description}</div>
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    Part Number: {part.part_number}
+                                  </div>
+                                </Label>
+                              </div>
+                            )
+                          })}
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
-                             <Input type="number" step="0.001" placeholder="4K X" {...register(fields[3] as any)} className="border-2 border-black text-sm" />
-                             <Input type="number" step="0.001" placeholder="4K Y" {...register(fields[4] as any)} className="border-2 border-black text-sm" />
-                             <Input type="number" step="0.001" placeholder="4K fL" {...register(fields[5] as any)} className="border-2 border-black text-sm" />
+                      )}
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4 border-t">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setPartsDialogOpen(false)}
+                        className="border-2 border-black text-black hover:bg-gray-100"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleSaveSelectedParts}
+                        disabled={!projectorModel || filteredParts.length === 0}
+                        className="bg-black text-white hover:bg-gray-800 border-2 border-black"
+                      >
+                        Save Selected ({selectedPartIds.size})
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                {recommendedParts.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs sm:text-sm font-semibold text-black">Selected Parts:</p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto border-2 border-gray-200 p-3 rounded-md">
+                      {recommendedParts.map((part, index) => (
+                        <div
+                          key={`${part.part_number}-${index}`}
+                          className="text-xs sm:text-sm border-b border-gray-200 pb-2 last:border-b-0 last:pb-0"
+                        >
+                          <div className="font-semibold text-black">{part.description}</div>
+                          <div className="text-gray-600">Part Number: {part.part_number}</div>
                         </div>
-                    </div>
-                  ))}
-                </FormSection>
-
-                <FormSection title="Color Accuracy - CIE XYZ">
-                  <div className="mb-4">
-                    <p className="font-semibold text-black text-sm mb-2">BW Step 10</p>
-                    <div className="grid grid-cols-3 gap-4 mb-2">
-                         <Input type="number" step="0.001" placeholder="2K X" {...register('BW_Step_10_2Kx')} className="border-2 border-black text-sm" />
-                         <Input type="number" step="0.001" placeholder="2K Y" {...register('BW_Step_10_2Ky')} className="border-2 border-black text-sm" />
-                         <Input type="number" step="0.001" placeholder="2K fL" {...register('BW_Step_10_2Kfl')} className="border-2 border-black text-sm" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                         <Input type="number" step="0.001" placeholder="4K X" {...register('BW_Step_10_4Kx')} className="border-2 border-black text-sm" />
-                         <Input type="number" step="0.001" placeholder="4K Y" {...register('BW_Step_10_4Ky')} className="border-2 border-black text-sm" />
-                         <Input type="number" step="0.001" placeholder="4K fL" {...register('BW_Step_10_4Kfl')} className="border-2 border-black text-sm" />
+                      ))}
                     </div>
                   </div>
-                </FormSection>
+                )}
+                {!projectorModel && (
+                  <p className="text-xs text-gray-600">
+                    Please enter a projector model above to select recommended parts.
+                  </p>
+                )}
+              </div>
+            </FormSection>
 
-                <FormSection title="Image Evaluation">
-                    {renderFieldsBySection("Image Evaluation")}
-                </FormSection>
+            <FormSection title="Service Images">
+              {imageError && <p className="text-sm text-red-500 mb-2">{imageError}</p>}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Before Images */}
+                <div>
+                  <p className="font-semibold text-sm text-black mb-2">Before Images</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleImageUpload('before', e.target.files)}
+                    className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50 mb-2"
+                  />
+                  {beforeImages.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {beforeImages.map((file, index) => (
+                        <div key={`before-${index}`} className="relative border border-gray-200 p-1 group bg-white">
+                          <img src={file} alt={"Before Image"} className="w-full h-24 object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage('before', index)}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                <FormSection title="Air Pollution Data">
-                    {renderFieldsBySection("Air Pollution Data")}
-                </FormSection>
-                
-                <FormSection title="Remarks & Other">
-                   <div className="space-y-4">
-                        <FormField label="Remarks">
-                         <textarea
-                            {...register('remarks')}
-                            className="w-full border-2 border-black p-2 min-h-[100px] text-sm"
-                            rows={4}
-                          />
-                        </FormField>
-                        <FormField label="Photos Drive Link">
-                           <Input {...register('photosDriveLink')} className="border-2 border-black text-sm" />
-                           <p className="text-xs text-gray-500 mt-1">Optional: Paste a link to a Google Drive folder or similar.</p>
-                        </FormField>
-                   </div>
-                </FormSection>
+                {/* After Images */}
+                <div>
+                  <p className="font-semibold text-sm text-black mb-2">After Images</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleImageUpload('after', e.target.files)}
+                    className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50 mb-2"
+                  />
+                  {afterImages.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {afterImages.map((file, index) => (
+                        <div key={`after-${index}`} className="relative border border-gray-200 p-1 group bg-white">
+                          <img src={file} alt={'After Images'} className="w-full h-24 object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage('after', index)}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                <FormSection title="Recommended Parts">
-                  <div className="space-y-3">
-                    <Dialog open={partsDialogOpen} onOpenChange={setPartsDialogOpen}>
-                      <DialogTrigger asChild>
+                {/* Broken Images */}
+                <div>
+                  <p className="font-semibold text-sm text-black mb-2">Broken Parts</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleImageUpload('broken', e.target.files)}
+                    className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50 mb-2"
+                  />
+                  {brokenImages.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {brokenImages.map((file, index) => (
+                        <div key={`broken-${index}`} className="relative border border-gray-200 p-1 group bg-white">
+                          <img src={file} alt={"broken images"} className="w-full h-24 object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage('broken', index)}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </FormSection>
+
+            <FormSection title="Signatures">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Site Signature */}
+                <div className="space-y-3">
+                  <p className="font-semibold text-sm text-black">Site Signature</p>
+                  {siteSignature ? (
+                    <div className="relative">
+                      <div className="border-2 border-black p-4 bg-gray-50 rounded-md">
+                        <img
+                          src={siteSignature}
+                          alt="Site Signature"
+                          className="w-full h-32 object-contain"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeSignature('site')}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
+                        title="Remove signature"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : isDrawingSignature && currentSignatureType === 'site' ? (
+                    <div className="space-y-2">
+                      <canvas
+                        ref={siteCanvasRef}
+                        width={400}
+                        height={150}
+                        className="w-full border-2 border-black bg-white cursor-crosshair rounded-md"
+                        onMouseDown={(e) => startDrawing(e.currentTarget, e)}
+                        onMouseMove={(e) => draw(e.currentTarget, e)}
+                        onMouseUp={stopDrawing}
+                        onMouseLeave={stopDrawing}
+                        onTouchStart={(e) => startDrawing(e.currentTarget, e)}
+                        onTouchMove={(e) => draw(e.currentTarget, e)}
+                        onTouchEnd={stopDrawing}
+                      />
+                      <div className="flex gap-2">
                         <Button
                           type="button"
                           variant="outline"
-                          className="border-2 border-black text-black hover:bg-gray-100"
-                          disabled={!projectorModel}
+                          size="sm"
+                          onClick={() => clearCanvas(siteCanvasRef.current)}
+                          className="border-2 border-black"
                         >
-                          {recommendedParts.length > 0
-                            ? `Update Selected Parts (${recommendedParts.length})`
-                            : 'Select Recommended Parts'}
+                          Clear
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col z-[100]">
-                        <DialogHeader>
-                          <DialogTitle>
-                            Select Recommended Parts
-                            {projectorModel && (
-                              <span className="text-sm font-normal text-gray-600 ml-2">
-                                for {projectorModel}
-                              </span>
-                            )}
-                          </DialogTitle>
-                          <DialogDescription>
-                            {projectorModel
-                              ? `Select parts recommended for projector model ${projectorModel}`
-                              : 'Please enter a projector model first to view available parts'}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="flex-1 overflow-y-auto px-1">
-                          {!projectorModel ? (
-                            <p className="text-sm text-gray-600 py-4">
-                              Please enter a projector model in the form above to view available parts.
-                            </p>
-                          ) : filteredParts.length === 0 ? (
-                            <p className="text-sm text-gray-600 py-4">
-                              No parts found for projector model "{projectorModel}". Please check the model
-                              name.
-                            </p>
-                          ) : (
-                            <div className="space-y-3 py-2">
-                              {filteredParts.map((part) => {
-                                const isSelected = selectedPartIds.has(part.part_number)
-                                return (
-                                  <div
-                                    key={part.part_number}
-                                    className="flex items-start gap-3 p-3 border-2 border-gray-200 rounded-md hover:border-black transition-colors"
-                                  >
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={() => handlePartToggle(part)}
-                                      id={part.part_number}
-                                      className="mt-1"
-                                    />
-                                    <Label
-                                      htmlFor={part.part_number}
-                                      className="flex-1 cursor-pointer text-sm"
-                                    >
-                                      <div className="font-semibold text-black">{part.description}</div>
-                                      <div className="text-xs text-gray-600 mt-1">
-                                        Part Number: {part.part_number}
-                                      </div>
-                                    </Label>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex justify-end gap-2 pt-4 border-t">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setPartsDialogOpen(false)}
-                            className="border-2 border-black text-black hover:bg-gray-100"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={handleSaveSelectedParts}
-                            disabled={!projectorModel || filteredParts.length === 0}
-                            className="bg-black text-white hover:bg-gray-800 border-2 border-black"
-                          >
-                            Save Selected ({selectedPartIds.size})
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                    {recommendedParts.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs sm:text-sm font-semibold text-black">Selected Parts:</p>
-                        <div className="space-y-2 max-h-48 overflow-y-auto border-2 border-gray-200 p-3 rounded-md">
-                          {recommendedParts.map((part, index) => (
-                            <div
-                              key={`${part.part_number}-${index}`}
-                              className="text-xs sm:text-sm border-b border-gray-200 pb-2 last:border-b-0 last:pb-0"
-                            >
-                              <div className="font-semibold text-black">{part.description}</div>
-                              <div className="text-gray-600">Part Number: {part.part_number}</div>
-                            </div>
-                          ))}
-                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => saveSignature('site')}
+                          disabled={uploading}
+                          className="bg-black text-white"
+                        >
+                          {uploading ? 'Saving...' : 'Save Signature'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsDrawingSignature(false)
+                            setCurrentSignatureType(null)
+                            clearCanvas(siteCanvasRef.current)
+                          }}
+                          className="border-2 border-black"
+                        >
+                          Cancel
+                        </Button>
                       </div>
-                    )}
-                    {!projectorModel && (
-                      <p className="text-xs text-gray-600">
-                        Please enter a projector model above to select recommended parts.
-                      </p>
-                    )}
-                  </div>
-                </FormSection>
-
-                <FormSection title="Service Images">
-                    {imageError && <p className="text-sm text-red-500 mb-2">{imageError}</p>}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {/* Before Images */}
-                        <div>
-                        <p className="font-semibold text-sm text-black mb-2">Before Images</p>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={(e) => handleImageUpload('before', e.target.files)}
-                            className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50 mb-2"
-                        />
-                        {beforeImages.length > 0 && (
-                            <div className="grid grid-cols-2 gap-2">
-                            {beforeImages.map((file, index) => (
-                                <div key={`before-${index}`} className="relative border border-gray-200 p-1 group bg-white">
-                                <img src={file} alt={"Before Image"} className="w-full h-24 object-cover" />
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemoveImage('before', index)}
-                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    ✕
-                                </button>
-                                </div>
-                            ))}
-                            </div>
-                        )}
-                        </div>
-
-                        {/* After Images */}
-                        <div>
-                        <p className="font-semibold text-sm text-black mb-2">After Images</p>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={(e) => handleImageUpload('after', e.target.files)}
-                            className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50 mb-2"
-                        />
-                        {afterImages.length > 0 && (
-                            <div className="grid grid-cols-2 gap-2">
-                            {afterImages.map((file, index) => (
-                                <div key={`after-${index}`} className="relative border border-gray-200 p-1 group bg-white">
-                                <img src={file} alt={'After Images'} className="w-full h-24 object-cover" />
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemoveImage('after', index)}
-                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    ✕
-                                </button>
-                                </div>
-                            ))}
-                            </div>
-                        )}
-                        </div>
-                        
-                        {/* Broken Images */}
-                        <div>
-                        <p className="font-semibold text-sm text-black mb-2">Broken Parts</p>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={(e) => handleImageUpload('broken', e.target.files)}
-                            className="w-full border-2 border-dashed border-black p-4 text-sm bg-gray-50 mb-2"
-                        />
-                        {brokenImages.length > 0 && (
-                            <div className="grid grid-cols-2 gap-2">
-                            {brokenImages.map((file, index) => (
-                                <div key={`broken-${index}`} className="relative border border-gray-200 p-1 group bg-white">
-                                <img src={file} alt={"broken images"} className="w-full h-24 object-cover" />
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemoveImage('broken', index)}
-                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    ✕
-                                </button>
-                                </div>
-                            ))}
-                            </div>
-                        )}
-                        </div>
                     </div>
-                </FormSection>
-
-                <FormSection title="Signatures">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Site Signature */}
-                        <div className="space-y-3">
-                            <p className="font-semibold text-sm text-black">Site Signature</p>
-                            {siteSignature ? (
-                                <div className="relative">
-                                    <div className="border-2 border-black p-4 bg-gray-50 rounded-md">
-                                        <img
-                                            src={siteSignature}
-                                            alt="Site Signature"
-                                            className="w-full h-32 object-contain"
-                                        />
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeSignature('site')}
-                                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
-                                        title="Remove signature"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            ) : isDrawingSignature && currentSignatureType === 'site' ? (
-                                <div className="space-y-2">
-                                    <canvas
-                                        ref={siteCanvasRef}
-                                        width={400}
-                                        height={150}
-                                        className="w-full border-2 border-black bg-white cursor-crosshair rounded-md"
-                                        onMouseDown={(e) => startDrawing(e.currentTarget, e)}
-                                        onMouseMove={(e) => draw(e.currentTarget, e)}
-                                        onMouseUp={stopDrawing}
-                                        onMouseLeave={stopDrawing}
-                                        onTouchStart={(e) => startDrawing(e.currentTarget, e)}
-                                        onTouchMove={(e) => draw(e.currentTarget, e)}
-                                        onTouchEnd={stopDrawing}
-                                    />
-                                    <div className="flex gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => clearCanvas(siteCanvasRef.current)}
-                                            className="border-2 border-black"
-                                        >
-                                            Clear
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            onClick={() => saveSignature('site')}
-                                            disabled={uploading}
-                                            className="bg-black text-white"
-                                        >
-                                            {uploading ? 'Saving...' : 'Save Signature'}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                                setIsDrawingSignature(false)
-                                                setCurrentSignatureType(null)
-                                                clearCanvas(siteCanvasRef.current)
-                                            }}
-                                            className="border-2 border-black"
-                                        >
-                                            Cancel
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                        setIsDrawingSignature(true)
-                                        setCurrentSignatureType('site')
-                                    }}
-                                    className="w-full border-2 border-dashed border-black p-6 hover:bg-gray-50"
-                                >
-                                    + Add Site Signature
-                                </Button>
-                            )}
-                        </div>
-
-                        {/* Engineer Signature */}
-                        <div className="space-y-3">
-                            <p className="font-semibold text-sm text-black">Engineer Signature</p>
-                            {engineerSignature ? (
-                                <div className="relative">
-                                    <div className="border-2 border-black p-4 bg-gray-50 rounded-md">
-                                        <img
-                                            src={engineerSignature}
-                                            alt="Engineer Signature"
-                                            className="w-full h-32 object-contain"
-                                        />
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeSignature('engineer')}
-                                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
-                                        title="Remove signature"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            ) : isDrawingSignature && currentSignatureType === 'engineer' ? (
-                                <div className="space-y-2">
-                                    <canvas
-                                        ref={engineerCanvasRef}
-                                        width={400}
-                                        height={150}
-                                        className="w-full border-2 border-black bg-white cursor-crosshair rounded-md"
-                                        onMouseDown={(e) => startDrawing(e.currentTarget, e)}
-                                        onMouseMove={(e) => draw(e.currentTarget, e)}
-                                        onMouseUp={stopDrawing}
-                                        onMouseLeave={stopDrawing}
-                                        onTouchStart={(e) => startDrawing(e.currentTarget, e)}
-                                        onTouchMove={(e) => draw(e.currentTarget, e)}
-                                        onTouchEnd={stopDrawing}
-                                    />
-                                    <div className="flex gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => clearCanvas(engineerCanvasRef.current)}
-                                            className="border-2 border-black"
-                                        >
-                                            Clear
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            onClick={() => saveSignature('engineer')}
-                                            disabled={uploading}
-                                            className="bg-black text-white"
-                                        >
-                                            {uploading ? 'Saving...' : 'Save Signature'}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                                setIsDrawingSignature(false)
-                                                setCurrentSignatureType(null)
-                                                clearCanvas(engineerCanvasRef.current)
-                                            }}
-                                            className="border-2 border-black"
-                                        >
-                                            Cancel
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                        setIsDrawingSignature(true)
-                                        setCurrentSignatureType('engineer')
-                                    }}
-                                    className="w-full border-2 border-dashed border-black p-6 hover:bg-gray-50"
-                                >
-                                    + Add Engineer Signature
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                </FormSection>
-
-                <div className="flex justify-end gap-2 pt-4 border-t sticky bottom-0 bg-white p-4">
-                <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-                    Cancel
-                </Button>
-                <Button type="submit" disabled={loading || uploading} className="bg-black text-white">
-                    {loading ? "Saving..." : "Save Changes"}
-                </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsDrawingSignature(true)
+                        setCurrentSignatureType('site')
+                      }}
+                      className="w-full border-2 border-dashed border-black p-6 hover:bg-gray-50"
+                    >
+                      + Add Site Signature
+                    </Button>
+                  )}
                 </div>
-            </form>
+
+                {/* Engineer Signature */}
+                <div className="space-y-3">
+                  <p className="font-semibold text-sm text-black">Engineer Signature</p>
+                  {engineerSignature ? (
+                    <div className="relative">
+                      <div className="border-2 border-black p-4 bg-gray-50 rounded-md">
+                        <img
+                          src={engineerSignature}
+                          alt="Engineer Signature"
+                          className="w-full h-32 object-contain"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeSignature('engineer')}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
+                        title="Remove signature"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : isDrawingSignature && currentSignatureType === 'engineer' ? (
+                    <div className="space-y-2">
+                      <canvas
+                        ref={engineerCanvasRef}
+                        width={400}
+                        height={150}
+                        className="w-full border-2 border-black bg-white cursor-crosshair rounded-md"
+                        onMouseDown={(e) => startDrawing(e.currentTarget, e)}
+                        onMouseMove={(e) => draw(e.currentTarget, e)}
+                        onMouseUp={stopDrawing}
+                        onMouseLeave={stopDrawing}
+                        onTouchStart={(e) => startDrawing(e.currentTarget, e)}
+                        onTouchMove={(e) => draw(e.currentTarget, e)}
+                        onTouchEnd={stopDrawing}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => clearCanvas(engineerCanvasRef.current)}
+                          className="border-2 border-black"
+                        >
+                          Clear
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => saveSignature('engineer')}
+                          disabled={uploading}
+                          className="bg-black text-white"
+                        >
+                          {uploading ? 'Saving...' : 'Save Signature'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsDrawingSignature(false)
+                            setCurrentSignatureType(null)
+                            clearCanvas(engineerCanvasRef.current)
+                          }}
+                          className="border-2 border-black"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsDrawingSignature(true)
+                        setCurrentSignatureType('engineer')
+                      }}
+                      className="w-full border-2 border-dashed border-black p-6 hover:bg-gray-50"
+                    >
+                      + Add Engineer Signature
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </FormSection>
+
+            <div className="flex justify-end gap-2 pt-4 border-t sticky bottom-0 bg-white p-4">
+              <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading || uploading} className="bg-black text-white">
+                {loading ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
         ) : isFetching ? (
-             <div className="flex items-center justify-center py-16">
-                 <p className="text-gray-500">Loading service details...</p>
-             </div>
+          <div className="flex items-center justify-center py-16">
+            <p className="text-gray-500">Loading service details...</p>
+          </div>
         ) : null}
       </DialogContent>
     </Dialog>
@@ -1840,11 +1969,10 @@ function UploadServiceRecordsDialog({
           {/* Upload Status */}
           {uploadStatus.type && (
             <div
-              className={`p-4 rounded-md ${
-                uploadStatus.type === "success"
-                  ? "bg-green-50 text-green-800 border border-green-200"
-                  : "bg-red-50 text-red-800 border border-red-200"
-              }`}
+              className={`p-4 rounded-md ${uploadStatus.type === "success"
+                ? "bg-green-50 text-green-800 border border-green-200"
+                : "bg-red-50 text-red-800 border border-red-200"
+                }`}
             >
               {uploadStatus.message}
             </div>
@@ -1896,12 +2024,12 @@ function PreviewDownloadDialog({
             const json = await res.json()
             const service = json.service || json
             setServiceData(service)
-            
+
             // Set default email if site has contact email
             if (service.contactDetails && service.contactDetails.includes("@")) {
               setEmail(service.contactDetails)
             }
-            
+
             // Generate default email content
             generateDefaultEmailContent(service)
           }
@@ -1921,7 +2049,7 @@ function PreviewDownloadDialog({
       month: "long",
       day: "numeric"
     }) : "N/A"
-    
+
     setEmailSubject(`Projector Service Report - ${cinema} - ${serviceNum}`)
     setEmailBody(`Dear Team,
 
@@ -1952,15 +2080,15 @@ www.ascompinc.co.in`)
       setLoading(true)
       const { constructAndGeneratePDF } = await import('@/lib/pdf-helper')
       const pdfBytes = await constructAndGeneratePDF(serviceId)
-      
+
       const blob = new Blob([pdfBytes as any], { type: "application/pdf" })
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `Service_Report_${serviceData?.serviceNumber ?? serviceId}.pdf`
+      link.download = `${serviceData?.projector?.serialNo || serviceData?.projectorSerial || 'Service_Report'}.pdf`
       link.click()
       window.URL.revokeObjectURL(url)
-      
+
       toast.success("PDF downloaded successfully")
     } catch (error) {
       console.error("Failed to generate PDF:", error)
@@ -1972,12 +2100,12 @@ www.ascompinc.co.in`)
 
   const handleShowEmailPreview = () => {
     setEmailError("")
-    
+
     if (!email || !validateEmail(email)) {
       setEmailError("Please enter a valid email address")
       return
     }
-    
+
     setShowEmailPreview(true)
   }
 
@@ -2018,7 +2146,7 @@ www.ascompinc.co.in`)
       toast.success("Email sent successfully", {
         description: `Service report has been sent to ${email}`,
       })
-      
+
       // Reset email preview
       setShowEmailPreview(false)
     } catch (error) {
@@ -2144,15 +2272,15 @@ www.ascompinc.co.in`)
 
                   <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
                     <p className="text-xs text-gray-600">
-                      <strong>📎 Attachment:</strong> Service_Report_{serviceData.serviceNumber}.pdf
+                      <strong>📎 Attachment:</strong> {serviceData?.projector?.serialNo || serviceData?.projectorSerial || 'Service_Report'}.pdf
                     </p>
                   </div>
                 </div>
 
                 {/* Preview Action Buttons */}
                 <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setShowEmailPreview(false)}
                     disabled={sendingEmail}
                   >
@@ -2298,7 +2426,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
               .filter((k) => !EXCLUDED_KEYS.has(k)),
           ),
         )
-        
+
         // Sort by priority: priority fields first, then alphabetically
         const derivedKeys = allKeys.sort((a, b) => {
           const aPriority = COLUMN_PRIORITY.indexOf(a)
@@ -2308,7 +2436,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
           if (bPriority !== -1) return 1
           return a.localeCompare(b)
         })
-        
+
         setColumnKeys(derivedKeys)
         setVisibleColumns((prev) => {
           if (Object.keys(prev).length) return prev
@@ -2427,37 +2555,37 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
 
   const formatValue = (key: string, value: any, rowId: string) => {
     if (value === null || value === undefined) return "—"
-    
+
     // Handle download action
     if (key === "action") {
       return (
         <div className="flex gap-2">
-        <button
-          onClick={() => {
-            setPreviewServiceId(rowId)
-            setPreviewDialogOpen(true)
-          }}
-          className="inline-flex gap-4 rounded-md items-center justify-center text-white bg-black p-2 w-full transition-colors"
-          title="Preview & Download PDF"
-        >
-          <Download className="h-4 w-4" />
-        </button>
-        <button
-          onClick={() => {
-            setEditingServiceId(rowId)
-            const rowData = records.find(r => r.id === rowId)
-            setEditingServiceData(rowData || null)
-            setEditDialogOpen(true)
-          }}
-          className="inline-flex gap-4 rounded-md items-center justify-center text-white bg-black p-2 w-full transition-colors"
-          title="Edit Service Record"
-        >
-          <Edit className="h-4 w-4" />
-        </button>
+          <button
+            onClick={() => {
+              setPreviewServiceId(rowId)
+              setPreviewDialogOpen(true)
+            }}
+            className="inline-flex gap-4 rounded-md items-center justify-center text-white bg-black p-2 w-full transition-colors"
+            title="Preview & Download PDF"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => {
+              setEditingServiceId(rowId)
+              const rowData = records.find(r => r.id === rowId)
+              setEditingServiceData(rowData || null)
+              setEditDialogOpen(true)
+            }}
+            className="inline-flex gap-4 rounded-md items-center justify-center text-white bg-black p-2 w-full transition-colors"
+            title="Edit Service Record"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
         </div>
       )
     }
-    
+
     // Handle signatures
     if (key === "signatures" && value) {
       const hasSignatures = typeof value === "object" || (typeof value === "string" && value.includes("http"))
@@ -2474,13 +2602,13 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
       }
       return "—"
     }
-    
+
     // Handle remarks with expand/collapse
     if (key === "remarks" && typeof value === "string" && value) {
       const isExpanded = expandedRemarks[rowId]
       const maxLength = 50
       const shouldTruncate = value.length > maxLength
-      
+
       return (
         <button
           onClick={() => toggleRemarks(rowId)}
@@ -2491,17 +2619,17 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         </button>
       )
     }
-    
+
     // Handle fields with notes (merged format: "OK - Note")
     if (NOTE_FIELD_MAP[key] && typeof value === "string") {
       const parts = value.split(" - ")
       const mainValue = parts[0] || ""
       const noteValue = parts.slice(1).join(" - ") || ""
-      
+
       if (!noteValue) {
         return <span>{mainValue || "—"}</span>
       }
-      
+
       return (
         <div className="flex flex-col items-start gap-1">
           <span>{mainValue}</span>
@@ -2509,7 +2637,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         </div>
       )
     }
-    
+
     // Handle image arrays
     if (key === "images" && Array.isArray(value) && value.length > 0) {
       return (
@@ -2522,7 +2650,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         </button>
       )
     }
-    
+
     if (key === "brokenImages" && Array.isArray(value) && value.length > 0) {
       return (
         <button
@@ -2534,7 +2662,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         </button>
       )
     }
-    
+
     // Handle drive link
     if (key === "photosDriveLink" && typeof value === "string" && value) {
       return (
@@ -2550,7 +2678,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         </a>
       )
     }
-    
+
     if (typeof value === "boolean") return value ? "Yes" : "No"
     if (Array.isArray(value)) return value.length > 0 ? `${value.length} items` : "—"
     if (typeof value === "object") return JSON.stringify(value)
@@ -2565,115 +2693,115 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
           <CardHeader className="flex flex-col gap-3">
             <CardTitle className="text-lg font-semibold text-black">Service Records</CardTitle>
             <div className="flex flex-col w-full gap-3 border-b-2 pb-4">
-            <div className="flex flex-wrap gap-3">
-              <Input
-                placeholder="Search site, projector, model, worker..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="border-2 border-black text-sm flex-1 min-w-[200px]"
-              />
-              <Popover open={columnMenuOpen} onOpenChange={setColumnMenuOpen}>
-                <PopoverTrigger asChild>
+              <div className="flex flex-wrap gap-3">
+                <Input
+                  placeholder="Search site, projector, model, worker..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="border-2 border-black text-sm flex-1 min-w-[200px]"
+                />
+                <Popover open={columnMenuOpen} onOpenChange={setColumnMenuOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-2 border-black text-sm"
+                    >
+                      Columns
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 max-h-96 overflow-hidden rounded-md border-2 border-black bg-white shadow-lg">
+                    <div className="p-3 space-y-2">
+                      <Input
+                        placeholder="Search columns..."
+                        value={columnSearch}
+                        onChange={(e) => setColumnSearch(e.target.value)}
+                        className="border-2 border-black text-sm"
+                      />
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-600">Toggle visibility</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="border-black"
+                          onClick={() => {
+                            const allSelected = columnKeys.every((k) => visibleColumns[k])
+                            setAllColumns(!allSelected)
+                          }}
+                        >
+                          {columnKeys.every((k) => visibleColumns[k]) ? "Deselect all" : "Select all"}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto border-t border-black/20">
+                      {columnKeys
+                        .filter((key) => toLabel(key).toLowerCase().includes(columnSearch.toLowerCase()))
+                        .map((key) => (
+                          <label
+                            key={key}
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-50"
+                          >
+                            <Checkbox
+                              checked={visibleColumns[key]}
+                              onCheckedChange={() => toggleColumn(key as any)}
+                              className="border-black"
+                            />
+                            {toLabel(key)}
+                          </label>
+                        ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <div className="flex flex-wrap gap-3">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="border-2 border-black text-sm w-fit justify-start">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? formatDate(startDate) : "Date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate ? new Date(startDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            setStartDate(formatIsoDate(date))
+                          } else {
+                            setStartDate("")
+                          }
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   <Button
-                    type="button"
                     variant="outline"
                     className="border-2 border-black text-sm"
-                  >
-                    Columns
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 max-h-96 overflow-hidden rounded-md border-2 border-black bg-white shadow-lg">
-                  <div className="p-3 space-y-2">
-                    <Input
-                      placeholder="Search columns..."
-                      value={columnSearch}
-                      onChange={(e) => setColumnSearch(e.target.value)}
-                      className="border-2 border-black text-sm"
-                    />
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-600">Toggle visibility</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="border-black"
-                        onClick={() => {
-                          const allSelected = columnKeys.every((k) => visibleColumns[k])
-                          setAllColumns(!allSelected)
-                        }}
-                      >
-                        {columnKeys.every((k) => visibleColumns[k]) ? "Deselect all" : "Select all"}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto border-t border-black/20">
-                    {columnKeys
-                      .filter((key) => toLabel(key).toLowerCase().includes(columnSearch.toLowerCase()))
-                      .map((key) => (
-                        <label
-                          key={key}
-                          className="flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-50"
-                        >
-                          <Checkbox
-                            checked={visibleColumns[key]}
-                            onCheckedChange={() => toggleColumn(key as any)}
-                            className="border-black"
-                          />
-                          {toLabel(key)}
-                        </label>
-                      ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <div className="flex flex-wrap gap-3">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="border-2 border-black text-sm w-fit justify-start">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? formatDate(startDate) : "Date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={startDate ? new Date(startDate) : undefined}
-                    onSelect={(date) => {
-                      if (date) {
-                        setStartDate(formatIsoDate(date))
-                      } else {
-                        setStartDate("")
-                      }
+                    onClick={() => {
+                      setSearch("")
+                      setWorkerFilter("all")
+                      setStartDate("")
+                      setPage(1)
                     }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <Button
-                variant="outline"
-                className="border-2 border-black text-sm"
-                onClick={() => {
-                  setSearch("")
-                  setWorkerFilter("all")
-                  setStartDate("")
-                  setPage(1)
-                }}
-              >
-                Reset filters
-              </Button>
-              <Button
-                className="text-sm"
-                onClick={() => setUploadDialogOpen(true)}
-              >
-                Upload
-              </Button>
-              <Button
-                className="text-sm"
-                onClick={() => setShowExportModal(true)}
-              >
-                Export
-              </Button>
-            </div>
-            </div>
+                  >
+                    Reset filters
+                  </Button>
+                  <Button
+                    className="text-sm"
+                    onClick={() => setUploadDialogOpen(true)}
+                  >
+                    Upload
+                  </Button>
+                  <Button
+                    className="text-sm"
+                    onClick={() => setShowExportModal(true)}
+                  >
+                    Export
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardHeader>
         )}
@@ -2813,11 +2941,11 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
       <EditServiceDialog
         open={editDialogOpen}
         onOpenChange={(open) => {
-            setEditDialogOpen(open)
-            if (!open) {
-                setEditingServiceData(null)
-                setEditingServiceId(null)
-            }
+          setEditDialogOpen(open)
+          if (!open) {
+            setEditingServiceData(null)
+            setEditingServiceId(null)
+          }
         }}
         serviceId={editingServiceId}
         initialData={editingServiceData}
