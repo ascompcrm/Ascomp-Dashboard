@@ -19,17 +19,20 @@ const navMainData: NavMainItem[] = [
   {
     title: "Home",
     url: "/admin/dashboard" as Route,
-    icon: Home
+    icon: Home,
+    for: "christie"
   },
   {
     title: "Database",
     url: "/admin/dashboard/overview" as Route,
     icon: Database,
+    for: "christie"
   },
   {
     title: "Sites & Projectors",
     url: "/admin/dashboard/sites" as Route,
     icon: Projector,
+    for: "christie"
   },
   {
     title: "Scheduled Services",
@@ -61,6 +64,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     avatar: user.image || "/avatars/shadcn.jpg",
   }
 
+  // Filter navigation items based on user email
+  const filteredNavItems = user.email === "contact@ascompinc.in"
+    ? navMainData.filter(item => item.for === "christie")
+    : navMainData
+
   return (
     <Sidebar className="h-[calc(100svh-var(--header-height))]!" {...props}>
       <SidebarHeader>
@@ -81,7 +89,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMainData} />
+        <NavMain items={filteredNavItems} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={userData} onLogout={logout} />

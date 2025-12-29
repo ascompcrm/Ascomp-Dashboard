@@ -24,6 +24,7 @@ import { CalendarIcon, Image as ImageIcon, Folder, ExternalLink, Download, Edit,
 import { toast } from "sonner"
 import Image from "next/image"
 import ExportDataModal from "./modals/export-data-modal"
+import { useAuth } from "@/lib/auth-context"
 
 
 type ServiceRecord = {
@@ -2314,6 +2315,7 @@ type OverviewViewProps = {
 }
 
 export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
+  const { user } = useAuth()
   const [records, setRecords] = useState<ServiceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -2380,6 +2382,10 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
           const projector = item.projector ?? {}
           const site = item.site ?? {}
 
+          if (site.address == "Anupam Saket Delhi") {
+            console.log("site", site, projector, item)
+          }
+
           const flattened: ServiceRecord = {
             id: item.id ?? `row-${idx}`,
             ...item,
@@ -2392,7 +2398,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
             siteName: site.siteName ?? item.siteName ?? "",
             siteCode: site.siteCode ?? "",
             siteAddress: site.address ?? item.address ?? "",
-            siteContactDetails: site.contactDetails ?? item.contactDetails ?? "",
+            siteContactDetails: item.contactDetails ?? site.contactDetails ?? "",
           }
 
           // Merge note fields with their parent fields
@@ -2570,18 +2576,20 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
           >
             <Download className="h-4 w-4" />
           </button>
-          <button
-            onClick={() => {
-              setEditingServiceId(rowId)
-              const rowData = records.find(r => r.id === rowId)
-              setEditingServiceData(rowData || null)
-              setEditDialogOpen(true)
-            }}
-            className="inline-flex gap-4 rounded-md items-center justify-center text-white bg-black p-2 w-full transition-colors"
-            title="Edit Service Record"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
+          {user?.email == "helpdesk@ascompinc.in" && (
+            <button
+              onClick={() => {
+                setEditingServiceId(rowId)
+                const rowData = records.find(r => r.id === rowId)
+                setEditingServiceData(rowData || null)
+                setEditDialogOpen(true)
+              }}
+              className="inline-flex gap-4 rounded-md items-center justify-center text-white bg-black p-2 w-full transition-colors"
+              title="Edit Service Record"
+            >
+              <Edit className="h-4 w-4" />
+            </button>
+          )}
         </div>
       )
     }
@@ -2788,12 +2796,12 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
                   >
                     Reset filters
                   </Button>
-                  <Button
+                  {/* <Button
                     className="text-sm"
                     onClick={() => setUploadDialogOpen(true)}
                   >
                     Upload
-                  </Button>
+                  </Button> */}
                   <Button
                     className="text-sm"
                     onClick={() => setShowExportModal(true)}

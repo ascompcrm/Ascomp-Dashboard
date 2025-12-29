@@ -17,10 +17,12 @@ export interface NavMainItem {
   title: string
   url: Route
   icon: LucideIcon
+  for?: string
 }
 
 export function NavMain({ items }: { items: NavMainItem[] }) {
   const pathname = usePathname()
+
 
   const isActive = (url: string) => {
     // if (url === "/admin/dashboard/overview") {
