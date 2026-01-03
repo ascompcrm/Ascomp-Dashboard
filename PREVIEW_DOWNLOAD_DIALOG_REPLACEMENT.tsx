@@ -66,6 +66,31 @@ function PreviewDownloadDialog({
       day: "numeric"
     }) : "N/A"
 
+    // Parse recommended parts
+    let recommendedPartsText = ""
+    try {
+      const workDetails = typeof service.workDetails === 'string'
+        ? JSON.parse(service.workDetails)
+        : service.workDetails
+
+      const parts = workDetails?.recommendedParts || service.recommendedParts || []
+      const partsArray = typeof parts === 'string' ? JSON.parse(parts) : parts
+
+      if (Array.isArray(partsArray) && partsArray.length > 0) {
+        recommendedPartsText = `
+
+Recommended Parts:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${partsArray.map((part, idx) =>
+          `${idx + 1}. Part Number: ${part.part_number}
+   Description: ${part.description}`
+        ).join('\n\n')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+      }
+    } catch (e) {
+      console.error("Failed to parse recommended parts:", e)
+    }
+
     setEmailSubject(`Projector Service Report - ${cinema} - ${serviceNum}`)
     setEmailBody(`Dear Team,
 
@@ -76,7 +101,7 @@ Service Details:
 Cinema Name: ${cinema}
 Service Number: ${serviceNum}
 Service Date: ${date}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${recommendedPartsText}
 
 Thank you for choosing Ascomp Inc.
 

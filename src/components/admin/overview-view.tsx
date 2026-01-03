@@ -147,6 +147,8 @@ const LABEL_OVERRIDES: Record<string, string> = {
   updatedAt: "Updated At",
   startTime: "Start Time",
   endTime: "End Time",
+  flLeft: "Fl Before",
+  flRight: "Fl After",
 }
 
 const toLabel = (key: string) => {
@@ -2043,6 +2045,7 @@ function PreviewDownloadDialog({
   }, [open, serviceId])
 
   const generateDefaultEmailContent = (service: any) => {
+    console.log("hi theree", service)
     const cinema = service.site.name || service.location || "Valued Client"
     const serviceNum = service.serviceNumber || "N/A"
     const date = service.date ? new Date(service.date).toLocaleDateString("en-US", {
@@ -2050,6 +2053,31 @@ function PreviewDownloadDialog({
       month: "long",
       day: "numeric"
     }) : "N/A"
+
+    // Parse recommended parts
+    let recommendedPartsText = ""
+    try {
+      const workDetails = typeof service.workDetails === 'string'
+        ? JSON.parse(service.workDetails)
+        : service.workDetails
+
+      const parts = workDetails?.recommendedParts || service.recommendedParts || []
+      const partsArray = typeof parts === 'string' ? JSON.parse(parts) : parts
+
+      if (Array.isArray(partsArray) && partsArray.length > 0) {
+        recommendedPartsText = `
+
+Recommended Parts:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${partsArray.map((part, idx) =>
+          `${idx + 1}. Part Number: ${part.part_number}
+   Description: ${part.description}`
+        ).join('\n\n')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+      }
+    } catch (e) {
+      console.error("Failed to parse recommended parts:", e)
+    }
 
     setEmailSubject(`Projector Service Report - ${cinema} - ${serviceNum}`)
     setEmailBody(`Dear Team,
@@ -2061,7 +2089,7 @@ Service Details:
 Cinema Name: ${cinema}
 Service Number: ${serviceNum}
 Service Date: ${date}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${recommendedPartsText}
 
 Thank you for choosing Ascomp Inc.
 
@@ -2341,6 +2369,8 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
   const [previewServiceId, setPreviewServiceId] = useState<string | null>(null)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
+  const [recommendedPartsDialogOpen, setRecommendedPartsDialogOpen] = useState(false)
+  const [selectedRecommendedParts, setSelectedRecommendedParts] = useState<RecommendedPart[]>([])
 
   useEffect(() => {
     const fetchRecords = async () => {
@@ -2381,10 +2411,6 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         const items: ServiceRecord[] = tasks.map((item: any, idx: number) => {
           const projector = item.projector ?? {}
           const site = item.site ?? {}
-
-          if (site.address == "Anupam Saket Delhi") {
-            console.log("site", site, projector, item)
-          }
 
           const flattened: ServiceRecord = {
             id: item.id ?? `row-${idx}`,
@@ -2687,6 +2713,28 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
       )
     }
 
+    // Handle recommended parts
+    if (key === "recommendedParts") {
+      try {
+        const parts = typeof value === "string" ? JSON.parse(value) : value
+        if (Array.isArray(parts) && parts.length > 0) {
+          return (
+            <button
+              onClick={() => {
+                setSelectedRecommendedParts(parts)
+                setRecommendedPartsDialogOpen(true)
+              }}
+              className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              <span>{parts.length} item{parts.length !== 1 ? "s" : ""}</span>
+            </button>
+          )
+        }
+      } catch (e) {
+        // If parsing fails, fall through to default handling
+      }
+    }
+
     if (typeof value === "boolean") return value ? "Yes" : "No"
     if (Array.isArray(value)) return value.length > 0 ? `${value.length} items` : "—"
     if (typeof value === "object") return JSON.stringify(value)
@@ -2796,12 +2844,12 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
                   >
                     Reset filters
                   </Button>
-                  {/* <Button
+                  <Button
                     className="text-sm"
                     onClick={() => setUploadDialogOpen(true)}
                   >
                     Upload
-                  </Button> */}
+                  </Button>
                   <Button
                     className="text-sm"
                     onClick={() => setShowExportModal(true)}
@@ -3024,6 +3072,42 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
       {showExportModal && (
         <ExportDataModal onClose={() => setShowExportModal(false)} />
       )}
+
+      {/* Recommended Parts Preview Dialog */}
+      <Dialog open={recommendedPartsDialogOpen} onOpenChange={setRecommendedPartsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Recommended Parts</DialogTitle>
+            <DialogDescription>
+              Parts recommended for replacement or maintenance
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            {selectedRecommendedParts.length > 0 ? (
+              <div className="border border-gray-200 rounded-md overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="text-left py-3 px-4 font-semibold text-black border-b">Part Number</th>
+                      <th className="text-left py-3 px-4 font-semibold text-black border-b">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedRecommendedParts.map((part, idx) => (
+                      <tr key={`${part.part_number}-${idx}`} className="border-b last:border-b-0 hover:bg-gray-50">
+                        <td className="py-3 px-4 text-black font-mono">{part.part_number}</td>
+                        <td className="py-3 px-4 text-black">{part.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-center text-gray-500 py-8">No recommended parts</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Upload Service Records Dialog */}
       <UploadServiceRecordsDialog

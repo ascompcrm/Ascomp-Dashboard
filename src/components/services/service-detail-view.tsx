@@ -49,6 +49,7 @@ interface ServiceDetailViewProps {
 export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
+  console.log("service view details", service)
   const handleDownloadPDF = async (service: Service) => {
     try {
       setIsGeneratingPdf(true)
@@ -194,7 +195,7 @@ export function ServiceDetailView({ service, onBack }: ServiceDetailViewProps) {
             <GridRow items={[
               { label: "Site Name", value: service.site.name },
               { label: "Address", value: service.site.address || service.address },
-              { label: "Contact", value: service.site.contactDetails || service.contactDetails },
+              { label: "Contact", value: service.contactDetails || service.site.contactDetails },
               { label: "Location", value: service.location },
               { label: "Cinema", value: service.cinemaName },
               { label: "Screen", value: service.site.screenNo || service.screenNumber },
