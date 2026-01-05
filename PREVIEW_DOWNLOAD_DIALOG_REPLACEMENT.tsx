@@ -60,6 +60,9 @@ function PreviewDownloadDialog({
   const generateDefaultEmailContent = (service: any) => {
     const cinema = service.cinemaName || service.siteName || "Valued Client"
     const serviceNum = service.serviceNumber || "N/A"
+    const address = service.address || service.site?.address || "N/A"
+    const serialNo = service.projector?.serialNo || service.projectorSerial || "N/A"
+    const screenNo = service.screenNumber || service.site?.screenNo || "N/A"
     const date = service.date ? new Date(service.date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -99,6 +102,9 @@ Please find attached the projector service report for your facility.
 Service Details:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Cinema Name: ${cinema}
+Address: ${address}
+Screen No: ${screenNo}
+Serial Number: ${serialNo}
 Service Number: ${serviceNum}
 Service Date: ${date}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${recommendedPartsText}

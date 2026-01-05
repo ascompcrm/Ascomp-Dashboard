@@ -2095,6 +2095,9 @@ function PreviewDownloadDialog({
     console.log("hi theree", service)
     const cinema = service.site.name || service.location || "Valued Client"
     const serviceNum = service.serviceNumber || "N/A"
+    const address = service.address || service.site?.address || "N/A"
+    const serialNo = service.projector?.serialNo || service.projectorSerial || "N/A"
+    const screenNo = service.screenNumber || service.site?.screenNo || "N/A"
     const date = service.date ? new Date(service.date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -2134,6 +2137,9 @@ Please find attached the projector service report for your facility.
 Service Details:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Cinema Name: ${cinema}
+Address: ${address}
+Audi No: ${screenNo}
+Serial Number: ${serialNo}
 Service Number: ${serviceNum}
 Service Date: ${date}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${recommendedPartsText}
