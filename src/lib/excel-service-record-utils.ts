@@ -38,6 +38,39 @@ export const normalizeEmail = (v: any): string | null => {
   return s.toLowerCase()
 }
 
+// Known valid status values for sanitization
+const validStatusPrefixes = [
+  'OK', 'YES', 'Concern', 'Working', 'Not Working', 'Not Available',
+  'Removed', 'Not removed', 'OK (Part is Ok)', 'YES (Needs Replacement)'
+]
+
+// Sanitize status field value - removes any note-like patterns
+// e.g., "Concern - Red colour on screen" → "Concern"
+// e.g., "YES (Needs Replacement) - some note" → "YES (Needs Replacement)"
+export const sanitizeStatusValue = (value: string | null): string | null => {
+  if (!value || typeof value !== 'string') return value
+
+  // Check if the value contains " - " which indicates note was incorrectly appended
+  const separatorIndex = value.indexOf(' - ')
+  if (separatorIndex === -1) return value // No separator, value is clean
+
+  // Extract the part before " - "
+  const statusPart = value.substring(0, separatorIndex).trim()
+
+  // Check if the extracted part looks like a valid status
+  const isValidStatus = validStatusPrefixes.some(prefix =>
+    statusPart === prefix || statusPart.startsWith(prefix)
+  )
+
+  if (isValidStatus) {
+    // Return just the status part, removing the note
+    return statusPart
+  }
+
+  // If we can't identify a valid status prefix, return original
+  return value
+}
+
 // Robust Excel date → JS Date (handles serials, JS Dates, common string formats)
 import { isValid as isValidDate } from "date-fns"
 
@@ -273,20 +306,21 @@ export const mapExcelRowToServiceRecordData = (row: Record<string, any>) => {
     lampMakeModel: toStringOrNull(lampModelMake),
     lampTotalRunningHours,
     lampCurrentRunningHours,
-    reflector: reflectorYesNo,
-    uvFilter: uvFilterYesNo,
-    integratorRod: integratorRodYesNo,
-    coldMirror: coldMirrorYesNo,
-    foldMirror: foldMirrorYesNo,
-    touchPanel: touchPanelYesNo,
-    evbBoard: evbBoardYesNo,
-    ImcbBoard: ImcbBoardYesNo,
-    pibBoard: pibBoardYesNo,
-    IcpBoard: IcpBoardYesNo,
-    imbSBoard: imbSBoardYesNo,
-    serialNumberVerified: chassisYesNo,
-    AirIntakeLadRad: leLadRadYesNo,
-    coolantLevelColor: levelColorYesNo,
+    // Apply sanitization to all status fields
+    reflector: sanitizeStatusValue(reflectorYesNo),
+    uvFilter: sanitizeStatusValue(uvFilterYesNo),
+    integratorRod: sanitizeStatusValue(integratorRodYesNo),
+    coldMirror: sanitizeStatusValue(coldMirrorYesNo),
+    foldMirror: sanitizeStatusValue(foldMirrorYesNo),
+    touchPanel: sanitizeStatusValue(touchPanelYesNo),
+    evbBoard: sanitizeStatusValue(evbBoardYesNo),
+    ImcbBoard: sanitizeStatusValue(ImcbBoardYesNo),
+    pibBoard: sanitizeStatusValue(pibBoardYesNo),
+    IcpBoard: sanitizeStatusValue(IcpBoardYesNo),
+    imbSBoard: sanitizeStatusValue(imbSBoardYesNo),
+    serialNumberVerified: sanitizeStatusValue(chassisYesNo),
+    AirIntakeLadRad: sanitizeStatusValue(leLadRadYesNo),
+    coolantLevelColor: sanitizeStatusValue(levelColorYesNo),
     reflectorNote: reflectorStatus,
     uvFilterNote: uvFilterStatus,
     integratorRodNote: integratorRodStatus,
@@ -301,25 +335,25 @@ export const mapExcelRowToServiceRecordData = (row: Record<string, any>) => {
     serialNumberVerifiedNote: chassisStatus,
     AirIntakeLadRadNote: leLadRadStatus,
     coolantLevelColorNote: levelColorStatus,
-    lightEngineWhite: whiteYesNo,
-    lightEngineRed: redYesNo,
-    lightEngineGreen: greenYesNo,
-    lightEngineBlue: blueYesNo,
-    lightEngineBlack: blackYesNo,
+    lightEngineWhite: sanitizeStatusValue(whiteYesNo),
+    lightEngineRed: sanitizeStatusValue(redYesNo),
+    lightEngineGreen: sanitizeStatusValue(greenYesNo),
+    lightEngineBlue: sanitizeStatusValue(blueYesNo),
+    lightEngineBlack: sanitizeStatusValue(blackYesNo),
     lightEngineWhiteNote: whiteStatus,
     lightEngineRedNote: redStatus,
     lightEngineGreenNote: greenStatus,
     lightEngineBlueNote: blueStatus,
     lightEngineBlackNote: blackStatus,
-    acBlowerVane: acBlowerYesNo,
-    extractorVane: extractorYesNo,
-    exhaustCfm: exhaustCfmYesNo,
-    lightEngineFans: leFansYesNo,
-    cardCageFans: cardCageFansYesNo,
-    radiatorFanPump: radiatorFanYesNo,
-    pumpConnectorHose: pumpConnectorYesNo,
-    securityLampHouseLock: securityLockYesNo,
-    lampLocMechanism: lampLocYesNo,
+    acBlowerVane: sanitizeStatusValue(acBlowerYesNo),
+    extractorVane: sanitizeStatusValue(extractorYesNo),
+    exhaustCfm: sanitizeStatusValue(exhaustCfmYesNo),
+    lightEngineFans: sanitizeStatusValue(leFansYesNo),
+    cardCageFans: sanitizeStatusValue(cardCageFansYesNo),
+    radiatorFanPump: sanitizeStatusValue(radiatorFanYesNo),
+    pumpConnectorHose: sanitizeStatusValue(pumpConnectorYesNo),
+    securityLampHouseLock: sanitizeStatusValue(securityLockYesNo),
+    lampLocMechanism: sanitizeStatusValue(lampLocYesNo),
     acBlowerVaneNote: acBlowerStatus,
     extractorVaneNote: extractorStatus,
     exhaustCfmNote: exhaustCfmStatus,

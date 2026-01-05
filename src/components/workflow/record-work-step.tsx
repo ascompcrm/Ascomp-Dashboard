@@ -221,7 +221,44 @@ const FormField = ({
   </div>
 )
 
+// Utility function to clean repeated/duplicated patterns from note values
+// Handles corrupted data like "Chipped - text - Chipped - text - Chipped - text"
+const cleanRepeatedNote = (noteValue: string): string => {
+  if (!noteValue || typeof noteValue !== 'string') return noteValue
 
+  // Split by " - " separator
+  const parts = noteValue.split(' - ')
+  if (parts.length <= 2) return noteValue // Normal format: "Choice - Text" or just "Choice"
+
+  // Check if there's a repeating pattern
+  // Pattern would be: Choice - Text - Choice - Text - Choice - Text...
+  // So parts would be: [Choice, Text, Choice, Text, Choice, Text]
+  const firstPart = parts[0]?.trim() || ''
+  const secondPart = parts[1]?.trim() || ''
+
+  // Check if the pattern repeats
+  let isRepeating = true
+  for (let i = 2; i < parts.length; i += 2) {
+    if ((parts[i]?.trim() || '') !== firstPart) {
+      isRepeating = false
+      break
+    }
+    if (i + 1 < parts.length && (parts[i + 1]?.trim() || '') !== secondPart) {
+      isRepeating = false
+      break
+    }
+  }
+
+  if (isRepeating && firstPart) {
+    // Return the cleaned version: just first occurrence
+    if (secondPart) {
+      return `${firstPart} - ${secondPart}`
+    }
+    return firstPart
+  }
+
+  return noteValue
+}
 
 const StatusSelectWithNote = ({
   field,
@@ -239,7 +276,7 @@ const StatusSelectWithNote = ({
   noteOptions?: string[]
   noteDefault?: string
   issueValues?: string[]
-  form: any 
+  form: any
   required?: boolean
 }) => {
   const { watch, register, setValue, getValues } = form
@@ -251,20 +288,22 @@ const StatusSelectWithNote = ({
   const initialChoice = noteDefault || noteOptions?.[0] || ''
   const [noteChoice, setNoteChoice] = useState<string>(initialChoice)
   const [noteText, setNoteText] = useState<string>('')
+  const [hasInitialized, setHasInitialized] = useState(false)
   const statusRegister = register(field as keyof RecordWorkForm)
 
   const selectOptions =
     options && options.length
       ? options
       : [
-          { value: 'OK', label: 'OK', description: 'Part is OK' },
-          { value: 'YES', label: 'YES', description: 'Needs replacement' },
-        ]
+        { value: 'OK', label: 'OK', description: 'Part is OK' },
+        { value: 'YES', label: 'YES', description: 'Needs replacement' },
+      ]
 
   const isIssue = (issueValues && issueValues.length > 0)
-    ? issueValues.includes(status) 
+    ? issueValues.includes(status)
     : (status === 'YES' || status === 'Concern' || status.startsWith('YES') || status.includes('Concern'))
 
+  // Format note as "Choice - Text" for the note field only
   const formatNote = (choice: string, text: string) => {
     const c = choice?.trim()
     const t = text?.trim()
@@ -274,48 +313,73 @@ const StatusSelectWithNote = ({
     return ''
   }
 
+  // Parse existing note value to extract choice and text
+  const parseExistingNote = (noteValue: string): { choice: string; text: string } => {
+    if (!noteValue || typeof noteValue !== 'string') {
+      return { choice: initialChoice, text: '' }
+    }
+
+    // Clean any repeated/corrupted patterns first
+    const cleanedValue = cleanRepeatedNote(noteValue)
+
+    // Check if cleanedValue matches any of the noteOptions
+    if (noteOptions && noteOptions.length > 0) {
+      for (const opt of noteOptions) {
+        // Check if it starts with "Option - " pattern
+        if (cleanedValue.startsWith(`${opt} - `)) {
+          return { choice: opt, text: cleanedValue.slice(opt.length + 3) }
+        }
+        // Check if it's exactly the option
+        if (cleanedValue === opt) {
+          return { choice: opt, text: '' }
+        }
+      }
+    }
+
+    // If no match found, treat the whole thing as text
+    return { choice: initialChoice, text: cleanedValue }
+  }
+
+  // Handle reason dropdown change - update the NOTE field with combined format
   const handleReasonChange = (val: string) => {
     setNoteChoice(val)
     if (isIssue) {
+      // Only update the NOTE field, never the status field
       setValue(noteField, formatNote(val, noteText), { shouldDirty: true })
     }
   }
 
+  // Handle note text change - update the NOTE field with combined format
   const handleNoteTextChange = (text: string) => {
     setNoteText(text)
     if (isIssue) {
+      // Only update the NOTE field, never the status field
       setValue(noteField, formatNote(noteChoice, text), { shouldDirty: true })
     }
   }
 
+  // Initialize from existing form value on mount (only once)
+  useEffect(() => {
+    if (hasInitialized) return
+
+    const existingNote = getValues(noteField)
+    if (existingNote && typeof existingNote === 'string' && existingNote.trim()) {
+      const parsed = parseExistingNote(existingNote)
+      setNoteChoice(parsed.choice)
+      setNoteText(parsed.text)
+    }
+    setHasInitialized(true)
+  }, []) // Empty dependency array - run only on mount
+
   // Clear on status change away from Issue
   useEffect(() => {
-    if (!isIssue) {
+    if (!isIssue && hasInitialized) {
       const currentNote = getValues(noteField)
-      const shouldResetChoice = noteChoice !== initialChoice
-      const shouldClearValue = Boolean(currentNote)
-
-      if (shouldResetChoice) setNoteChoice(initialChoice)
+      if (noteChoice !== initialChoice) setNoteChoice(initialChoice)
       if (noteText) setNoteText('')
-      if (shouldClearValue) setValue(noteField, '', { shouldDirty: true })
+      if (currentNote) setValue(noteField, '', { shouldDirty: true })
     }
-  }, [status, initialChoice, noteField, noteChoice, noteText, getValues, setValue, isIssue])
-
-  // Keep note field in sync when status is Issue
-  useEffect(() => {
-    if (isIssue && noteOptions?.length) {
-      setValue(noteField, formatNote(noteChoice, noteText), { shouldDirty: true })
-    }
-  }, [status, noteChoice, noteText, noteField, setValue, isIssue, noteOptions])
-
-  // Initialize choice on first render if missing
-  useEffect(() => {
-    if (!noteChoice && initialChoice) {
-      setNoteChoice(initialChoice)
-    }
-  }, [noteChoice, initialChoice])
-
-
+  }, [isIssue]) // Only depend on isIssue changing
 
   return (
     <FormField label={label} required={required}>
@@ -329,13 +393,6 @@ const StatusSelectWithNote = ({
           const value = event.target.value
           setValue(field, value, { shouldDirty: true })
           statusRegister.onChange(event)
-          if (value !== 'YES' && value !== 'Concern') {
-             // We need to clear issue notes if they were stored in 'issueNotes' object
-             // But here we are using individual fields like 'securityLampHouseLockNote'
-             // The clearIssueNote logic in original component handled 'issueNotes' object
-             // Let's rely on the useEffect inside this component which clears the field
-             // But we might need to clear the specific note field
-          }
         }}
         className="w-full border-2 border-black p-2 text-black text-sm"
       >
@@ -415,12 +472,6 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     defaultValues: createInitialFormData(),
   })
 
-  const safeDate = (dateStr: any, fallback: string) => {
-    if (!dateStr || typeof dateStr !== 'string') return fallback
-    const d = new Date(dateStr)
-    return isNaN(d.getTime()) ? fallback : (d.toISOString().split('T')[0] ?? fallback)
-  }
-
   useEffect(() => {
     const initial = createInitialFormData()
     if (data?.workDetails) {
@@ -429,7 +480,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
         ...data.workDetails,
         // Override with selectedService values to ensure they take precedence
         cinemaName: data.selectedService?.site || data.workDetails.cinemaName || initial.cinemaName,
-        date: safeDate(data.selectedService?.date, data.workDetails.date || initial.date),
+        // Use saved workDetails date if exists, otherwise use today's date (initial.date)
+        date: data.workDetails.date || initial.date,
         address: data.selectedService?.address || data.workDetails.address || initial.address,
         contactDetails: data.selectedService?.contactDetails || data.workDetails.contactDetails || initial.contactDetails,
         projectorModel: data.selectedService?.projectorModel || data.workDetails.projectorModel || initial.projectorModel,
@@ -448,7 +500,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           ...parsed,
           // Override with selectedService values to ensure they take precedence
           cinemaName: data.selectedService?.site || parsed.cinemaName || initial.cinemaName,
-          date: safeDate(data.selectedService?.date, parsed.date || initial.date),
+          // Use saved form date if exists, otherwise use today's date (initial.date)
+          date: parsed.date || initial.date,
           address: data.selectedService?.address || parsed.address || initial.address,
           contactDetails: data.selectedService?.contactDetails || parsed.contactDetails || initial.contactDetails,
           projectorModel: data.selectedService?.projectorModel || parsed.projectorModel || initial.projectorModel,
@@ -458,11 +511,12 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           recommendedParts: parsed.recommendedParts || [],
         })
       } else {
-        // No saved data, but we have service details
+        // No saved data, but we have service details - use today's date
         reset({
           ...initial,
           cinemaName: data.selectedService?.site || initial.cinemaName,
-          date: safeDate(data.selectedService?.date, initial.date),
+          // Use today's date for new form entries
+          date: initial.date,
           address: data.selectedService?.address || initial.address,
           contactDetails: data.selectedService?.contactDetails || initial.contactDetails,
           projectorModel: data.selectedService?.projectorModel || initial.projectorModel,
@@ -622,14 +676,14 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     // Compress image before upload (resize to max 1200x1200, JPEG 80% quality)
     const { compressImage } = await import('@/lib/image-compression')
     const compressedBlob = await compressImage(file, 1200, 1200, 0.8)
-    
+
     // Create a new File from the compressed blob
     const compressedFile = new File(
-      [compressedBlob], 
+      [compressedBlob],
       file.name.replace(/\.[^/.]+$/, '.jpg'), // Change extension to .jpg
       { type: 'image/jpeg' }
     )
-    
+
     const formData = new FormData()
     formData.append('file', compressedFile)
     formData.append('folder', `${category}-images`)
@@ -654,11 +708,11 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     try {
       const uploads = await Promise.all(Array.from(files).map((file) => uploadToBlob(file, type)))
       setImageError(null)
-      
+
       const nextBefore = type === 'before' ? [...beforeImagesRef.current, ...uploads] : beforeImagesRef.current
       const nextAfter = type === 'after' ? [...afterImagesRef.current, ...uploads] : afterImagesRef.current
       const nextBroken = type === 'broken' ? [...brokenImagesRef.current, ...uploads] : brokenImagesRef.current
-      
+
       persistImages(nextBefore, nextAfter, nextBroken)
     } catch (error) {
       console.error('Image upload failed:', error)
@@ -704,13 +758,13 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
   const filteredParts = partsData.filter((part) => {
     const matchesModel = part.projector_model.toLowerCase() === projectorModel?.toLowerCase()
     if (!matchesModel) return false
-    
+
     if (!partSearchQuery) return true
-    
+
     const searchLower = partSearchQuery.toLowerCase()
     const matchesDescription = part.description.toLowerCase().includes(searchLower)
     const matchesPartNumber = part.part_number.toLowerCase().includes(searchLower)
-    
+
     return matchesDescription || matchesPartNumber
   })
 
@@ -751,7 +805,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     if (!formConfig || formConfig.length === 0) {
       return null
     }
-    
+
     // Filter section fields and exclude duplicate dimension fields for "Software & Screen Information"
     // These are handled separately with "Scope Dimensions" and "Flat Dimensions" headings
     const excludedFields = ['screenHeight', 'screenWidth', 'flatHeight', 'flatWidth']
@@ -772,7 +826,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
     // Group fields into rows (2 columns on larger screens)
     const rows: typeof sectionFields[] = []
     let currentRow: typeof sectionFields = []
-    
+
     sectionFields.forEach((field, idx) => {
       currentRow.push(field)
       // Create a new row every 2 fields, or if it's a textarea/select that should be full width
@@ -788,7 +842,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           <div key={rowIdx} className={row.length > 1 && row[0]?.type !== 'textarea' ? "grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3" : ""}>
             {row.map((field) => {
               if (!field) return null
-              
+
               // Handle StatusSelectWithNote component type
               if (field.componentType === "statusSelectWithNote") {
                 const selectOptions = field.options?.map(opt => ({
@@ -796,10 +850,10 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                   label: opt,
                   description: field.optionDescriptions?.[opt] || ""
                 })) || [
-                  { value: 'OK', label: 'OK', description: 'Part is OK' },
-                  { value: 'YES', label: 'YES', description: 'Needs replacement' },
-                ]
-                
+                    { value: 'OK', label: 'OK', description: 'Part is OK' },
+                    { value: 'YES', label: 'YES', description: 'Needs replacement' },
+                  ]
+
                 return (
                   <StatusSelectWithNote
                     key={field.key}
@@ -885,8 +939,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                         {field.min !== undefined && field.max !== undefined
                           ? `Enter between ${field.min} and ${field.max}.`
                           : field.min !== undefined
-                          ? `Enter ${field.min} or greater.`
-                          : `Enter ${field.max} or less.`}
+                            ? `Enter ${field.min} or greater.`
+                            : `Enter ${field.max} or less.`}
                       </p>
                     )}
                   </FormField>
@@ -910,8 +964,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                         {field.min !== undefined && field.max !== undefined
                           ? `Enter between ${field.min} and ${field.max}.`
                           : field.min !== undefined
-                          ? `Enter ${field.min} or greater.`
-                          : `Enter ${field.max} or less.`}
+                            ? `Enter ${field.min} or greater.`
+                            : `Enter ${field.max} or less.`}
                       </p>
                     )}
                   </FormField>
@@ -923,7 +977,7 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                 const min = field.min !== undefined ? field.min : -Infinity
                 const max = field.max !== undefined ? field.max : Infinity
                 const isInvalid = isOutOfRange(value, min, max)
-                
+
                 return (
                   <FormField key={field.key} label={field.label} required={field.required}>
                     <DynamicFormField
@@ -936,8 +990,8 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
                         {field.min !== undefined && field.max !== undefined
                           ? `Enter between ${field.min} and ${field.max}.`
                           : field.min !== undefined
-                          ? `Enter ${field.min} or greater.`
-                          : `Enter ${field.max} or less.`}
+                            ? `Enter ${field.min} or greater.`
+                            : `Enter ${field.max} or less.`}
                       </p>
                     )}
                   </FormField>
@@ -971,13 +1025,13 @@ export default function RecordWorkStep({ data, onNext, onBack }: any) {
           const fieldValue = values[field.key as keyof RecordWorkForm]
           const min = field.min !== undefined ? field.min : -Infinity
           const max = field.max !== undefined ? field.max : Infinity
-          
+
           if (isOutOfRange(fieldValue, min, max)) {
             const rangeText = field.min !== undefined && field.max !== undefined
               ? `between ${field.min} and ${field.max}`
               : field.min !== undefined
-              ? `${field.min} or greater`
-              : `${field.max} or less`
+                ? `${field.min} or greater`
+                : `${field.max} or less`
             validationErrors.push(`${field.label} must be ${rangeText}.`)
           }
         }

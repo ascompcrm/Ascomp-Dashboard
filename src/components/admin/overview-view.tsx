@@ -162,6 +162,45 @@ const toLabel = (key: string) => {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+// Utility function to clean repeated/duplicated patterns from note values
+// Handles corrupted data like "Chipped - text - Chipped - text - Chipped - text"
+const cleanRepeatedNote = (noteValue: string): string => {
+  if (!noteValue || typeof noteValue !== 'string') return noteValue
+
+  // Split by " - " separator
+  const parts = noteValue.split(' - ')
+  if (parts.length <= 2) return noteValue // Normal format: "Choice - Text" or just "Choice"
+
+  // Check if there's a repeating pattern
+  // Pattern would be: Choice - Text - Choice - Text - Choice - Text...
+  // So parts would be: [Choice, Text, Choice, Text, Choice, Text]
+  const firstPart = parts[0]?.trim() || ''
+  const secondPart = parts[1]?.trim() || ''
+
+  // Check if the pattern repeats
+  let isRepeating = true
+  for (let i = 2; i < parts.length; i += 2) {
+    if ((parts[i]?.trim() || '') !== firstPart) {
+      isRepeating = false
+      break
+    }
+    if (i + 1 < parts.length && (parts[i + 1]?.trim() || '') !== secondPart) {
+      isRepeating = false
+      break
+    }
+  }
+
+  if (isRepeating && firstPart) {
+    // Return the cleaned version: just first occurrence
+    if (secondPart) {
+      return `${firstPart} - ${secondPart}`
+    }
+    return firstPart
+  }
+
+  return noteValue
+}
+
 type IssueNotes = Record<string, string>
 type UploadedImage = string
 type ProjectorPart = {
@@ -376,13 +415,16 @@ const StatusSelectWithNote = ({
   // But only if we haven't manually set it ourselves
   useEffect(() => {
     if (!initializedRef.current && currentNoteValue && noteOptions?.length) {
-      const matchedOption = noteOptions.find(opt => currentNoteValue.startsWith(opt) || currentNoteValue === opt)
+      // Clean any repeated/corrupted patterns first
+      const cleanedNoteValue = cleanRepeatedNote(currentNoteValue)
+
+      const matchedOption = noteOptions.find(opt => cleanedNoteValue.startsWith(opt) || cleanedNoteValue === opt)
       if (matchedOption) {
         setNoteChoice(matchedOption)
         const separator = " - "
-        const idx = currentNoteValue.indexOf(separator)
-        if (idx !== -1 && currentNoteValue.substring(0, idx) === matchedOption) {
-          setNoteText(currentNoteValue.substring(idx + separator.length))
+        const idx = cleanedNoteValue.indexOf(separator)
+        if (idx !== -1 && cleanedNoteValue.substring(0, idx) === matchedOption) {
+          setNoteText(cleanedNoteValue.substring(idx + separator.length))
         } else {
           setNoteText('')
         }
@@ -405,6 +447,7 @@ const StatusSelectWithNote = ({
     ? issueValues.includes(status)
     : (status === 'YES' || status === 'Concern' || status.startsWith('YES') || status.includes('Concern'))
 
+  // Format note as "Choice - Text" for the note field only
   const formatNote = (choice: string, text: string) => {
     const c = choice?.trim()
     const t = text?.trim()
@@ -414,16 +457,20 @@ const StatusSelectWithNote = ({
     return ''
   }
 
+  // Handle reason dropdown change - update the NOTE field with combined format
   const handleReasonChange = (val: string) => {
     setNoteChoice(val)
     if (isIssue) {
+      // Only update the NOTE field, never the status field
       setValue(noteField, formatNote(val, noteText), { shouldDirty: true })
     }
   }
 
+  // Handle note text change - update the NOTE field with combined format
   const handleNoteTextChange = (text: string) => {
     setNoteText(text)
     if (isIssue) {
+      // Only update the NOTE field, never the status field
       setValue(noteField, formatNote(noteChoice, text), { shouldDirty: true })
     }
   }
@@ -2656,7 +2703,9 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
 
     // Handle fields with notes (merged format: "OK - Note")
     if (NOTE_FIELD_MAP[key] && typeof value === "string") {
-      const parts = value.split(" - ")
+      // Clean any repeated/corrupted patterns first
+      const cleanedValue = cleanRepeatedNote(value)
+      const parts = cleanedValue.split(" - ")
       const mainValue = parts[0] || ""
       const noteValue = parts.slice(1).join(" - ") || ""
 

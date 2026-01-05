@@ -334,6 +334,44 @@ export async function PUT(
       'securityLampHouseLockNote'
     ])
 
+    // Status fields that should NEVER contain note-like patterns
+    const statusFields = new Set([
+      'reflector', 'uvFilter', 'integratorRod', 'coldMirror', 'foldMirror',
+      'touchPanel', 'evbBoard', 'ImcbBoard', 'pibBoard', 'IcpBoard', 'imbSBoard',
+      'serialNumberVerified', 'AirIntakeLadRad', 'coolantLevelColor',
+      'lightEngineWhite', 'lightEngineRed', 'lightEngineGreen', 'lightEngineBlue', 'lightEngineBlack',
+      'acBlowerVane', 'extractorVane', 'lightEngineFans', 'cardCageFans',
+      'radiatorFanPump', 'pumpConnectorHose', 'securityLampHouseLock', 'lampLocMechanism',
+      'focusBoresight', 'integratorPosition', 'spotsOnScreen',
+      'screenCropping', 'convergence', 'channelsChecked',
+      'pixelDefects', 'imageVibration', 'liteloc', 'leStatus', 'acStatus'
+    ])
+
+    // Known valid status values (the part before any " - ")
+    const validStatusPrefixes = [
+      'OK', 'YES', 'Concern', 'Working', 'Not Working', 'Not Available',
+      'Removed', 'Not removed', 'OK (Part is Ok)', 'YES (Needs Replacement)'
+    ]
+
+    // Sanitize status field value - removes any note-like patterns
+    const sanitizeStatusValue = (value: string): string => {
+      if (!value || typeof value !== 'string') return value
+
+      const separatorIndex = value.indexOf(' - ')
+      if (separatorIndex === -1) return value
+
+      const statusPart = value.substring(0, separatorIndex).trim()
+      const isValidStatus = validStatusPrefixes.some(prefix =>
+        statusPart === prefix || statusPart.startsWith(prefix)
+      )
+
+      if (isValidStatus) {
+        return statusPart
+      }
+
+      return value
+    }
+
     const readonlyFields = new Set([
       'id', 'createdAt', 'updatedAt', 'userId', 'projectorId', 'siteId', 'serviceNumber', 'assignedToId', 'date'
     ])
@@ -348,6 +386,15 @@ export async function PUT(
       } else if (!Array.isArray(recommendedParts) && recommendedParts && typeof recommendedParts === 'object') {
         updateData.recommendedParts = recommendedParts
       }
+    }
+
+    // Sanitize all status fields before processing
+    if (workDetails) {
+      statusFields.forEach(field => {
+        if (workDetails[field] && typeof workDetails[field] === 'string') {
+          workDetails[field] = sanitizeStatusValue(workDetails[field])
+        }
+      })
     }
 
     // Add work details with proper type conversion
