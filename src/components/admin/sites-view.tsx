@@ -54,7 +54,7 @@ export default function SitesView() {
     try {
       setLoading(true)
       const response = await fetch("/api/admin/sites")
-      
+
       if (!response.ok) {
         let errorMessage = "Failed to fetch sites"
         try {
@@ -67,7 +67,7 @@ export default function SitesView() {
         console.error("Error fetching sites:", errorMessage, response.status)
         throw new Error(errorMessage)
       }
-      
+
       const result = await response.json()
       setSites(result.sites || [])
       // Don't expand sites by default - keep them closed
@@ -162,53 +162,53 @@ export default function SitesView() {
               <p className="text-muted-foreground">No sites found matching your search.</p>
             </div>
           ) : (
-          filteredSites.map((site) => {
-            const completedCount = site.projectors.filter((p) => p.status === "completed").length
-            const pendingCount = site.projectors.filter((p) => p.status === "pending").length
-            const scheduledCount = site.projectors.filter((p) => p.status === "scheduled").length
+            filteredSites.map((site) => {
+              const completedCount = site.projectors.filter((p) => p.status === "completed").length
+              const pendingCount = site.projectors.filter((p) => p.status === "pending").length
+              const scheduledCount = site.projectors.filter((p) => p.status === "scheduled").length
 
-            const siteInfo = site as any // Type assertion to access additional fields
+              const siteInfo = site as any // Type assertion to access additional fields
 
-            return (
-              <div key={site.id} className="border border-border bg-background rounded-lg shadow-sm">
-                <div className="p-5">
-                  {/* Site Header */}
-                  <div className="mb-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="text-base font-bold text-foreground mb-0.5">{site.name}</h3>
-                        {siteInfo?.siteCode && (
-                          <p className="text-xs text-muted-foreground">Site Code: {siteInfo.siteCode}</p>
-                        )}
+              return (
+                <div key={site.id} className="border border-border bg-background rounded-lg shadow-sm">
+                  <div className="p-5">
+                    {/* Site Header */}
+                    <div className="mb-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h3 className="text-base font-bold text-foreground mb-0.5">{site.name}</h3>
+                          {siteInfo?.siteCode && (
+                            <p className="text-xs text-muted-foreground">Site Code: {siteInfo.siteCode}</p>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            router.push(`/admin/dashboard/sites/${site.id}`)
+                          }}
+                          className="border-border shrink-0 h-8 text-xs px-3"
+                        >
+                          View Details
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          router.push(`/admin/dashboard/sites/${site.id}`)
-                        }}
-                        className="border-border shrink-0 h-8 text-xs px-3"
-                      >
-                        View Details
-                      </Button>
                     </div>
-                  </div>
 
-                  {/* Site Information */}
-                  <div className="space-y-2 mb-4">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Address</p>
-                      <p className="text-sm text-foreground">{site.address}</p>
-                    </div>
-                    {site.contactDetails && (
+                    {/* Site Information */}
+                    <div className="space-y-2 mb-4">
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Contact Details</p>
-                        <p className="text-sm text-foreground">{site.contactDetails}</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Address</p>
+                        <p className="text-sm text-foreground">{site.address}</p>
                       </div>
-                    )}
-                    {/* <div>
+                      {site.contactDetails && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Contact Details</p>
+                          <p className="text-sm text-foreground">{site.contactDetails}</p>
+                        </div>
+                      )}
+                      {/* <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">Created Date</p>
                       <p className="text-sm text-foreground">
                         {new Date(site.createdDate).toLocaleDateString("en-US", {
@@ -218,32 +218,32 @@ export default function SitesView() {
                         })}
                       </p>
                     </div> */}
-                  </div>
+                    </div>
 
-                  {/* Statistics */}
-                  {/* Statistics - Simplified */}
-                  <div className="flex items-center gap-3 pt-3 border-t border-border mt-3">
-                    <div className="flex-1 text-center border-r border-border last:border-0 px-1">
-                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Projectors</p>
-                       <p className="text-sm font-bold text-foreground">{site.projectors.length}</p>
+                    {/* Statistics */}
+                    {/* Statistics - Simplified */}
+                    <div className="flex items-center gap-3 pt-3 border-t border-border mt-3">
+                      <div className="flex-1 text-center border-r border-border last:border-0 px-1">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Projectors</p>
+                        <p className="text-sm font-bold text-foreground">{site.projectors.length}</p>
+                      </div>
+                      <div className="flex-1 text-center border-r border-border last:border-0 px-1">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Pending</p>
+                        <p className="text-sm font-bold text-red-600">{pendingCount}</p>
+                      </div>
+                      <div className="flex-1 text-center border-r border-border last:border-0 px-1">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Scheduled</p>
+                        <p className="text-sm font-bold text-blue-600">{scheduledCount}</p>
+                      </div>
+                      <div className="flex-1 text-center border-r border-border last:border-0 px-1">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Completed</p>
+                        <p className="text-sm font-bold text-green-600">{completedCount}</p>
+                      </div>
                     </div>
-                     <div className="flex-1 text-center border-r border-border last:border-0 px-1">
-                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Pending</p>
-                       <p className="text-sm font-bold text-red-600">{pendingCount}</p>
-                    </div>
-                     <div className="flex-1 text-center border-r border-border last:border-0 px-1">
-                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Scheduled</p>
-                       <p className="text-sm font-bold text-blue-600">{scheduledCount}</p>
-                    </div>
-                     <div className="flex-1 text-center border-r border-border last:border-0 px-1">
-                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Completed</p>
-                       <p className="text-sm font-bold text-green-600">{completedCount}</p>
-                    </div>
-                  </div>
 
-                  {/* Toggle Button at the end */}
-                  <div className="pt-2 mt-2">
-                    <Button
+                    {/* Toggle Button at the end */}
+                    <div className="pt-2 mt-2">
+                      <Button
                         variant="ghost"
                         size="sm"
                         onClick={(e) => {
@@ -254,37 +254,21 @@ export default function SitesView() {
                         className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground h-8"
                       >
                         {expandedSites.has(site.id) ? (
-                            <ChevronUp className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4" />
                         ) : (
-                            <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-4 w-4" />
                         )}
                       </Button>
-                  </div>
-                </div>
-
-                {expandedSites.has(site.id) && (
-                  <div className="border-t border-border bg-muted/20 p-5">
-                    <div className="flex justify-between items-center mb-4">
-                      <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-0.5">Projectors</h4>
-                        <p className="text-xs text-muted-foreground">{site.projectors.length} projector{site.projectors.length !== 1 ? 's' : ''}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedSite(site.id)
-                        }}
-                        className="border-border"
-                      >
-                        Add Projector
-                      </Button>
                     </div>
+                  </div>
 
-                    {site.projectors.length === 0 ? (
-                      <div className="py-6 text-center border border-dashed border-border">
-                        <p className="text-sm text-muted-foreground mb-3">No projectors match the selected filter.</p>
+                  {expandedSites.has(site.id) && (
+                    <div className="border-t border-border bg-muted/20 p-5">
+                      <div className="flex justify-between items-center mb-4">
+                        <div>
+                          <h4 className="text-sm font-semibold text-foreground mb-0.5">Projectors</h4>
+                          <p className="text-xs text-muted-foreground">{site.projectors.length} projector{site.projectors.length !== 1 ? 's' : ''}</p>
+                        </div>
                         <Button
                           size="sm"
                           variant="outline"
@@ -294,53 +278,69 @@ export default function SitesView() {
                           }}
                           className="border-border"
                         >
-                          Add First Projector
+                          Add Projector
                         </Button>
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {site.projectors.map((projector) => {
-                          const projectorForDetails: Projector = {
-                            id: projector.id,
-                            name: projector.name,
-                            model: projector.model,
-                            serialNumber: projector.serialNumber,
-                            installDate: projector.installDate,
-                            lastServiceDate: projector.lastServiceDate,
-                            status: projector.status,
-                            nextServiceDue: projector.nextServiceDue,
-                            serviceHistory: projector.serviceHistory,
-                          }
-                          const siteForDetails: Site = {
-                            id: site.id,
-                            name: site.name,
-                            location: site.location,
-                            address: site.address,
-                            createdDate: site.createdDate,
-                            projectors: [],
-                          }
-                          return (
-                            <ProjectorDetails
-                              key={projector.id}
-                              site={siteForDetails}
-                              projector={projectorForDetails}
-                              onSchedule={() => {
-                                setSelectedProjector({ siteId: site.id, projectorId: projector.id })
-                                setShowSchedule(true)
-                              }}
-                              onViewDetails={() =>
-                                router.push(`/admin/dashboard/sites/${site.id}/projectors/${projector.id}`)
-                              }
-                            />
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })
+
+                      {site.projectors.length === 0 ? (
+                        <div className="py-6 text-center border border-dashed border-border">
+                          <p className="text-sm text-muted-foreground mb-3">No projectors match the selected filter.</p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedSite(site.id)
+                            }}
+                            className="border-border"
+                          >
+                            Add First Projector
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {site.projectors.map((projector) => {
+                            const projectorForDetails: Projector = {
+                              id: projector.id,
+                              name: projector.name,
+                              model: projector.model,
+                              serialNumber: projector.serialNumber,
+                              installDate: projector.installDate,
+                              lastServiceDate: projector.lastServiceDate,
+                              status: projector.status,
+                              nextServiceDue: projector.nextServiceDue,
+                              serviceHistory: projector.serviceHistory,
+                            }
+                            const siteForDetails: Site = {
+                              id: site.id,
+                              name: site.name,
+                              location: site.location,
+                              address: site.address,
+                              createdDate: site.createdDate,
+                              projectors: [],
+                            }
+                            return (
+                              <ProjectorDetails
+                                key={projector.id}
+                                site={siteForDetails}
+                                projector={projectorForDetails}
+                                onSchedule={() => {
+                                  setSelectedProjector({ siteId: site.id, projectorId: projector.id })
+                                  setShowSchedule(true)
+                                }}
+                                onViewDetails={() =>
+                                  router.push(`/admin/dashboard/sites/${site.id}/projectors/${projector.id}`)
+                                }
+                              />
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })
           )}
         </div>
       )}
@@ -372,7 +372,27 @@ export default function SitesView() {
             setShowSchedule(false)
           }}
           onSuccess={() => {
+            // Optimistic update: immediately update the local state
+            setSites(prevSites =>
+              prevSites.map(site => {
+                if (site.id === selectedProjector.siteId) {
+                  return {
+                    ...site,
+                    projectors: site.projectors.map(proj => {
+                      if (proj.id === selectedProjector.projectorId) {
+                        return { ...proj, status: "scheduled" as const }
+                      }
+                      return proj
+                    })
+                  }
+                }
+                return site
+              })
+            )
+
+            // Also fetch fresh data from server to ensure consistency
             fetchSites()
+
             setSelectedProjector(null)
             setShowSchedule(false)
           }}
