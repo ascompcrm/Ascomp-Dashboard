@@ -218,7 +218,30 @@ export async function POST(request: NextRequest) {
             engineerSignatureUrl:
                 fullService.signatures?.engineer || (fullService.signatures as any)?.engineerSignatureUrl || "",
             siteSignatureUrl: fullService.signatures?.site || (fullService.signatures as any)?.siteSignatureUrl || "",
-            imagesLink: fullService.workDetails?.photosDriveLink || undefined,
+            imagesLink: (() => {
+                // First check if photosDriveLink exists (it's in workDetails)
+                if (fullService.workDetails?.photosDriveLink) {
+                    return fullService.workDetails.photosDriveLink;
+                }
+                // Also check top-level photosDriveLink
+                if (fullService.photosDriveLink) {
+                    return fullService.photosDriveLink;
+                }
+
+                // Check if images arrays have any data
+                const hasImages =
+                    (Array.isArray(fullService.images) && fullService.images.length > 0) ||
+                    (Array.isArray(fullService.afterImages) && fullService.afterImages.length > 0) ||
+                    (Array.isArray(fullService.brokenImages) && fullService.brokenImages.length > 0);
+
+                if (hasImages) {
+                    // Generate link to images page with full domain
+                    const imagesPath = `/share/service-images/${serviceId}`;
+                    return `${baseUrl}${imagesPath}`;
+                }
+
+                return undefined;
+            })(),
         }
 
         // Generate PDF
