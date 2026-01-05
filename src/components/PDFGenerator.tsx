@@ -151,7 +151,7 @@ export const convertServiceVisitToText = (value: string | number | null | undefi
   if (!value) return '';
   const str = String(value).trim();
   const lowerStr = str.toLowerCase();
-  
+
   // Map of valid ordinals (case-insensitive)
   const ordinalMap: Record<string, string> = {
     'first': 'First',
@@ -166,65 +166,37 @@ export const convertServiceVisitToText = (value: string | number | null | undefi
     'tenth': 'Tenth',
     'special': 'Special'
   };
-  
+
   // If already in text format, return capitalized version
   if (ordinalMap[lowerStr]) {
     return ordinalMap[lowerStr];
   }
-  
+
   // Convert number to ordinal
   const num = parseInt(str, 10);
   if (!isNaN(num)) {
     const ordinals = ['', 'First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth', 'Ninth', 'Tenth'];
     return ordinals[num] || `${num}th`;
   }
-  
+
   // If not a number and not a known ordinal, return as-is (capitalize first letter)
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
 export async function generateMaintenanceReport(data: MaintenanceReportData): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const timesRomanBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-  let logoImage;
-  let logoImage2;
-  try {
-    const logoResponse = await fetch('/LOGO/Ascomp.png');
-    const logoResponse2 = await fetch('/LOGO/Christie.png');
-    if (logoResponse.ok) {
-      const logoBytes = await logoResponse.arrayBuffer();
-      logoImage = await pdfDoc.embedPng(logoBytes);
-    }
-    if (logoResponse2.ok) {
-      const logoBytes = await logoResponse2.arrayBuffer();
-      logoImage2 = await pdfDoc.embedPng(logoBytes);
-    }
-  } catch (error) {
-    try {
-      if (typeof window === 'undefined') {
-        const fs = require('fs');
-        const path = require('path');
-        const logoPath = path.join(process.cwd(), 'public', 'LOGO', 'Ascomp.png');
-        const logoPath2 = path.join(process.cwd(), 'public', 'LOGO', 'Christie.png');
-        const logoBytes = fs.readFileSync(logoPath);
-        const logoBytes2 = fs.readFileSync(logoPath2);
-        logoImage = await pdfDoc.embedPng(logoBytes);
-        logoImage2 = await pdfDoc.embedPng(logoBytes2);
-      }
-    } catch (fsError) {
-      console.warn('Could not load logo image, falling back to text:', fsError);
-    }
-  }
 
-  // Load signature images
-  let engineerSignatureImage;
-  let siteSignatureImage;
-  
-  const loadSignatureImage = async (url: string) => {
+  // Load fonts in parallel
+  const [timesRoman, timesRomanBold] = await Promise.all([
+    pdfDoc.embedFont(StandardFonts.TimesRoman),
+    pdfDoc.embedFont(StandardFonts.TimesRomanBold),
+  ]);
+
+  // Helper function to load and embed an image
+  const loadImage = async (url: string): Promise<any> => {
     try {
-      let signatureBytes: ArrayBuffer;
-      
+      let imageBytes: ArrayBuffer;
+
       // Handle data URLs (base64)
       if (url.startsWith('data:')) {
         const base64Data = url.split(',')[1];
@@ -234,33 +206,61 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        signatureBytes = bytes.buffer;
+        imageBytes = bytes.buffer;
       } else {
-        // Handle regular URLs
-        const signatureResponse = await fetch(url);
-        if (!signatureResponse.ok) return null;
-        signatureBytes = await signatureResponse.arrayBuffer();
+        // Handle regular URLs with a timeout for slow connections
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+        try {
+          const response = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (!response.ok) return null;
+          imageBytes = await response.arrayBuffer();
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          console.warn(`Image fetch timeout or error for ${url}:`, fetchError);
+          return null;
+        }
       }
-      
+
       // Try PNG first, then JPG
       try {
-        return await pdfDoc.embedPng(signatureBytes);
+        return await pdfDoc.embedPng(imageBytes);
       } catch {
-        return await pdfDoc.embedJpg(signatureBytes);
+        try {
+          return await pdfDoc.embedJpg(imageBytes);
+        } catch {
+          return null;
+        }
       }
     } catch (error) {
-      console.warn('Could not load signature image:', error);
+      console.warn('Could not load image:', error);
       return null;
     }
   };
 
+  // Load ALL images in PARALLEL for maximum speed
+  const imagePromises: Promise<any>[] = [
+    loadImage('/LOGO/Ascomp.png'),
+    loadImage('/LOGO/Christie.png'),
+  ];
+
+  // Only add signature fetches if URLs are provided
   if (data.engineerSignatureUrl) {
-    engineerSignatureImage = await loadSignatureImage(data.engineerSignatureUrl);
+    imagePromises.push(loadImage(data.engineerSignatureUrl));
+  } else {
+    imagePromises.push(Promise.resolve(null));
   }
 
   if (data.siteSignatureUrl) {
-    siteSignatureImage = await loadSignatureImage(data.siteSignatureUrl);
+    imagePromises.push(loadImage(data.siteSignatureUrl));
+  } else {
+    imagePromises.push(Promise.resolve(null));
   }
+
+  // Wait for all images to load simultaneously
+  const [logoImage, logoImage2, engineerSignatureImage, siteSignatureImage] = await Promise.all(imagePromises);
 
   const page1 = pdfDoc.addPage([595, 842]);
   const page2 = pdfDoc.addPage([595, 842]);
@@ -332,7 +332,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 
   const contactBoxHeight = 50;
   const contactBoxY = yPos - contactBoxHeight;
-  
+
   page1.drawRectangle({
     x: 40,
     y: contactBoxY,
@@ -525,8 +525,8 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 
   const leStatusStr = data.leStatus.status;
   const leRemarksStr = data.leStatus.remarks;
-  const leCombined = (leStatusStr && leRemarksStr) 
-    ? `${leStatusStr} - ${leRemarksStr}` 
+  const leCombined = (leStatusStr && leRemarksStr)
+    ? `${leStatusStr} - ${leRemarksStr}`
     : (leStatusStr || leRemarksStr || '');
 
   drawTableRow(page2, timesRomanBold, timesRoman, 40, yPos, width - 80,
@@ -538,14 +538,14 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   const textSize = 8;
   const lineHeight = 12;
   const maxRemarksWidth = remarksWidth - 6;
-  
+
   // Calculate how many lines the remarks will take
   const remarksLines = wrapText(remarksText, maxRemarksWidth, timesRoman, textSize);
   const remarksRowHeight = Math.max(40, (remarksLines.length * lineHeight) + 8);
-  
+
   // Draw the row with dynamic height
   let currentX = 40;
-  
+
   // Remarks label cell
   page2.drawRectangle({
     x: currentX,
@@ -563,7 +563,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     color: rgb(0, 0, 0),
   });
   currentX += 80;
-  
+
   // Remarks content cell (multi-line)
   page2.drawRectangle({
     x: currentX,
@@ -585,7 +585,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     });
   });
   currentX += remarksWidth;
-  
+
   // LE S. No. label cell
   page2.drawRectangle({
     x: currentX,
@@ -603,7 +603,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     color: rgb(0, 0, 0),
   });
   currentX += 80;
-  
+
   // LE S. No. value cell
   page2.drawRectangle({
     x: currentX,
@@ -621,7 +621,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     color: rgb(0, 0, 0),
     maxWidth: 64,
   });
-  
+
   yPos -= remarksRowHeight
 
   const leftTableX = 40
@@ -681,7 +681,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
   for (const [label, item] of evaluationItems) {
     const itemObj = item as StatusItem; // Type assertion since array elements are inferred as StatusItem
     const statusText = normalizeYesNo(itemObj.yesNo);
-    
+
     drawTableRow(page2, timesRoman, timesRoman, leftTableX, leftY, 240,
       [label || '', statusText], [180, 60], 16)
 
@@ -769,10 +769,10 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
       // Support both { partNumber } and { part_number } shapes
       const rawPartNumber = (part as any).partNumber ?? (part as any).part_number ?? ''
       const partNumber = String(rawPartNumber || '')
-      const nameLines = partName.length > 30 
+      const nameLines = partName.length > 30
         ? [partName.substring(0, 30), partName.substring(30)]
         : [partName]
-      
+
       nameLines.forEach((line, idx) => {
         if (idx === 0) {
           drawTableRow(page2, timesRoman, timesRoman, rightTableX, rightY, 255,
@@ -808,7 +808,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     const linkWidth = cellWidth - labelWidth;
     const cellHeight = 20;
     const cellY = leftY - cellHeight;
-    
+
     // Draw table cells manually to customize colors
     // Label cell
     page2.drawRectangle({
@@ -826,7 +826,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
       font: timesRomanBold,
       color: rgb(0, 0, 1), // Blue color
     });
-    
+
     // Link cell
     page2.drawRectangle({
       x: linkX,
@@ -845,7 +845,7 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
       color: rgb(0, 0, 1), // Blue color for link
       maxWidth: linkWidth - 6,
     });
-    
+
     // Make the "Images" text clickable with the actual URL
     try {
       // PDF coordinates: origin is at bottom-left
@@ -853,14 +853,14 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
       const linkTop = cellY + cellHeight;
       const linkLeft = linkX;
       const linkRight = linkX + linkWidth;
-      
+
       // Create URI action - URI must be a PDFString
       const uriAction = pdfDoc.context.obj({
         Type: PDFName.of('Action'),
         S: PDFName.of('URI'),
         URI: PDFString.of(imagesLink),
       });
-      
+
       // Create link annotation
       const linkAnnotation = pdfDoc.context.obj({
         Type: PDFName.of('Annot'),
@@ -871,11 +871,11 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
       });
 
       const annotationRef = pdfDoc.context.register(linkAnnotation);
-      
+
       // Add annotation to page's Annots array
       const annotsName = PDFName.of('Annots');
       const existingAnnots = page2.node.lookup(annotsName);
-      
+
       if (existingAnnots) {
         const annotsArray = existingAnnots as any;
         const currentAnnots = annotsArray.array || [];
@@ -886,10 +886,10 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
     } catch (error) {
       console.warn('Could not add clickable link annotation:', error);
     }
-    
+
     leftY -= cellHeight;
   }
-  
+
   rightY -= 10;
 
   leftY -= 60;
@@ -951,18 +951,18 @@ export async function generateMaintenanceReport(data: MaintenanceReportData): Pr
 // Helper function to wrap text into multiple lines
 function wrapText(text: string, maxWidth: number, font: any, fontSize: number): string[] {
   if (!text) return [''];
-  
+
   // Replace newlines with spaces and sanitize text
   const sanitizedText = text.replace(/[\n\r]+/g, ' ').replace(/[^\x20-\x7E]/g, '');
   const words = sanitizedText.split(' ');
   const lines: string[] = [];
   let currentLine = '';
-  
+
   for (const word of words) {
     const testLine = currentLine ? `${currentLine} ${word}` : word;
     // Use font.widthOfTextAtSize for accurate text width measurement
     const textWidth = font.widthOfTextAtSize(testLine, fontSize);
-    
+
     if (textWidth <= maxWidth) {
       currentLine = testLine;
     } else {
@@ -988,11 +988,11 @@ function wrapText(text: string, maxWidth: number, font: any, fontSize: number): 
       }
     }
   }
-  
+
   if (currentLine) {
     lines.push(currentLine);
   }
-  
+
   return lines.length > 0 ? lines : [''];
 }
 
