@@ -131,7 +131,7 @@ const LABEL_OVERRIDES: Record<string, string> = {
   serviceNumber: "Service #",
   siteName: "Site",
   siteCode: "Site Code",
-  siteAddress: "Cinema Name",
+  siteAddress: "Address",
   siteContactDetails: "Site Contact",
   projectorName: "Projector",
   projectorModel: "Model #",
@@ -150,6 +150,19 @@ const LABEL_OVERRIDES: Record<string, string> = {
   flLeft: "Fl Before",
   flRight: "Fl After",
 }
+
+// Default columns to show on initial load
+const DEFAULT_VISIBLE_COLUMNS = new Set([
+  "action",
+  "date",
+  "serviceNumber",
+  "siteName",
+  "siteAddress",
+  "screenNumber",
+  "projectorSerial",
+  "projectorModel",
+  "engineerVisited",
+])
 
 const toLabel = (key: string) => {
   if (LABEL_OVERRIDES[key]) return LABEL_OVERRIDES[key]
@@ -2525,10 +2538,11 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         setColumnKeys(derivedKeys)
         setVisibleColumns((prev) => {
           if (Object.keys(prev).length) return prev
+          // Only show default columns initially for faster rendering
           return derivedKeys.reduce(
             (acc, key) => ({
               ...acc,
-              [key]: true,
+              [key]: DEFAULT_VISIBLE_COLUMNS.has(key),
             }),
             {} as Record<string, boolean>,
           )
@@ -2578,7 +2592,7 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
         const bTime = bDate ? new Date(bDate).getTime() : 0
         return bTime - aTime // descending newest first
       })
-  }, [records, search, workerFilter, startDate])
+  }, [records, search, workerFilter, startDate, columnKeys, visibleColumns])
 
   useEffect(() => {
     setPage(1)
@@ -2899,12 +2913,12 @@ export default function OverviewView({ hideHeader, limit }: OverviewViewProps) {
                   >
                     Reset filters
                   </Button>
-                  <Button
+                  {/* <Button
                     className="text-sm"
                     onClick={() => setUploadDialogOpen(true)}
                   >
                     Upload
-                  </Button>
+                  </Button> */}
                   <Button
                     className="text-sm"
                     onClick={() => setShowExportModal(true)}
