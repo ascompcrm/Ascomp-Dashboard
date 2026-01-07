@@ -22,7 +22,6 @@ import { ServiceListSkeleton } from "@/components/services/service-list-skeleton
 
 type ViewMode = "completed" | "allCompleted"
 
-// Simple hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value)
   useEffect(() => {
@@ -49,7 +48,6 @@ export default function ServicesPage() {
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
-  // Reset selected service when view mode changes
   useEffect(() => {
     setSelectedService(null)
   }, [viewMode])
@@ -90,11 +88,9 @@ export default function ServicesPage() {
     }
   }
 
-  // Filter and sort services
   const filteredServices = services.filter((service) => {
     const query = debouncedSearchQuery.toLowerCase()
 
-    // Safety checks for null/undefined values
     const matchesSearch =
       (service.site?.name?.toLowerCase().includes(query) ?? false) ||
       (service.projector?.model?.toLowerCase().includes(query) ?? false) ||
@@ -104,22 +100,17 @@ export default function ServicesPage() {
       (service.site?.address?.toLowerCase().includes(query) ?? false) ||
       (service.address?.toLowerCase().includes(query) ?? false)
 
-    // Check if service date matches selected date (comparing YYYY-MM-DD parts)
     const matchesDate = dateFilter
       ? service.date?.startsWith(format(dateFilter, "yyyy-MM-dd"))
       : true
 
-    // console.log("service dets here", service)
-
     return matchesSearch && matchesDate
   }).sort((a, b) => {
-    // Both modes show completed services, so use completedAt for sorting
     const aDate = a.completedAt || a.date
     const bDate = b.completedAt || b.date
     return new Date(bDate || "").getTime() - new Date(aDate || "").getTime()
   })
 
-  // Loading state
   if (loading && !selectedService) {
     return (
       <div className="min-h-screen bg-white w-full">
@@ -136,7 +127,6 @@ export default function ServicesPage() {
     )
   }
 
-  // Detail View
   if (selectedService) {
     return (
       <ServiceDetailView
@@ -212,7 +202,7 @@ export default function ServicesPage() {
                     if (viewMode !== "completed") {
                       setLoading(true)
                       setViewMode("completed")
-                      setSearchQuery("") // Optional: clear search on mode switch
+                      setSearchQuery("")
                     }
                   }}
                 >

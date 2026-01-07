@@ -85,8 +85,8 @@ function PreviewDownloadDialog({
 Recommended Parts:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${partsArray.map((part, idx) =>
-          `${idx + 1}. Part Number: ${part.part_number}
-   Description: ${part.description}`
+          `${idx + 1}. Part Number: ${part.part_number || part.partNumber}
+   Description: ${part.description || part.name}`
         ).join('\n\n')}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
       }
